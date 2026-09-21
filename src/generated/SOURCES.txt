@@ -1,0 +1,3 @@
+platform-go     v14.0.0
+primitives-go   v2.5.0
+files           12
