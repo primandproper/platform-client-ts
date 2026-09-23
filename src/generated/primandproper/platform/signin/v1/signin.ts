@@ -211,6 +211,80 @@ export interface ExchangeRefreshTokenResponse {
 }
 
 /**
+ * SignOutRequest ends one login: every refresh token this sign-in issued stops
+ * being exchangeable.
+ *
+ * It is anonymous and carries the refresh token, which is
+ * ExchangeRefreshTokenRequest's arrangement and is here for the same two
+ * reasons. The credential presented is the whole of the request's authority, so
+ * no field names a user and none could. And it is the one shape that still works
+ * when the access token has already expired, which is when somebody signing out
+ * usually is: they came back to an application that had been closed for a week
+ * and pressed the button.
+ *
+ * It grants nothing a caller did not already have. Whoever holds a live refresh
+ * token can already end the family by presenting it twice -- that is what reuse
+ * detection does -- so this is the same act performed on purpose, with the
+ * server told that it was deliberate rather than having to assume theft.
+ *
+ * What it cannot do is stop an access token already in somebody's hands. Nothing
+ * here can: an access token is checked by the consumer's interceptor against the
+ * issuer's signature and not against any table this service holds. What it stops
+ * is that token being replaced, so a sign-out takes effect within one
+ * access-token lifetime. A deployment that needs it to take effect sooner is
+ * asking for shorter access tokens, which is signin.WithTokenTTL, rather than
+ * for another RPC.
+ */
+export interface SignOutRequest {
+  /**
+   * refresh_token is the credential a previous IssuedToken carried. A token
+   * nobody holds, one already spent and one already revoked are one answer --
+   * there is nothing here for a caller to learn, and the family is ended either
+   * way or was already.
+   */
+  refreshToken: string;
+}
+
+/**
+ * SignOutResponse is empty, and is a message rather than google.protobuf.Empty
+ * so that it can gain a field without becoming a breaking change -- see
+ * UpdatePasswordResponse.
+ *
+ * It deliberately does not report how many tokens were withdrawn. The service
+ * has that number and it is a row count rather than a device count: a login that
+ * has refreshed forty times is forty rows, so a client rendering "signed out of
+ * N devices" would be rendering something else entirely.
+ */
+export interface SignOutResponse {}
+
+/**
+ * SignOutEverywhereRequest ends every login the calling user holds, on every
+ * device, including the one asking.
+ *
+ * It requires a caller and names nobody, which is GetAuthStatusRequest's rule
+ * for GetAuthStatusRequest's reason: the subject is whoever is calling, and a
+ * field naming somebody else would be an administrator's revocation wearing a
+ * sign-out's clothes. An operator ending somebody else's sessions is a different
+ * act with a different permission, and it is signin.Service's method rather than
+ * this RPC.
+ *
+ * It is the door for a password a person thinks somebody else has seen, so it
+ * takes no credential and re-proves nothing: a user who is told "your password
+ * may be compromised" and then asked for that password before they may act on it
+ * has been given advice they cannot take. What it costs is bounded by what it
+ * does -- ending your own sessions, which anyone holding your access token could
+ * achieve by waiting -- and the remedy for a stolen access token is here rather
+ * than nowhere.
+ */
+export interface SignOutEverywhereRequest {}
+
+/**
+ * SignOutEverywhereResponse is empty -- see SignOutResponse, whose reasoning
+ * applies here with more force, since this count spans every login.
+ */
+export interface SignOutEverywhereResponse {}
+
+/**
  * GetAuthStatusRequest names nobody. The subject is whoever is calling, and a
  * field naming somebody else would be a directory read wearing a whoami's
  * clothes.
@@ -1428,6 +1502,199 @@ export const ExchangeRefreshTokenResponse: MessageFns<ExchangeRefreshTokenRespon
     const message = createBaseExchangeRefreshTokenResponse();
     message.token =
       object.token !== undefined && object.token !== null ? IssuedToken.fromPartial(object.token) : undefined;
+    return message;
+  },
+};
+
+function createBaseSignOutRequest(): SignOutRequest {
+  return { refreshToken: '' };
+}
+
+export const SignOutRequest: MessageFns<SignOutRequest> = {
+  encode(message: SignOutRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.refreshToken !== '') {
+      writer.uint32(10).string(message.refreshToken);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SignOutRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSignOutRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.refreshToken = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): SignOutRequest {
+    return {
+      refreshToken: isSet(object.refreshToken)
+        ? globalThis.String(object.refreshToken)
+        : isSet(object.refresh_token)
+          ? globalThis.String(object.refresh_token)
+          : '',
+    };
+  },
+
+  toJSON(message: SignOutRequest): unknown {
+    const obj: any = {};
+    if (message.refreshToken !== '') {
+      obj.refreshToken = message.refreshToken;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<SignOutRequest>, I>>(base?: I): SignOutRequest {
+    return SignOutRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<SignOutRequest>, I>>(object: I): SignOutRequest {
+    const message = createBaseSignOutRequest();
+    message.refreshToken = object.refreshToken ?? '';
+    return message;
+  },
+};
+
+function createBaseSignOutResponse(): SignOutResponse {
+  return {};
+}
+
+export const SignOutResponse: MessageFns<SignOutResponse> = {
+  encode(_: SignOutResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SignOutResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSignOutResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): SignOutResponse {
+    return {};
+  },
+
+  toJSON(_: SignOutResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<SignOutResponse>, I>>(base?: I): SignOutResponse {
+    return SignOutResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<SignOutResponse>, I>>(_: I): SignOutResponse {
+    const message = createBaseSignOutResponse();
+    return message;
+  },
+};
+
+function createBaseSignOutEverywhereRequest(): SignOutEverywhereRequest {
+  return {};
+}
+
+export const SignOutEverywhereRequest: MessageFns<SignOutEverywhereRequest> = {
+  encode(_: SignOutEverywhereRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SignOutEverywhereRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSignOutEverywhereRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): SignOutEverywhereRequest {
+    return {};
+  },
+
+  toJSON(_: SignOutEverywhereRequest): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<SignOutEverywhereRequest>, I>>(base?: I): SignOutEverywhereRequest {
+    return SignOutEverywhereRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<SignOutEverywhereRequest>, I>>(_: I): SignOutEverywhereRequest {
+    const message = createBaseSignOutEverywhereRequest();
+    return message;
+  },
+};
+
+function createBaseSignOutEverywhereResponse(): SignOutEverywhereResponse {
+  return {};
+}
+
+export const SignOutEverywhereResponse: MessageFns<SignOutEverywhereResponse> = {
+  encode(_: SignOutEverywhereResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SignOutEverywhereResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSignOutEverywhereResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): SignOutEverywhereResponse {
+    return {};
+  },
+
+  toJSON(_: SignOutEverywhereResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<SignOutEverywhereResponse>, I>>(base?: I): SignOutEverywhereResponse {
+    return SignOutEverywhereResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<SignOutEverywhereResponse>, I>>(_: I): SignOutEverywhereResponse {
+    const message = createBaseSignOutEverywhereResponse();
     return message;
   },
 };
@@ -3048,7 +3315,7 @@ export const RedeemMagicLinkResponse: MessageFns<RedeemMagicLinkResponse> = {
 /**
  * SignInService is sign-in.
  *
- * Eight of its RPCs are anonymous by definition and five require a caller. What
+ * Nine of its RPCs are anonymous by definition and six require a caller. What
  * none of them requires is a permission: there is no grant that would make
  * "sign in" safer, and the four authenticated ones take their subject from the
  * caller and have no field that could name anybody else. See
@@ -3163,6 +3430,34 @@ export const SignInServiceService = {
       Buffer.from(ExchangeRefreshTokenResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): ExchangeRefreshTokenResponse => ExchangeRefreshTokenResponse.decode(value),
   },
+  /**
+   * The way out, in its two sizes. Ending this login carries the credential and
+   * needs no caller, so an application whose access token expired while it was
+   * closed can still sign out; ending every login needs a caller and names
+   * nobody. Both are a client's to call and neither is an operator's tool --
+   * revoking somebody else's sessions is signin.Service's method, reached
+   * through a consumer's own administrative surface.
+   */
+  signOut: {
+    path: '/primandproper.platform.signin.v1.SignInService/SignOut' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: SignOutRequest): Buffer => Buffer.from(SignOutRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): SignOutRequest => SignOutRequest.decode(value),
+    responseSerialize: (value: SignOutResponse): Buffer => Buffer.from(SignOutResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): SignOutResponse => SignOutResponse.decode(value),
+  },
+  signOutEverywhere: {
+    path: '/primandproper.platform.signin.v1.SignInService/SignOutEverywhere' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: SignOutEverywhereRequest): Buffer =>
+      Buffer.from(SignOutEverywhereRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): SignOutEverywhereRequest => SignOutEverywhereRequest.decode(value),
+    responseSerialize: (value: SignOutEverywhereResponse): Buffer =>
+      Buffer.from(SignOutEverywhereResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): SignOutEverywhereResponse => SignOutEverywhereResponse.decode(value),
+  },
   /** The two reads a client makes on load. */
   getAuthStatus: {
     path: '/primandproper.platform.signin.v1.SignInService/GetAuthStatus' as const,
@@ -3249,6 +3544,16 @@ export interface SignInServiceServer extends UntypedServiceImplementation {
   loginForToken: handleUnaryCall<LoginForTokenRequest, LoginForTokenResponse>;
   adminLoginForToken: handleUnaryCall<AdminLoginForTokenRequest, AdminLoginForTokenResponse>;
   exchangeRefreshToken: handleUnaryCall<ExchangeRefreshTokenRequest, ExchangeRefreshTokenResponse>;
+  /**
+   * The way out, in its two sizes. Ending this login carries the credential and
+   * needs no caller, so an application whose access token expired while it was
+   * closed can still sign out; ending every login needs a caller and names
+   * nobody. Both are a client's to call and neither is an operator's tool --
+   * revoking somebody else's sessions is signin.Service's method, reached
+   * through a consumer's own administrative surface.
+   */
+  signOut: handleUnaryCall<SignOutRequest, SignOutResponse>;
+  signOutEverywhere: handleUnaryCall<SignOutEverywhereRequest, SignOutEverywhereResponse>;
   /** The two reads a client makes on load. */
   getAuthStatus: handleUnaryCall<GetAuthStatusRequest, GetAuthStatusResponse>;
   getSelf: handleUnaryCall<GetSelfRequest, GetSelfResponse>;
@@ -3399,6 +3704,44 @@ export interface SignInServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: ExchangeRefreshTokenResponse) => void,
+  ): ClientUnaryCall;
+  /**
+   * The way out, in its two sizes. Ending this login carries the credential and
+   * needs no caller, so an application whose access token expired while it was
+   * closed can still sign out; ending every login needs a caller and names
+   * nobody. Both are a client's to call and neither is an operator's tool --
+   * revoking somebody else's sessions is signin.Service's method, reached
+   * through a consumer's own administrative surface.
+   */
+  signOut(
+    request: SignOutRequest,
+    callback: (error: ServiceError | null, response: SignOutResponse) => void,
+  ): ClientUnaryCall;
+  signOut(
+    request: SignOutRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: SignOutResponse) => void,
+  ): ClientUnaryCall;
+  signOut(
+    request: SignOutRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: SignOutResponse) => void,
+  ): ClientUnaryCall;
+  signOutEverywhere(
+    request: SignOutEverywhereRequest,
+    callback: (error: ServiceError | null, response: SignOutEverywhereResponse) => void,
+  ): ClientUnaryCall;
+  signOutEverywhere(
+    request: SignOutEverywhereRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: SignOutEverywhereResponse) => void,
+  ): ClientUnaryCall;
+  signOutEverywhere(
+    request: SignOutEverywhereRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: SignOutEverywhereResponse) => void,
   ): ClientUnaryCall;
   /** The two reads a client makes on load. */
   getAuthStatus(
