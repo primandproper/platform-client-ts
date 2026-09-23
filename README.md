@@ -118,8 +118,8 @@ it and publishes the outcome for `settledGraceMs`, and the rest poll for it. The
 AES-GCM under a key derived from the spent refresh token, so read access to the store yields nothing usable. An instance
 that dies mid-exchange leaves a claim that expires after `claimTtlMs` (90s by default), and the next caller takes the
 exchange over under the same idempotency key: sent as an R10 retry with `idempotentRefresh` on, and never sent with it
-off. A store that cannot be reached fails the refresh with `ExchangeNotSentError` before the token is sent, so the session
-keeps its refresh token and tries again on the next call.
+off. A store that cannot be reached fails the refresh with `ExchangeNotSentError` before the token is sent, so the
+session keeps its refresh token and tries again on the next call.
 
 With Redis or Valkey, through `redis` (node-redis):
 
