@@ -17,6 +17,14 @@ export {
 export { isAmbiguous, PlatformError, type Reason, SignInReason, signInReasonDomain, toPlatformError } from './errors';
 export { createGrpcJsTransport, type GrpcJsTransport, type GrpcJsTransportConfig } from './grpc-js';
 export { NotSignedInError, Session, type SessionConfig, type SessionState, type TokenResponse } from './session';
+export {
+  type ExchangeAttempt,
+  type ExchangeCoordinator,
+  InMemoryExchangeCoordinator,
+  type InMemoryExchangeCoordinatorConfig,
+  settledGraceMs,
+} from './coordinator';
+export { IssuedToken } from './generated/primandproper/platform/signin/v1/signin';
 export { type Counts, counts, items, type ListRequest, type ListResponse, pages } from './pagination';
 export {
   adminSignIn,

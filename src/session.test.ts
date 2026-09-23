@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { type ExchangeAttempt, type ExchangeCoordinator, InMemoryExchangeCoordinator } from './coordinator';
 import { PlatformError } from './errors';
 import { type IssuedToken, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
 import { NotSignedInError, Session, type SessionConfig, type SessionState } from './session';
@@ -14,7 +15,8 @@ function setup(held?: (now: Date) => IssuedToken | undefined, config: Partial<Se
   const clock = new FakeClock();
   const store = new MemoryCredentialStore(held ? held(clock.now()) : undefined);
   const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }) as never);
-  const session = new Session({ transport, store, clock, metadata: { 'x-tenant': 'acme' }, ...config });
+  const coordinator = new InMemoryExchangeCoordinator({ clock });
+  const session = new Session({ transport, store, clock, coordinator, metadata: { 'x-tenant': 'acme' }, ...config });
   const states: SessionState[] = [];
   session.onStateChange((s) => states.push(s));
   return { clock, store, transport, session, states };
@@ -281,9 +283,9 @@ describe('Session', () => {
   });
 });
 
-describe('Session refresh (R10)', () => {
-  const keyOf = (options: { metadata?: Record<string, string> }) => options.metadata?.['idempotency-key'];
+const keyOf = (options: { metadata?: Record<string, string> }) => options.metadata?.['idempotency-key'];
 
+describe('Session refresh (R10)', () => {
   it('sends no key and never retries an exchange when R10 is off', async () => {
     const { clock, transport, session } = setup((now) => fakeIssuedToken(now));
     transport.handle(exchange, () => {
@@ -430,5 +432,127 @@ describe('Session refresh (R10)', () => {
 
     expect(transport.callsTo(exchange)).toHaveLength(1);
     expect((await store.load())?.refreshToken).toBe('');
+  });
+});
+
+describe('Session across requests (ExchangeCoordinator)', () => {
+  /** perRequest stands in for a backend-for-frontend: a Session per request, over a store backed by its cookie. */
+  function perRequest() {
+    const clock = new FakeClock();
+    const coordinator = new InMemoryExchangeCoordinator({ clock });
+    const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }) as never);
+    const request = (token: IssuedToken) => {
+      const store = new MemoryCredentialStore(token);
+      return { store, session: new Session({ transport, store, clock, coordinator }) };
+    };
+    return { clock, transport, request };
+  }
+
+  it('makes one exchange for concurrent Sessions holding the same refresh token, and each saves the successor', async () => {
+    const { clock, transport, request } = perRequest();
+    const cookie = fakeIssuedToken(clock.now());
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    transport.handle(exchange, async () => {
+      await held;
+      return { token: successor(clock.now(), 2) };
+    });
+
+    clock.advance(60 * 60 * 1000);
+    const requests = Array.from({ length: 5 }, () => request(cookie));
+    const calls = requests.map(({ session }) => session.call(getSelf, {}));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    release();
+    await Promise.all(calls);
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    const saved = await Promise.all(requests.map(({ store }) => store.load()));
+    expect(saved.map((t) => t?.refreshToken)).toEqual(Array(5).fill('refresh-2'));
+    expect(transport.callsTo(getSelf).map((c) => tokenSent(c.options))).toEqual(Array(5).fill('Bearer access-2'));
+  });
+
+  it('gives a Session holding the spent token the successor, without an exchange, after the exchange settled', async () => {
+    const { clock, transport, request } = perRequest();
+    const cookie = fakeIssuedToken(clock.now());
+    transport.handle(exchange, () => ({ token: successor(clock.now(), 2) }));
+
+    clock.advance(60 * 60 * 1000);
+    await request(cookie).session.call(getSelf, {});
+    clock.advance(5_000);
+    const stale = request(cookie);
+    await stale.session.call(getSelf, {});
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    expect((await stale.store.load())?.refreshToken).toBe('refresh-2');
+    expect(tokenSent(transport.callsTo(getSelf)[1]!.options)).toBe('Bearer access-2');
+  });
+
+  it('signs out a Session holding the spent token when the exchange was refused', async () => {
+    const { clock, transport, request } = perRequest();
+    const cookie = fakeIssuedToken(clock.now());
+    transport.handle(exchange, () => {
+      throw new StatusError(Code.UNAUTHENTICATED, 'refused');
+    });
+
+    clock.advance(60 * 60 * 1000);
+    await expect(request(cookie).session.call(getSelf, {})).rejects.toBeInstanceOf(PlatformError);
+    const stale = request(cookie);
+    await expect(stale.session.call(getSelf, {})).rejects.toMatchObject({ code: Code.UNAUTHENTICATED });
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    expect(await stale.store.load()).toBeUndefined();
+  });
+});
+
+describe('Session takeover (ExchangeCoordinator)', () => {
+  /** takingOver is a coordinator reporting that an earlier attempt for every token never reported back. */
+  function takingOver(idempotencyKey: string): ExchangeCoordinator {
+    return {
+      run: (_refreshToken, exchange) => exchange({ idempotencyKey, takeover: true } satisfies ExchangeAttempt),
+    };
+  }
+
+  it('sends a takeover as the keyed retry with R10 on, under the coordinator key', async () => {
+    const { clock, transport, session } = setup((now) => fakeIssuedToken(now), {
+      idempotentRefresh: true,
+      coordinator: takingOver('key-from-claim'),
+    });
+    transport.handle(exchange, () => ({ token: successor(clock.now(), 2) }));
+
+    clock.advance(60 * 60 * 1000);
+    await session.call(getSelf, {});
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    expect(keyOf(transport.callsTo(exchange)[0]!.options)).toBe('key-from-claim');
+  });
+
+  it('does not retry an ambiguous takeover, since it already was the retry', async () => {
+    const { clock, store, transport, session } = setup((now) => fakeIssuedToken(now), {
+      idempotentRefresh: true,
+      coordinator: takingOver('key-from-claim'),
+    });
+    transport.handle(exchange, () => {
+      throw new StatusError(Code.UNAVAILABLE, 'connection reset');
+    });
+
+    clock.advance(60 * 60 * 1000 - 10_000);
+    await expect(session.call(getSelf, {})).rejects.toBeInstanceOf(PlatformError);
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    expect((await store.load())?.refreshToken).toBe('');
+    expect(session.state).toBe('authenticated');
+  });
+
+  it('never sends a takeover with R10 off, and abandons the refresh token instead (R5)', async () => {
+    const { clock, store, transport, session } = setup((now) => fakeIssuedToken(now), {
+      coordinator: takingOver('key-from-claim'),
+    });
+
+    clock.advance(60 * 60 * 1000 - 10_000);
+    await expect(session.call(getSelf, {})).rejects.toThrow('never reported back');
+
+    expect(transport.callsTo(exchange)).toEqual([]);
+    expect((await store.load())?.refreshToken).toBe('');
+    expect(session.state).toBe('authenticated');
   });
 });

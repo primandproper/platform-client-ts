@@ -30,10 +30,15 @@ speaks rather than mirroring it, because a client-only fix needs a version numbe
 
 ## Using it
 
-One `Session` per process, for every service that process calls: platform's and the product's own. It holds the session,
-refreshes it (one exchange at a time, R1), and sends the tenant's metadata on every call (R12). Any ts-proto
-`outputServices=grpc-js` method definition goes through it, so a product's own services share the same refresher instead
-of racing it.
+One `Session` per login, for every service that login calls: platform's and the product's own. It holds the session,
+refreshes it, and sends the tenant's metadata on every call (R12). Any ts-proto `outputServices=grpc-js` method
+definition goes through it, so a product's own services share the same refresher instead of racing it.
+
+**One `ExchangeCoordinator` per deployment.** A refresh token works once (R1), and every `Session` exchanges through a
+coordinator that makes sure each token is presented once however many Sessions hold it, keeping the outcome for a minute
+(`settledGraceMs`) for a request that arrives still holding the spent token. The default is an in-memory one shared by
+the whole process, which is right for one process and wrong for several: a deployment of more than one instance needs a
+coordinator they all share.
 
 ```ts
 import * as grpc from '@grpc/grpc-js';
@@ -61,6 +66,49 @@ store and nowhere a log, a crash report or a URL can reach. A default that could
 none. The in-memory `MemoryCredentialStore` in `@primandproper/platform-client/testing` is for tests, alongside
 `FakeTransport` and `FakeClock`.
 
+### A Session per request
+
+A backend-for-frontend holds a browser's session in a cookie, so it builds a `Session` per request over a store backed
+by that request's cookie. Concurrent requests near expiry, and a request that left the browser before the refreshed
+cookie arrived, all carry the same refresh token; the coordinator exchanges it once and hands each of them the
+successor. Nothing here deletes the cookie on a failed refresh: `Session` clears the store only when the login is really
+over (R2, R7).
+
+```ts
+// SvelteKit's hooks.server.ts; any framework with request-scoped cookies has the same shape.
+import type { Cookies, Handle } from '@sveltejs/kit';
+import { type CredentialStore, IssuedToken, Session } from '@primandproper/platform-client';
+
+const cookieName = 'session';
+
+function cookieStore(cookies: Cookies): CredentialStore {
+  return {
+    async load() {
+      const raw = cookies.get(cookieName);
+      return raw ? IssuedToken.fromJSON(JSON.parse(raw)) : undefined;
+    },
+    async save(token) {
+      cookies.set(cookieName, JSON.stringify(IssuedToken.toJSON(token)), {
+        path: '/',
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        expires: token.refreshTokenExpiresAt ?? token.expiresAt,
+      });
+    },
+    async clear() {
+      cookies.delete(cookieName, { path: '/' });
+    },
+  };
+}
+
+export const handle: Handle = async ({ event, resolve }) => {
+  // transport is built once per process; the Session, like the cookie, is per request.
+  event.locals.session = new Session({ transport, store: cookieStore(event.cookies) });
+  return resolve(event);
+};
+```
+
 **`idempotentRefresh` is off by default.** A client cannot tell from the wire whether the server supports R10, and
 against one that does not, a keyed retry is a bare retry: reuse, and the login revoked. Off, an exchange that fails
 ambiguously keeps the session until its access token expires and never re-sends the refresh token (R5).
@@ -72,7 +120,7 @@ Connect transport behind the same `Transport` interface.
 
 | rule | what                                                           | where                                                                                           |
 | ---- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| R1   | one refresh at a time                                          | `Session` (`refresh`)                                                                           |
+| R1   | one refresh at a time                                          | `Session` (`refresh`), `ExchangeCoordinator`                                                    |
 | R2   | a failed refresh that is not a refusal does not sign out       | `Session` (`settleFailedExchange`)                                                              |
 | R3   | one refresh-and-retry on `UNAUTHENTICATED`, never a loop       | `Session.call`                                                                                  |
 | R4   | an idempotency key per logical operation, outside the retry    | the refresh exchange; any other call passes its own `idempotency-key` in `CallOptions.metadata` |
