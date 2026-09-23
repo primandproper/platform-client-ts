@@ -5,7 +5,8 @@
 # tag is in PLATFORM_GO_VERSION, and the primitives-go version is *read out of that
 # tag's go.mod*. Pinning it separately would let the two skew, and generating
 # filtering.proto from a different version than the server was built against is a
-# wire mismatch that no test in this repo would catch.
+# wire mismatch that no test in this repo would catch. googleapis' google/rpc protos are
+# the one input not fetched: they are vendored under third_party/ with their commit.
 #
 # Nothing here needs a Go toolchain. This is a TypeScript repository and it stays one.
 set -euo pipefail
@@ -46,9 +47,21 @@ while IFS= read -r p; do
   count=$((count + 1))
 done < <(find "$platform_dir" "$primitives_dir" -path '*/proto/primandproper/*' -name '*.proto' | sort)
 
+# google/rpc is googleapis, not protoc's bundled well-knowns, so it is vendored at a pinned
+# commit rather than fetched: the error detail a client branches on rides in these messages.
+VENDORED="$ROOT/third_party/googleapis"
+googleapis_commit="$(tr -d '[:space:]' < "$VENDORED/COMMIT")"
+while IFS= read -r p; do
+  rel="${p#"$VENDORED"/}"
+  mkdir -p "$OUT/include/$(dirname "$rel")"
+  cp "$p" "$OUT/include/$rel"
+  count=$((count + 1))
+done < <(find "$VENDORED/google" -name '*.proto' | sort)
+
 cat > "$OUT/SOURCES.txt" <<EOF
 platform-go     $PLATFORM_VERSION
 primitives-go   $primitives_version
+googleapis      $googleapis_commit
 files           $count
 EOF
 echo "$count .proto files -> .protos/include"
