@@ -1,3 +1,4 @@
+import { type ExchangeAttempt, type ExchangeCoordinator, InMemoryExchangeCoordinator } from './coordinator';
 import { isAmbiguous, PlatformError, toPlatformError } from './errors';
 import { type IssuedToken, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
 import {
@@ -27,6 +28,9 @@ const idempotencyKeyHeader = 'idempotency-key';
  */
 const defaultExchangeDeadlineMs = 30_000;
 
+/** processCoordinator is what every Session in a process shares unless it is given a coordinator of its own. */
+const processCoordinator = new InMemoryExchangeCoordinator();
+
 export type SessionState = 'anonymous' | 'authenticating' | 'authenticated' | 'refreshing';
 
 export interface SessionConfig {
@@ -52,6 +56,12 @@ export interface SessionConfig {
   idempotentRefresh?: boolean;
   /** exchangeDeadlineMs bounds each ExchangeRefreshToken attempt. Thirty seconds unless set. */
   exchangeDeadlineMs?: number;
+  /**
+   * coordinator deduplicates exchanges across every Session that shares it, so that Sessions built per request over
+   * the same refresh token present it once. One per deployment: the process-wide in-memory one unless set, which is
+   * enough for a single process and not for several.
+   */
+  coordinator?: ExchangeCoordinator;
 }
 
 /** NotSignedInError is what an authenticated call rejects with when there is no session to make it with. */
@@ -72,8 +82,9 @@ export interface TokenResponse {
  * service a process calls, platform's and its own alike, goes through one Session, because two refreshers would present
  * the same refresh token twice, which is reuse, which revokes the login (R1).
  *
- * Single-flight is per Session. Two Sessions over one shared store (two browser tabs, say) are two refreshers; a store
- * shared that way has to serialize them itself, with the Web Locks API or its equivalent.
+ * Across Sessions, the ExchangeCoordinator they share makes sure a refresh token is exchanged once. Sessions that share
+ * no coordinator (two browser tabs, say) are two refreshers; a store shared that way has to serialize them itself, with
+ * the Web Locks API or its equivalent.
  */
 export class Session {
   private readonly transport: Transport;
@@ -82,6 +93,7 @@ export class Session {
   private readonly authorizer: Authorizer;
   private readonly idempotentRefresh: boolean;
   private readonly exchangeDeadlineMs: number;
+  private readonly coordinator: ExchangeCoordinator;
 
   private current: IssuedToken | undefined;
   private currentState: SessionState = 'anonymous';
@@ -97,6 +109,7 @@ export class Session {
     this.authorizer = config.authorizer ?? bearerAuthorizer;
     this.idempotentRefresh = config.idempotentRefresh ?? false;
     this.exchangeDeadlineMs = config.exchangeDeadlineMs ?? defaultExchangeDeadlineMs;
+    this.coordinator = config.coordinator ?? processCoordinator;
   }
 
   get state(): SessionState {
@@ -291,35 +304,52 @@ export class Session {
     }
     this.setState('refreshing');
 
-    // R10's key is minted once per logical exchange, outside the retry, and sent on the first attempt: a key that was
-    // not on the original request cannot be recognised on the retry.
-    const key = this.idempotentRefresh ? globalThis.crypto.randomUUID() : undefined;
+    const refreshToken = held.refreshToken;
+    let successor: IssuedToken;
+    try {
+      successor = await this.coordinator.run(refreshToken, (attempt) => this.exchangeWith(refreshToken, attempt));
+    } catch (err) {
+      await this.settleFailedExchange(held, err);
+      throw err;
+    }
+    await this.adopt(successor);
+    return successor;
+  }
+
+  /**
+   * exchangeWith is the one exchange a coordinator lets run for a refresh token. Its outcome reaches every Session
+   * waiting on that token, so it only talks to the server: each Session settles the outcome against its own store.
+   */
+  private async exchangeWith(refreshToken: string, attempt: ExchangeAttempt): Promise<IssuedToken> {
+    // R10's key is minted once per refresh token, outside the retry, and sent on the first attempt: a key that was not
+    // on the original request cannot be recognised on the retry.
+    const key = this.idempotentRefresh ? attempt.idempotencyKey : undefined;
+    if (attempt.takeover && key === undefined) {
+      // An earlier attempt may have spent the token, and without R10 the only way to send it again is bare (R5).
+      throw new Error('an earlier exchange of this refresh token never reported back');
+    }
     const startedAt = this.clock.now().getTime();
 
     let response: TokenResponse;
     try {
-      response = await this.exchangeOnce(held.refreshToken, key);
+      response = await this.exchangeOnce(refreshToken, key);
     } catch (first) {
+      // A takeover is already the retry. One retry per key: honouring it clears the key, so another would be reuse.
       const retryable =
-        key !== undefined && isAmbiguous(first) && this.clock.now().getTime() - startedAt < remintWindowMs;
+        !attempt.takeover &&
+        key !== undefined &&
+        isAmbiguous(first) &&
+        this.clock.now().getTime() - startedAt < remintWindowMs;
       if (!retryable) {
-        await this.settleFailedExchange(held, first);
         throw first;
       }
-      try {
-        // One retry per key: honouring it clears the key, so a second presentation would be reuse.
-        response = await this.exchangeOnce(held.refreshToken, key);
-      } catch (second) {
-        await this.settleFailedExchange(held, second);
-        throw second;
-      }
+      response = await this.exchangeOnce(refreshToken, key);
     }
 
     if (!response.token) {
-      await this.abandonRefreshToken(held);
+      // It is not a PlatformError, so it is ambiguous, and the refresh token is abandoned.
       throw new Error(`${SignInServiceService.exchangeRefreshToken.path} answered OK with no token`);
     }
-    await this.adopt(response.token);
     return response.token;
   }
 
