@@ -78,6 +78,18 @@ export function toPlatformError(err: unknown): unknown {
   return err instanceof StatusError ? PlatformError.fromStatus(err) : err;
 }
 
+/**
+ * ExchangeNotSentError is an exchange that failed before the refresh token left this caller: a coordinator that could
+ * not reach its store, say. It is not ambiguous, since the server never saw the token, so the session keeps it and tries
+ * again on the next call. `cause` is what failed.
+ */
+export class ExchangeNotSentError extends Error {
+  constructor(message: string, options: { cause: unknown }) {
+    super(message, options);
+    this.name = 'ExchangeNotSentError';
+  }
+}
+
 const ambiguousCodes: ReadonlySet<Code> = new Set([
   Code.DEADLINE_EXCEEDED,
   Code.UNAVAILABLE,
@@ -88,13 +100,13 @@ const ambiguousCodes: ReadonlySet<Code> = new Set([
 
 /**
  * isAmbiguous reports whether a failed call may have committed before it failed: R10's table. A failure with no status
- * at all is ambiguous, since nothing says the request did not arrive.
+ * at all is ambiguous, since nothing says the request did not arrive, unless it is an ExchangeNotSentError, which does.
  */
 export function isAmbiguous(err: unknown): boolean {
   if (err instanceof PlatformError || err instanceof StatusError) {
     return ambiguousCodes.has(err.code);
   }
-  return true;
+  return !(err instanceof ExchangeNotSentError);
 }
 
 function readReason(bytes: Uint8Array): Reason | undefined {

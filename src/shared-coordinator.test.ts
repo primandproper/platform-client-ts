@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { type ExchangeAttempt, hashToken } from './coordinator';
 import { describeExchangeCoordinator } from './coordinator.conformance';
-import { PlatformError, SignInReason } from './errors';
+import { ExchangeNotSentError, PlatformError, SignInReason } from './errors';
 import { type IssuedToken, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
 import { Session } from './session';
 import {
@@ -155,6 +155,37 @@ describe('SharedExchangeCoordinator', () => {
 
     expect(result.token).toBe('access-2');
   });
+
+  it('treats a claimant whose key write failed as a first attempt once its claim expires, not a takeover', async () => {
+    const clock = new FakeClock();
+    const working = new MemoryCoordinationStore(clock);
+    let keyWriteFails = true;
+    const store: CoordinationStore = {
+      setIfAbsent: async (key, value, ttlMs) => {
+        if (key.endsWith(':key') && keyWriteFails) {
+          keyWriteFails = false;
+          throw new Error('connection reset');
+        }
+        return working.setIfAbsent(key, value, ttlMs);
+      },
+      get: (key) => working.get(key),
+      set: (key, value, ttlMs) => working.set(key, value, ttlMs),
+    };
+    const coordinator = new SharedExchangeCoordinator({ store });
+    const attempts: ExchangeAttempt[] = [];
+    const exchange = async (attempt: ExchangeAttempt) => {
+      attempts.push(attempt);
+      return successor(clock);
+    };
+
+    await expect(coordinator.run('refresh-1', exchange)).rejects.toBeInstanceOf(ExchangeNotSentError);
+    const next = coordinator.run('refresh-1', exchange);
+    await settleMicrotasks();
+    clock.advance(defaultClaimTtlMs);
+
+    expect((await next).token).toBe('access-2');
+    expect(attempts.map((a) => a.takeover)).toEqual([false]);
+  });
 });
 
 describe('Session over SharedExchangeCoordinator', () => {
@@ -186,6 +217,44 @@ describe('Session over SharedExchangeCoordinator', () => {
     await expect(call).rejects.toThrow('never reported back');
     expect(transport.callsTo(exchange)).toHaveLength(1);
     expect((await second.store.load())?.refreshToken).toBe('');
+  });
+
+  it('keeps the refresh token when the coordination store is unreachable, and refreshes once it is back', async () => {
+    const clock = new FakeClock();
+    const working = new MemoryCoordinationStore(clock);
+    let down = true;
+    const reachable = <T>(call: () => Promise<T>) => (down ? Promise.reject(new Error('ECONNREFUSED')) : call());
+    const shared: CoordinationStore = {
+      setIfAbsent: (key, value, ttlMs) => reachable(() => working.setIfAbsent(key, value, ttlMs)),
+      get: (key) => reachable(() => working.get(key)),
+      set: (key, value, ttlMs) => reachable(() => working.set(key, value, ttlMs)),
+    };
+    const transport = new FakeTransport()
+      .handle(getSelf, () => ({ user: undefined }) as never)
+      .handle(exchange, () => ({
+        token: fakeIssuedToken(clock.now(), { token: 'access-2', refreshToken: 'refresh-2' }),
+      }));
+    const cookie = fakeIssuedToken(clock.now());
+    const store = new MemoryCredentialStore(cookie);
+    const session = new Session({
+      transport,
+      store,
+      clock,
+      coordinator: new SharedExchangeCoordinator({ store: shared }),
+    });
+
+    clock.advance(60 * 60 * 1000 - 10_000);
+    await expect(session.call(getSelf, {})).rejects.toBeInstanceOf(ExchangeNotSentError);
+
+    expect(transport.callsTo(exchange)).toEqual([]);
+    expect((await store.load())?.refreshToken).toBe(cookie.refreshToken);
+    expect(session.state).toBe('authenticated');
+
+    down = false;
+    await session.call(getSelf, {});
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    expect((await store.load())?.refreshToken).toBe('refresh-2');
   });
 });
 

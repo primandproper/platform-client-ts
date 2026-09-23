@@ -1,5 +1,5 @@
 import { type ExchangeAttempt, type ExchangeCoordinator, hashToken, settledGraceMs } from './coordinator';
-import { PlatformError, type Reason } from './errors';
+import { ExchangeNotSentError, PlatformError, type Reason } from './errors';
 import { IssuedToken } from './generated/primandproper/platform/signin/v1/signin';
 import { type Code, StatusError } from './transport';
 
@@ -75,11 +75,12 @@ export class SharedExchangeCoordinator implements ExchangeCoordinator {
     const records = recordsFor(id);
     let delayMs = pollInitialMs;
     for (;;) {
-      const published = await this.store.get(records.outcome);
+      const published = await beforeSend(() => this.store.get(records.outcome));
       if (published !== undefined) {
+        // Not beforeSend: an outcome that will not open was still an exchange, so the token may be spent.
         return settle(await openOutcome(published, refreshToken, id));
       }
-      if (await this.store.setIfAbsent(records.claim, 'claimed', this.claimTtlMs)) {
+      if (await beforeSend(() => this.store.setIfAbsent(records.claim, 'claimed', this.claimTtlMs))) {
         return this.exchangeUnderClaim(refreshToken, id, exchange);
       }
       await sleep(delayMs * (0.5 + Math.random() / 2));
@@ -97,10 +98,11 @@ export class SharedExchangeCoordinator implements ExchangeCoordinator {
     // for as long as its outcome would have been. Finding one already there is what makes this a takeover.
     const keyTtlMs = this.claimTtlMs + settledGraceMs;
     const minted = globalThis.crypto.randomUUID();
-    const first = await this.store.setIfAbsent(records.key, minted, keyTtlMs);
-    const idempotencyKey = first ? minted : ((await this.store.get(records.key)) ?? minted);
+    // A key write that fails leaves no key behind, so the next claimant is a first attempt, not a takeover.
+    const first = await beforeSend(() => this.store.setIfAbsent(records.key, minted, keyTtlMs));
+    const idempotencyKey = first ? minted : ((await beforeSend(() => this.store.get(records.key))) ?? minted);
     if (!first) {
-      await this.store.set(records.key, idempotencyKey, keyTtlMs);
+      await beforeSend(() => this.store.set(records.key, idempotencyKey, keyTtlMs));
     }
 
     let outcome: Outcome;
@@ -219,6 +221,18 @@ async function outcomeKey(refreshToken: string) {
     false,
     ['encrypt', 'decrypt'],
   );
+}
+
+/**
+ * beforeSend makes a store call from before the exchange, so that a store that cannot be reached is an
+ * ExchangeNotSentError: the session keeps its refresh token rather than abandoning one the server never saw.
+ */
+async function beforeSend<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (err) {
+    throw new ExchangeNotSentError('the coordination store failed before the refresh token was sent', { cause: err });
+  }
 }
 
 function recordsFor(id: string) {
