@@ -1,3 +1,6 @@
+import { signInReasonDomain } from './errors';
+import { ErrorInfo } from './generated/google/rpc/error_details';
+import { Status } from './generated/google/rpc/status';
 import type { IssuedToken } from './generated/primandproper/platform/signin/v1/signin';
 import type { Clock, CredentialStore } from './seams';
 import { type CallOptions, Code, StatusError, type Transport, type UnaryMethod } from './transport';
@@ -96,4 +99,15 @@ export function fakeIssuedToken(now: Date, overrides: Partial<IssuedToken> = {})
     familyId: 'family-1',
     ...overrides,
   };
+}
+
+/** refusal is a StatusError carrying a sign-in reason in its details, as a v14.1.0 server sends one. */
+export function refusal(code: Code, message: string, reason: string, domain = signInReasonDomain): StatusError {
+  const info = ErrorInfo.encode({ domain, reason, metadata: {} }).finish();
+  const details = Status.encode({
+    code,
+    message,
+    details: [{ typeUrl: 'type.googleapis.com/google.rpc.ErrorInfo', value: info }],
+  }).finish();
+  return new StatusError(code, message, details);
 }
