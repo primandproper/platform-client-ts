@@ -63,7 +63,8 @@ const recipe = await session.call(RecipesServiceService.getRecipe, { id });
 
 **There is no default `CredentialStore`.** It holds the refresh token, which belongs in the platform's most protected
 store and nowhere a log, a crash report or a URL can reach. A default that could not meet that bar would be worse than
-none. This repository's own tests use an in-memory one (`src/testing.ts`).
+none. The in-memory `MemoryCredentialStore` in `@primandproper/platform-client/testing` is for tests, alongside
+`FakeTransport` and `FakeClock`.
 
 ### A Session per request
 
@@ -146,6 +147,8 @@ pnpm install
 pnpm run codegen        # fetch the protos, then generate
 pnpm exec tsc --noEmit  # typecheck
 pnpm test               # vitest
+pnpm run build          # ESM and .d.ts into dist/
+pnpm run check-build    # import the built package from plain Node
 ```
 
 **One pin, one derived version.** `PLATFORM_GO_VERSION` names a `platform-go` tag. The `primitives-go` version is _read
