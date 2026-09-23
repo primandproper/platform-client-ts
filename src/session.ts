@@ -109,6 +109,25 @@ export class Session {
     return () => this.listeners.delete(listener);
   }
 
+  /**
+   * held answers the session as it stands once any sign-in or refresh in flight has settled, or undefined when there is
+   * none. It never refreshes.
+   */
+  async held(): Promise<IssuedToken | undefined> {
+    await this.ensureLoaded();
+    await this.signingIn?.catch(() => undefined);
+    await this.refreshing?.catch(() => undefined);
+    return this.current;
+  }
+
+  /**
+   * clear forgets the session here and in the store. On its own it ends nothing on the server: the refresh token stays
+   * exchangeable for the rest of its window, which is why signing out is `signOut`, not this (R17).
+   */
+  async clear(): Promise<void> {
+    await this.end();
+  }
+
   /** callAnonymous makes a call that carries no credential. */
   async callAnonymous<Req, Res>(method: UnaryMethod<Req, Res>, request: Req, options?: CallOptions): Promise<Res> {
     try {
