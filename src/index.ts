@@ -44,3 +44,4 @@ export {
   verifyEmailAddress,
   type VerifyEmailResult,
 } from './registration';
+export { type AuthStatusResult, getAuthStatus, type RequiredAction } from './authstatus';
