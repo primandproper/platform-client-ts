@@ -7,13 +7,15 @@
   "scripts": {
     "fetch-protos": "./scripts/fetch-protos.sh",
     "generate": "./scripts/generate.sh",
-    "codegen": "pnpm run fetch-protos && pnpm run generate"
+    "codegen": "pnpm run fetch-protos && pnpm run generate",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "22.13.1",
     "prettier": "3.6.2",
     "ts-proto": "2.11.5",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "5.0.1"
   },
   "dependencies": {
     "@bufbuild/protobuf": "2.10.1",

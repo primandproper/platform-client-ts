@@ -41,6 +41,9 @@ jobs:
       - name: Typecheck
         run: pnpm exec tsc --noEmit
 
+      - name: Test
+        run: pnpm test
+
       - name: Formatting
         run: pnpm exec prettier --check 'src/**/*.ts' '*.json' '*.md'
 
