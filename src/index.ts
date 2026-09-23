@@ -24,6 +24,12 @@ export {
   type InMemoryExchangeCoordinatorConfig,
   settledGraceMs,
 } from './coordinator';
+export {
+  type CoordinationStore,
+  defaultClaimTtlMs,
+  SharedExchangeCoordinator,
+  type SharedExchangeCoordinatorConfig,
+} from './shared-coordinator';
 export { IssuedToken } from './generated/primandproper/platform/signin/v1/signin';
 export { type Counts, counts, items, type ListRequest, type ListResponse, pages } from './pagination';
 export {

@@ -3,6 +3,7 @@ import { ErrorInfo } from './generated/google/rpc/error_details';
 import { Status } from './generated/google/rpc/status';
 import type { IssuedToken } from './generated/primandproper/platform/signin/v1/signin';
 import type { Clock, CredentialStore } from './seams';
+import type { CoordinationStore } from './shared-coordinator';
 import { type CallOptions, Code, StatusError, type Transport, type UnaryMethod } from './transport';
 
 /**
@@ -26,6 +27,45 @@ export class MemoryCredentialStore implements CredentialStore {
 
   async clear(): Promise<void> {
     this.token = undefined;
+  }
+}
+
+/**
+ * MemoryCoordinationStore is a CoordinationStore in memory whose entries expire by `clock`. It is for tests: several
+ * SharedExchangeCoordinators over one of these stand in for instances sharing Redis.
+ */
+export class MemoryCoordinationStore implements CoordinationStore {
+  readonly entries = new Map<string, { value: string; expiresAt: number }>();
+  private readonly clock: Clock;
+
+  constructor(clock: Clock) {
+    this.clock = clock;
+  }
+
+  async setIfAbsent(key: string, value: string, ttlMs: number): Promise<boolean> {
+    // No await before the write, so that two callers cannot both find the key absent.
+    if (this.live(key) !== undefined) {
+      return false;
+    }
+    this.entries.set(key, { value, expiresAt: this.clock.now().getTime() + ttlMs });
+    return true;
+  }
+
+  async get(key: string): Promise<string | undefined> {
+    return this.live(key);
+  }
+
+  async set(key: string, value: string, ttlMs: number): Promise<void> {
+    this.entries.set(key, { value, expiresAt: this.clock.now().getTime() + ttlMs });
+  }
+
+  private live(key: string): string | undefined {
+    const entry = this.entries.get(key);
+    if (entry && entry.expiresAt <= this.clock.now().getTime()) {
+      this.entries.delete(key);
+      return undefined;
+    }
+    return entry?.value;
   }
 }
 

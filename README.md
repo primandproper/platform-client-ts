@@ -38,7 +38,7 @@ definition goes through it, so a product's own services share the same refresher
 coordinator that makes sure each token is presented once however many Sessions hold it, keeping the outcome for a minute
 (`settledGraceMs`) for a request that arrives still holding the spent token. The default is an in-memory one shared by
 the whole process, which is right for one process and wrong for several: a deployment of more than one instance needs a
-coordinator they all share.
+coordinator they all share, which is `SharedExchangeCoordinator` ([below](#several-instances)).
 
 ```ts
 import * as grpc from '@grpc/grpc-js';
@@ -107,6 +107,42 @@ export const handle: Handle = async ({ event, resolve }) => {
   event.locals.session = new Session({ transport, store: cookieStore(event.cookies) });
   return resolve(event);
 };
+```
+
+### Several instances
+
+A load balancer sends one browser's concurrent requests to different instances, which share no memory, so each would
+exchange the same refresh token. `SharedExchangeCoordinator` coordinates them through a `CoordinationStore` you write
+over a store they already share; the package takes no dependency on one. The first instance to claim a token exchanges
+it and publishes the outcome for `settledGraceMs`, and the rest poll for it. The published successor is sealed with
+AES-GCM under a key derived from the spent refresh token, so read access to the store yields nothing usable. An instance
+that dies mid-exchange leaves a claim that expires after `claimTtlMs` (90s by default), and the next caller takes the
+exchange over under the same idempotency key: sent as an R10 retry with `idempotentRefresh` on, and never sent with it
+off.
+
+With Redis or Valkey, through `redis` (node-redis):
+
+```ts
+import { createClient } from 'redis';
+import { type CoordinationStore, SharedExchangeCoordinator } from '@primandproper/platform-client';
+
+const redis = await createClient({ url: process.env.REDIS_URL }).connect();
+
+const coordinationStore: CoordinationStore = {
+  async setIfAbsent(key, value, ttlMs) {
+    return (await redis.set(key, value, { NX: true, PX: ttlMs })) === 'OK'; // SET key value NX PX ttl
+  },
+  async get(key) {
+    return (await redis.get(key)) ?? undefined; // GET key
+  },
+  async set(key, value, ttlMs) {
+    await redis.set(key, value, { PX: ttlMs }); // SET key value PX ttl
+  },
+};
+
+// One per process, shared by every Session it builds.
+const coordinator = new SharedExchangeCoordinator({ store: coordinationStore });
+event.locals.session = new Session({ transport, store: cookieStore(event.cookies), coordinator });
 ```
 
 **`idempotentRefresh` is off by default.** A client cannot tell from the wire whether the server supports R10, and
