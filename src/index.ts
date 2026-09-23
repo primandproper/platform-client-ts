@@ -28,3 +28,11 @@ export {
   type SignInResult,
 } from './signin';
 export { signOut, signOutEverywhere } from './signout';
+export {
+  completePasswordReset,
+  type CompleteResult,
+  type DeadLink,
+  requestPasswordReset,
+  verifyPasswordResetToken,
+  type VerifyResult,
+} from './passwordreset';
