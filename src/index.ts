@@ -27,3 +27,4 @@ export {
   signIn,
   type SignInResult,
 } from './signin';
+export { signOut, signOutEverywhere } from './signout';
