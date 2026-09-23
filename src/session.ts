@@ -163,6 +163,29 @@ export class Session {
   }
 
   /**
+   * callOptionallyAuthenticated makes a call that carries the credential whenever a session is held and none otherwise,
+   * for an RPC that answers an anonymous caller rather than refusing one. A held session is refreshed as `call` would;
+   * one that turns out to have ended makes the call anonymously instead.
+   */
+  async callOptionallyAuthenticated<Req, Res>(
+    method: UnaryMethod<Req, Res>,
+    request: Req,
+    options?: CallOptions,
+  ): Promise<Res> {
+    if (!(await this.held())) {
+      return this.callAnonymous(method, request, options);
+    }
+    try {
+      return await this.call(method, request, options);
+    } catch (err) {
+      if (err instanceof NotSignedInError) {
+        return this.callAnonymous(method, request, options);
+      }
+      throw err;
+    }
+  }
+
+  /**
    * signIn makes a call to one of the three doors that mint a session and adopts what it answers. A refusal leaves the
    * session as it was, and is surfaced for the caller to branch on.
    */
