@@ -36,3 +36,11 @@ export {
   verifyPasswordResetToken,
   type VerifyResult,
 } from './passwordreset';
+export {
+  attachPassword,
+  type AttachPasswordResult,
+  type PasswordAlreadySet,
+  requestMagicLink,
+  verifyEmailAddress,
+  type VerifyEmailResult,
+} from './registration';
