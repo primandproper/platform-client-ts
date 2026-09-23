@@ -16,6 +16,17 @@ import { type CallOptions, Code, type Transport, type UnaryMethod, withConstantM
  */
 const refreshSkewMs = 30_000;
 
+/** remintWindow is how long after an exchange the server will honour a keyed retry of it. It is not configurable there. */
+const remintWindowMs = 10 * 60 * 1000;
+
+const idempotencyKeyHeader = 'idempotency-key';
+
+/**
+ * defaultExchangeDeadline is generous on purpose. A short deadline on the exchange turns a slow success into an
+ * ambiguous failure, which costs a keyed retry with R10 on and the refresh token with it off.
+ */
+const defaultExchangeDeadlineMs = 30_000;
+
 export type SessionState = 'anonymous' | 'authenticating' | 'authenticated' | 'refreshing';
 
 export interface SessionConfig {
@@ -28,6 +39,19 @@ export interface SessionConfig {
    * metadata, this is where it goes (R12).
    */
   metadata?: Metadata;
+  /**
+   * idempotentRefresh turns on R10: an exchange that fails ambiguously is retried once under the idempotency key the
+   * first attempt carried, and the server answers with a fresh successor instead of treating it as reuse.
+   *
+   * It is off unless the deployment says its server supports it, because a client cannot tell from the wire. It needs
+   * a server built from platform-go v14.1.0 or later AND a refresh-token store that implements the behaviour (the ones
+   * platform-go ships do; a consumer's own may not). Against one that does not, a keyed retry is a bare retry: reuse,
+   * and the login revoked. Off, an ambiguous failure keeps the session until its access token expires and never
+   * re-sends the refresh token (R5).
+   */
+  idempotentRefresh?: boolean;
+  /** exchangeDeadlineMs bounds each ExchangeRefreshToken attempt. Thirty seconds unless set. */
+  exchangeDeadlineMs?: number;
 }
 
 /** NotSignedInError is what an authenticated call rejects with when there is no session to make it with. */
@@ -56,6 +80,8 @@ export class Session {
   private readonly store: CredentialStore;
   private readonly clock: Clock;
   private readonly authorizer: Authorizer;
+  private readonly idempotentRefresh: boolean;
+  private readonly exchangeDeadlineMs: number;
 
   private current: IssuedToken | undefined;
   private currentState: SessionState = 'anonymous';
@@ -69,6 +95,8 @@ export class Session {
     this.store = config.store;
     this.clock = config.clock ?? systemClock;
     this.authorizer = config.authorizer ?? bearerAuthorizer;
+    this.idempotentRefresh = config.idempotentRefresh ?? false;
+    this.exchangeDeadlineMs = config.exchangeDeadlineMs ?? defaultExchangeDeadlineMs;
   }
 
   get state(): SessionState {
@@ -221,21 +249,28 @@ export class Session {
     }
     this.setState('refreshing');
 
+    // R10's key is minted once per logical exchange, outside the retry, and sent on the first attempt: a key that was
+    // not on the original request cannot be recognised on the retry.
+    const key = this.idempotentRefresh ? globalThis.crypto.randomUUID() : undefined;
+    const startedAt = this.clock.now().getTime();
+
     let response: TokenResponse;
     try {
-      response = await this.callAnonymous(SignInServiceService.exchangeRefreshToken, {
-        refreshToken: held.refreshToken,
-      });
-    } catch (err) {
-      if (err instanceof PlatformError && (err.code === Code.UNAUTHENTICATED || err.code === Code.PERMISSION_DENIED)) {
-        // R7: signed out, and there is no learning why. PERMISSION_DENIED is the directory refusing them: stop asking.
-        await this.end();
-      } else if (isAmbiguous(err)) {
-        await this.abandonRefreshToken(held);
-      } else {
-        this.setState('authenticated');
+      response = await this.exchangeOnce(held.refreshToken, key);
+    } catch (first) {
+      const retryable =
+        key !== undefined && isAmbiguous(first) && this.clock.now().getTime() - startedAt < remintWindowMs;
+      if (!retryable) {
+        await this.settleFailedExchange(held, first);
+        throw first;
       }
-      throw err;
+      try {
+        // One retry per key: honouring it clears the key, so a second presentation would be reuse.
+        response = await this.exchangeOnce(held.refreshToken, key);
+      } catch (second) {
+        await this.settleFailedExchange(held, second);
+        throw second;
+      }
     }
 
     if (!response.token) {
@@ -244,6 +279,29 @@ export class Session {
     }
     await this.adopt(response.token);
     return response.token;
+  }
+
+  private exchangeOnce(refreshToken: string, key: string | undefined): Promise<TokenResponse> {
+    return this.callAnonymous(
+      SignInServiceService.exchangeRefreshToken,
+      { refreshToken },
+      {
+        // A deadline is wall-clock time for the transport, not the Clock seam's, which decides expiry.
+        deadline: new Date(Date.now() + this.exchangeDeadlineMs),
+        metadata: key ? { [idempotencyKeyHeader]: key } : undefined,
+      },
+    );
+  }
+
+  private async settleFailedExchange(held: IssuedToken, err: unknown): Promise<void> {
+    if (err instanceof PlatformError && (err.code === Code.UNAUTHENTICATED || err.code === Code.PERMISSION_DENIED)) {
+      // R7: signed out, and there is no learning why. PERMISSION_DENIED is the directory refusing them: stop asking.
+      await this.end();
+    } else if (isAmbiguous(err)) {
+      await this.abandonRefreshToken(held);
+    } else {
+      this.setState('authenticated');
+    }
   }
 
   /**

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { PlatformError } from './errors';
 import { type IssuedToken, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
-import { NotSignedInError, Session, type SessionState } from './session';
+import { NotSignedInError, Session, type SessionConfig, type SessionState } from './session';
 import { FakeClock, fakeIssuedToken, FakeTransport, MemoryCredentialStore } from './testing';
 import { Code, StatusError } from './transport';
 
@@ -10,11 +10,11 @@ const getSelf = SignInServiceService.getSelf;
 const exchange = SignInServiceService.exchangeRefreshToken;
 const login = SignInServiceService.loginForToken;
 
-function setup(held?: (now: Date) => IssuedToken | undefined) {
+function setup(held?: (now: Date) => IssuedToken | undefined, config: Partial<SessionConfig> = {}) {
   const clock = new FakeClock();
   const store = new MemoryCredentialStore(held ? held(clock.now()) : undefined);
   const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }) as never);
-  const session = new Session({ transport, store, clock, metadata: { 'x-tenant': 'acme' } });
+  const session = new Session({ transport, store, clock, metadata: { 'x-tenant': 'acme' }, ...config });
   const states: SessionState[] = [];
   session.onStateChange((s) => states.push(s));
   return { clock, store, transport, session, states };
@@ -278,5 +278,157 @@ describe('Session', () => {
 
     expect(tokenSent(transport.callsTo(getSelf)[0]!.options)).toBe('Bearer access-2');
     expect(transport.callsTo(exchange)).toHaveLength(1);
+  });
+});
+
+describe('Session refresh (R10)', () => {
+  const keyOf = (options: { metadata?: Record<string, string> }) => options.metadata?.['idempotency-key'];
+
+  it('sends no key and never retries an exchange when R10 is off', async () => {
+    const { clock, transport, session } = setup((now) => fakeIssuedToken(now));
+    transport.handle(exchange, () => {
+      throw new StatusError(Code.DEADLINE_EXCEEDED, 'deadline exceeded');
+    });
+
+    clock.advance(60 * 60 * 1000 - 10_000);
+    await expect(session.call(getSelf, {})).rejects.toBeInstanceOf(PlatformError);
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    expect(keyOf(transport.callsTo(exchange)[0]!.options)).toBeUndefined();
+  });
+
+  it('puts a deadline on every exchange attempt, thirty seconds by default', async () => {
+    const { clock, transport, session } = setup((now) => fakeIssuedToken(now));
+    transport.handle(exchange, () => ({ token: successor(clock.now(), 2) }));
+
+    clock.advance(60 * 60 * 1000);
+    const before = Date.now();
+    await session.call(getSelf, {});
+
+    const deadline = transport.callsTo(exchange)[0]!.options.deadline!.getTime();
+    expect(deadline - before).toBeGreaterThanOrEqual(30_000);
+    expect(deadline - before).toBeLessThan(31_000);
+  });
+
+  it('honours a configured exchange deadline', async () => {
+    const { clock, transport, session } = setup((now) => fakeIssuedToken(now), { exchangeDeadlineMs: 5_000 });
+    transport.handle(exchange, () => ({ token: successor(clock.now(), 2) }));
+
+    clock.advance(60 * 60 * 1000);
+    const before = Date.now();
+    await session.call(getSelf, {});
+
+    const deadline = transport.callsTo(exchange)[0]!.options.deadline!.getTime();
+    expect(deadline - before).toBeLessThan(6_000);
+  });
+
+  it('sends a key on the first attempt, not just the ones it expects to lose', async () => {
+    const { clock, transport, session } = setup((now) => fakeIssuedToken(now), { idempotentRefresh: true });
+    transport.handle(exchange, () => ({ token: successor(clock.now(), 2) }));
+
+    clock.advance(60 * 60 * 1000);
+    await session.call(getSelf, {});
+
+    const key = keyOf(transport.callsTo(exchange)[0]!.options);
+    expect(key).toMatch(/^[\x21-\x7e]{1,255}$/);
+    expect(transport.callsTo(exchange)[0]!.options.metadata?.['x-tenant']).toBe('acme');
+  });
+
+  it('retries an ambiguous exchange once, with the same token and the same key', async () => {
+    const { clock, store, transport, session } = setup((now) => fakeIssuedToken(now), { idempotentRefresh: true });
+    let attempts = 0;
+    transport.handle(exchange, () => {
+      attempts++;
+      if (attempts === 1) {
+        throw new StatusError(Code.UNAVAILABLE, 'connection reset');
+      }
+      return { token: successor(clock.now(), 2) };
+    });
+
+    clock.advance(60 * 60 * 1000);
+    await session.call(getSelf, {});
+
+    const [first, retry] = transport.callsTo(exchange);
+    expect(first!.request).toEqual({ refreshToken: 'refresh-1' });
+    expect(retry!.request).toEqual({ refreshToken: 'refresh-1' });
+    expect(keyOf(retry!.options)).toBe(keyOf(first!.options));
+    expect((await store.load())?.refreshToken).toBe('refresh-2');
+    expect(tokenSent(transport.callsTo(getSelf)[0]!.options)).toBe('Bearer access-2');
+  });
+
+  it('mints a new key for each logical exchange', async () => {
+    const { clock, transport, session } = setup((now) => fakeIssuedToken(now), { idempotentRefresh: true });
+    let n = 1;
+    transport.handle(exchange, () => ({ token: successor(clock.now(), ++n) }));
+
+    clock.advance(60 * 60 * 1000);
+    await session.call(getSelf, {});
+    clock.advance(60 * 60 * 1000);
+    await session.call(getSelf, {});
+
+    const [a, b] = transport.callsTo(exchange).map((c) => keyOf(c.options));
+    expect(a).toBeDefined();
+    expect(a).not.toBe(b);
+  });
+
+  it('retries only once: a second ambiguous failure keeps the access token and drops the refresh token', async () => {
+    const { clock, store, transport, session } = setup((now) => fakeIssuedToken(now), { idempotentRefresh: true });
+    transport.handle(exchange, () => {
+      throw new StatusError(Code.DEADLINE_EXCEEDED, 'deadline exceeded');
+    });
+
+    clock.advance(60 * 60 * 1000 - 10_000);
+    await expect(session.call(getSelf, {})).rejects.toBeInstanceOf(PlatformError);
+
+    expect(transport.callsTo(exchange)).toHaveLength(2);
+    expect(session.state).toBe('authenticated');
+    expect((await store.load())?.refreshToken).toBe('');
+  });
+
+  it.each([
+    ['UNAUTHENTICATED', Code.UNAUTHENTICATED],
+    ['PERMISSION_DENIED', Code.PERMISSION_DENIED],
+    ['INVALID_ARGUMENT', Code.INVALID_ARGUMENT],
+    ['FAILED_PRECONDITION', Code.FAILED_PRECONDITION],
+  ])('does not retry an exchange refused with %s', async (_name, code) => {
+    const { clock, transport, session } = setup((now) => fakeIssuedToken(now), { idempotentRefresh: true });
+    transport.handle(exchange, () => {
+      throw new StatusError(code, 'refused');
+    });
+
+    clock.advance(60 * 60 * 1000 - 10_000);
+    await expect(session.call(getSelf, {})).rejects.toMatchObject({ code });
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+  });
+
+  it('signs out when the keyed retry is refused', async () => {
+    const { clock, store, transport, session } = setup((now) => fakeIssuedToken(now), { idempotentRefresh: true });
+    let attempts = 0;
+    transport.handle(exchange, () => {
+      attempts++;
+      throw new StatusError(attempts === 1 ? Code.UNAVAILABLE : Code.UNAUTHENTICATED, 'x');
+    });
+
+    clock.advance(60 * 60 * 1000);
+    await expect(session.call(getSelf, {})).rejects.toMatchObject({ code: Code.UNAUTHENTICATED });
+
+    expect(await store.load()).toBeUndefined();
+    expect(session.state).toBe('anonymous');
+  });
+
+  it('does not retry once the ten-minute window has closed', async () => {
+    const { clock, store, transport, session } = setup((now) => fakeIssuedToken(now), { idempotentRefresh: true });
+    transport.handle(exchange, () => {
+      // The process was suspended mid-exchange for longer than the server will honour the key.
+      clock.advance(10 * 60 * 1000);
+      throw new StatusError(Code.UNAVAILABLE, 'connection reset');
+    });
+
+    clock.advance(60 * 60 * 1000 - 20_000);
+    await expect(session.call(getSelf, {})).rejects.toBeInstanceOf(PlatformError);
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    expect((await store.load())?.refreshToken).toBe('');
   });
 });
