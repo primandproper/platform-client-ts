@@ -14,4 +14,5 @@ export {
   type UnaryMethod,
   withConstantMetadata,
 } from './transport';
+export { isAmbiguous, PlatformError, type Reason, SignInReason, signInReasonDomain, toPlatformError } from './errors';
 export { createGrpcJsTransport, type GrpcJsTransport, type GrpcJsTransportConfig } from './grpc-js';
