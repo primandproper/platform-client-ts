@@ -150,6 +150,24 @@ event.locals.session = new Session({ transport, store: cookieStore(event.cookies
 against one that does not, a keyed retry is a bare retry: reuse, and the login revoked. Off, an exchange that fails
 ambiguously keeps the session until its access token expires and never re-sends the refresh token (R5).
 
+### A token held somewhere else
+
+A consumer moving onto platform from its own sign-in already has an access token and refreshes it elsewhere, so there is
+nothing for a `Session` to hold. `TokenCaller` lets it adopt the stubs first: it takes the same `transport`,
+`authorizer` and `metadata` as a `Session` (which makes its own calls through one), and sends whatever token it is
+handed.
+
+```ts
+import { TokenCaller } from '@primandproper/platform-client';
+
+const caller = new TokenCaller({ transport, metadata: { 'x-tenant': 'acme' } });
+const recipe = await caller.call(RecipesServiceService.getRecipe, accessTokenFromCookie, { id });
+```
+
+It holds no state, so R1–R7 do not apply to it. It never refreshes and never retries: a call answered `UNAUTHENTICATED`
+rejects with that `PlatformError`, and signing the user in again is the caller's job. Once the login moves onto
+platform's `SignInService`, the caller should be a `Session`.
+
 **Only a Node transport ships today** (`@grpc/grpc-js`). A browser calling services directly would need a gRPC-web or
 Connect transport behind the same `Transport` interface.
 
@@ -168,7 +186,7 @@ Connect transport behind the same `Transport` interface.
 | R9   | `counts_known` gates the counts                                | `counts`                                                                                        |
 | R10  | retry an ambiguous exchange once, same key                     | `SessionConfig.idempotentRefresh` (opt-in), `isAmbiguous`                                       |
 | R11  | branch on the reason, never the message                        | `PlatformError.is`, `SignInReason`                                                              |
-| R12  | the tenant travels identically on every call                   | `SessionConfig.metadata`, `withConstantMetadata`                                                |
+| R12  | the tenant travels identically on every call                   | `SessionConfig.metadata`, `TokenCallerConfig.metadata`, `withConstantMetadata`                  |
 | R13  | the reason where there is one, the code where there is not     | `PlatformError`                                                                                 |
 | R14  | walk until a page has no rows                                  | `pages`                                                                                         |
 | R15  | the same screen whether the address exists or not              | `requestPasswordReset`, `requestMagicLink`                                                      |
