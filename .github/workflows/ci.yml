@@ -50,6 +50,9 @@ jobs:
       - name: Built package imports from plain Node
         run: pnpm run check-build
 
+      - name: A consumer on other versions of the runtime shares ours
+        run: pnpm run check-consumer
+
       - name: Formatting
         run: pnpm exec prettier --check 'src/**/*.ts' '*.json' '*.md'
 
