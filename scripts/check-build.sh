@@ -18,5 +18,18 @@ for (const [entry, mod, name] of [['.', main, 'Session'], ['./testing', testing,
     process.exit(1);
   }
 }
+const exportsMap = JSON.parse(await import('node:fs').then((fs) => fs.readFileSync('package.json', 'utf8'))).exports;
+const stubs = Object.keys(exportsMap).filter((e) => !['.', './testing', './package.json'].includes(e));
+if (stubs.length === 0) {
+  console.error('::error::package.json exports no platform package');
+  process.exit(1);
+}
+for (const entry of stubs) {
+  const mod = await import('@primandproper/platform-client' + entry.slice(1));
+  if (Object.keys(mod).length === 0) {
+    console.error(\`::error::\${entry} imported, but exports nothing\`);
+    process.exit(1);
+  }
+}
 console.log('built package imports from plain Node');
 "

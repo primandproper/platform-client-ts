@@ -6,14 +6,22 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": {
-      "types": "./dist/index.d.mts",
-      "default": "./dist/index.mjs"
-    },
-    "./testing": {
-      "types": "./dist/testing.d.mts",
-      "default": "./dist/testing.mjs"
-    }
+    ".": "./dist/index.mjs",
+    "./audit/v1": "./dist/audit/v1.mjs",
+    "./billing/v1": "./dist/billing/v1.mjs",
+    "./comments/v1": "./dist/comments/v1.mjs",
+    "./filtering/v1": "./dist/filtering/v1.mjs",
+    "./identity/v1": "./dist/identity/v1.mjs",
+    "./issuereports/v1": "./dist/issuereports/v1.mjs",
+    "./notifications/v1": "./dist/notifications/v1.mjs",
+    "./oauth2clients/v1": "./dist/oauth2clients/v1.mjs",
+    "./passwordreset/v1": "./dist/passwordreset/v1.mjs",
+    "./settings/v1": "./dist/settings/v1.mjs",
+    "./signin/v1": "./dist/signin/v1.mjs",
+    "./testing": "./dist/testing.mjs",
+    "./waitlists/v1": "./dist/waitlists/v1.mjs",
+    "./webhooks/v1": "./dist/webhooks/v1.mjs",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"
@@ -24,9 +32,12 @@
     "generate": "./scripts/generate.sh",
     "codegen": "pnpm run fetch-protos && pnpm run generate",
     "test": "vitest run",
-    "check-build": "./scripts/check-build.sh"
+    "check-build": "./scripts/check-build.sh",
+    "check-consumer": "./scripts/check-consumer.sh"
   },
   "devDependencies": {
+    "@bufbuild/protobuf": "2.10.1",
+    "@grpc/grpc-js": "1.14.3",
     "@types/node": "22.13.1",
     "prettier": "3.6.2",
     "ts-proto": "2.11.5",
@@ -34,9 +45,9 @@
     "typescript": "5.9.3",
     "vitest": "5.0.1"
   },
-  "dependencies": {
-    "@bufbuild/protobuf": "2.10.1",
-    "@grpc/grpc-js": "1.14.3"
+  "peerDependencies": {
+    "@bufbuild/protobuf": "^2.10.1",
+    "@grpc/grpc-js": "^1.14.3"
   },
   "packageManager": "pnpm@10.33.0"
 }

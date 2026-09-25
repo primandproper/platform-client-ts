@@ -204,6 +204,7 @@ pnpm exec tsc --noEmit  # typecheck
 pnpm test               # vitest
 pnpm run build          # ESM and .d.ts into dist/
 pnpm run check-build    # import the built package from plain Node
+pnpm run check-consumer # typecheck a consumer on other runtime versions against the packed package
 ```
 
 **One pin, one derived version.** `PLATFORM_GO_VERSION` names a `platform-go` tag. The `primitives-go` version is _read
@@ -219,8 +220,26 @@ recorded beside them.
 Flags match DDB's (`outputServices=grpc-js`, `esModuleInterop=true`, then prettier), because output that does not match
 is output that cannot be dropped in.
 
+### In a product
+
+A product's protos import platform's (`User`, `Account`, `QueryFilter`). Map those imports onto this package's subpaths
+rather than generating a second copy of platform's messages:
+
+```
+--ts_proto_opt=Mprimandproper/platform/identity/v1/identity.proto=@primandproper/platform-client/identity/v1
+--ts_proto_opt=Mprimandproper/platform/filtering/v1/filtering.proto=@primandproper/platform-client/filtering/v1
+```
+
+The product's generated `encode` then hands its `BinaryWriter` to ours, which only typechecks if both sides load the
+same `@bufbuild/protobuf`. That is why it and `@grpc/grpc-js` are peer dependencies: the product installs them, and this
+package uses the product's copy.
+
 ### Upgrading
 
-Edit `PLATFORM_GO_VERSION`, run `pnpm run codegen`, commit the diff. CI fails if the committed output is not exactly
-what the pinned tag produces, so a bumped pin without a regeneration — or a hand-edited generated file — is a red build
-rather than a runtime surprise.
+Edit `PLATFORM_GO_VERSION`, run `pnpm run codegen` and then `pnpm run build`, commit the diff. CI fails if the committed
+output is not exactly what the pinned tag produces, so a bumped pin without a regeneration — or a hand-edited generated
+file — is a red build rather than a runtime surprise.
+
+The build writes `package.json`'s `exports` from the generated tree: every `<package>/<version>` under
+`src/generated/primandproper/platform` is published as `./<package>/<version>`. A package the new tag adds is exported
+with nothing to edit by hand, and CI fails if the committed `exports` are not what the build writes.

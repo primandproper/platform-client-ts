@@ -7,14 +7,13 @@ settings:
 importers:
 
   .:
-    dependencies:
+    devDependencies:
       '@bufbuild/protobuf':
         specifier: 2.10.1
         version: 2.10.1
       '@grpc/grpc-js':
         specifier: 1.14.3
         version: 1.14.3
-    devDependencies:
       '@types/node':
         specifier: 22.13.1
         version: 22.13.1
