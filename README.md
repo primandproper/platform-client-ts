@@ -236,6 +236,10 @@ package uses the product's copy.
 
 ### Upgrading
 
-Edit `PLATFORM_GO_VERSION`, run `pnpm run codegen`, commit the diff. CI fails if the committed output is not exactly
-what the pinned tag produces, so a bumped pin without a regeneration — or a hand-edited generated file — is a red build
-rather than a runtime surprise.
+Edit `PLATFORM_GO_VERSION`, run `pnpm run codegen` and then `pnpm run build`, commit the diff. CI fails if the committed
+output is not exactly what the pinned tag produces, so a bumped pin without a regeneration — or a hand-edited generated
+file — is a red build rather than a runtime surprise.
+
+The build writes `package.json`'s `exports` from the generated tree: every `<package>/<version>` under
+`src/generated/primandproper/platform` is published as `./<package>/<version>`. A package the new tag adds is exported
+with nothing to edit by hand, and CI fails if the committed `exports` are not what the build writes.

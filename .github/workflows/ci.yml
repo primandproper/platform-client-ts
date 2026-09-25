@@ -44,8 +44,15 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # The build writes package.json's exports from the generated tree, so a committed map that differs from it is
+      # one that was edited by hand or not rebuilt after codegen added a package.
       - name: Build
-        run: pnpm run build
+        run: |
+          pnpm run build
+          git diff --exit-code -- package.json || {
+            echo "::error::package.json exports differ from what the build generates. Run 'pnpm run build' and commit package.json."
+            exit 1
+          }
 
       - name: Built package imports from plain Node
         run: pnpm run check-build
