@@ -1,15 +1,9 @@
 import { type ExchangeAttempt, type ExchangeCoordinator, InMemoryExchangeCoordinator } from './coordinator';
-import { isAmbiguous, PlatformError, toPlatformError } from './errors';
+import { isAmbiguous, PlatformError } from './errors';
 import { type IssuedToken, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
-import {
-  type Authorizer,
-  bearerAuthorizer,
-  type Clock,
-  type CredentialStore,
-  type Metadata,
-  systemClock,
-} from './seams';
-import { type CallOptions, Code, type Transport, type UnaryMethod, withConstantMetadata } from './transport';
+import { type Authorizer, type Clock, type CredentialStore, type Metadata, systemClock } from './seams';
+import { TokenCaller } from './token-caller';
+import { type CallOptions, Code, type Transport, type UnaryMethod } from './transport';
 
 /**
  * refreshSkew is how long before an access token's expiry a call refreshes it instead. The contract fixes it at thirty
@@ -87,10 +81,9 @@ export interface TokenResponse {
  * the Web Locks API or its equivalent.
  */
 export class Session {
-  private readonly transport: Transport;
+  private readonly caller: TokenCaller;
   private readonly store: CredentialStore;
   private readonly clock: Clock;
-  private readonly authorizer: Authorizer;
   private readonly idempotentRefresh: boolean;
   private readonly exchangeDeadlineMs: number;
   private readonly coordinator: ExchangeCoordinator;
@@ -103,10 +96,9 @@ export class Session {
   private readonly listeners = new Set<(state: SessionState) => void>();
 
   constructor(config: SessionConfig) {
-    this.transport = config.metadata ? withConstantMetadata(config.transport, config.metadata) : config.transport;
+    this.caller = new TokenCaller(config);
     this.store = config.store;
     this.clock = config.clock ?? systemClock;
-    this.authorizer = config.authorizer ?? bearerAuthorizer;
     this.idempotentRefresh = config.idempotentRefresh ?? false;
     this.exchangeDeadlineMs = config.exchangeDeadlineMs ?? defaultExchangeDeadlineMs;
     this.coordinator = config.coordinator ?? processCoordinator;
@@ -142,12 +134,8 @@ export class Session {
   }
 
   /** callAnonymous makes a call that carries no credential. */
-  async callAnonymous<Req, Res>(method: UnaryMethod<Req, Res>, request: Req, options?: CallOptions): Promise<Res> {
-    try {
-      return await this.transport.unary(method, request, options);
-    } catch (err) {
-      throw toPlatformError(err);
-    }
+  callAnonymous<Req, Res>(method: UnaryMethod<Req, Res>, request: Req, options?: CallOptions): Promise<Res> {
+    return this.caller.callAnonymous(method, request, options);
   }
 
   /**
@@ -409,14 +397,13 @@ export class Session {
     await this.store.clear();
   }
 
-  private async send<Req, Res>(
+  private send<Req, Res>(
     method: UnaryMethod<Req, Res>,
     request: Req,
     options: CallOptions | undefined,
     token: IssuedToken,
   ): Promise<Res> {
-    const metadata = { ...options?.metadata, ...this.authorizer.credentials(token.token) };
-    return this.callAnonymous(method, request, { ...options, metadata });
+    return this.caller.call(method, token.token, request, options);
   }
 
   private ensureLoaded(): Promise<void> {

@@ -25,6 +25,7 @@ export {
 } from './errors';
 export { createGrpcJsTransport, type GrpcJsTransport, type GrpcJsTransportConfig } from './grpc-js';
 export { NotSignedInError, Session, type SessionConfig, type SessionState, type TokenResponse } from './session';
+export { TokenCaller, type TokenCallerConfig } from './token-caller';
 export {
   type ExchangeAttempt,
   type ExchangeCoordinator,
