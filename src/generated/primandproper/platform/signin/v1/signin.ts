@@ -22,6 +22,9 @@ import { Timestamp } from '../../../../google/protobuf/timestamp';
 import {
   Account,
   AccountCreationInput,
+  Agreement,
+  agreementFromJSON,
+  agreementToJSON,
   Invitation,
   Membership,
   User,
@@ -211,6 +214,37 @@ export interface ExchangeRefreshTokenResponse {
 }
 
 /**
+ * SwitchAccountRequest spends a refresh token for a fresh pair against another
+ * account the same person belongs to: the same login, moved.
+ *
+ * It is anonymous for ExchangeRefreshTokenRequest's reason -- the refresh token
+ * is the whole of the request's authority -- and it is a request of its own
+ * rather than a field on that one because switching is a deliberate act, not a
+ * refresh. Who the new token is for is read off the row the presented token
+ * named; which account it is for is the one thing a client says.
+ *
+ * The account must be one that person is currently a member of. Naming any
+ * other is refused exactly as a dead token is, so the answer says nothing about
+ * the account named, and the presented token is left unspent: the login stays
+ * where it was. The successor stays in the same login -- ListSignIns shows it
+ * once, EndSignIn ends it, and presenting the spent token again ends it as a
+ * replay of any exchange does.
+ */
+export interface SwitchAccountRequest {
+  /** refresh_token is the credential a previous IssuedToken carried. */
+  refreshToken: string;
+  /**
+   * account_id is the account the new pair is for. Empty is INVALID_ARGUMENT:
+   * a switch says where it is going.
+   */
+  accountId: string;
+}
+
+export interface SwitchAccountResponse {
+  token: IssuedToken | undefined;
+}
+
+/**
  * SignOutRequest ends one login: every refresh token this sign-in issued stops
  * being exchangeable.
  *
@@ -227,13 +261,14 @@ export interface ExchangeRefreshTokenResponse {
  * detection does -- so this is the same act performed on purpose, with the
  * server told that it was deliberate rather than having to assume theft.
  *
- * What it cannot do is stop an access token already in somebody's hands. Nothing
- * here can: an access token is checked by the consumer's interceptor against the
- * issuer's signature and not against any table this service holds. What it stops
- * is that token being replaced, so a sign-out takes effect within one
- * access-token lifetime. A deployment that needs it to take effect sooner is
- * asking for shorter access tokens, which is signin.WithTokenTTL, rather than
- * for another RPC.
+ * What it does on its own is stop the access token already in somebody's hands
+ * being replaced, so a sign-out takes effect within one access-token lifetime:
+ * an access token is checked by the consumer's interceptor against the issuer's
+ * signature rather than against any table this service holds. A deployment that
+ * needs it to take effect at once has its interceptor ask
+ * signin.Service.CheckSignIn on every request -- the sign-in extractor's
+ * WithSignInCheck -- which refuses the ended login's access token from the next
+ * request on, rather than asking for another RPC.
  */
 export interface SignOutRequest {
   /**
@@ -265,8 +300,8 @@ export interface SignOutResponse {}
  * for GetAuthStatusRequest's reason: the subject is whoever is calling, and a
  * field naming somebody else would be an administrator's revocation wearing a
  * sign-out's clothes. An operator ending somebody else's sessions is a different
- * act with a different permission, and it is signin.Service's method rather than
- * this RPC.
+ * act with a different permission, and it is
+ * SignInAdministrationService.EndAllSignInsForUser rather than this RPC.
  *
  * It is the door for a password a person thinks somebody else has seen, so it
  * takes no credential and re-proves nothing: a user who is told "your password
@@ -283,6 +318,150 @@ export interface SignOutEverywhereRequest {}
  * applies here with more force, since this count spans every login.
  */
 export interface SignOutEverywhereResponse {}
+
+/**
+ * ActiveSignIn is one live login, as a "where you're signed in" screen shows
+ * it.
+ *
+ * The platform lists the logins and records how each one happened; the device
+ * is the consumer's. The server stores no device, no browser and no address,
+ * and that is a decision rather than a gap. Whether any of those is recorded at
+ * all is the consumer's, and a consumer that does record them keys them on
+ * family_id -- signin's AfterIssueToken hook runs inside every mint with the
+ * family on it -- and hands them back through the server's sign-in annotator,
+ * which fills attributes.
+ */
+export interface ActiveSignIn {
+  /**
+   * family_id names the login: the value every IssuedToken it produced carried,
+   * the access token's "sid" claim, and what EndSignInRequest names.
+   */
+  familyId: string;
+  /** signed_in_at is when the login began. Refreshing does not move it. */
+  signedInAt: Date | undefined;
+  /**
+   * last_refreshed_at is when the login last exchanged a refresh token, or
+   * signed_in_at for a login that never has.
+   */
+  lastRefreshedAt: Date | undefined;
+  /** expires_at is when the login ends if nothing refreshes it before then. */
+  expiresAt: Date | undefined;
+  /** active_account_id is the account the login's tokens are for. */
+  activeAccountId: string;
+  /**
+   * administrative reports whether the login came through the administrative
+   * door.
+   */
+  administrative: boolean;
+  /**
+   * current reports whether this is the login the request itself was made
+   * through. It is false on every entry when the server cannot tell -- a
+   * consumer whose principal does not carry the access token's "sid" -- which
+   * is the answer that marks nothing rather than guessing.
+   */
+  current: boolean;
+  /**
+   * actor_id is the operator signed in as this person through this login --
+   * an impersonation an operator surface began -- and empty for a login of the
+   * person's own. A client shows it, because "somebody else is signed in as
+   * you" is a thing a person is owed the chance to see and end.
+   */
+  actorId: string;
+  /**
+   * credential_kind is how the login happened: what proved the sign-in that
+   * began it -- "password", "recovery_code", "magic_link", "principal",
+   * "impersonation", or a kind the consumer named when it proved the principal
+   * itself. A refresh does not change it. It is empty only for a login whose
+   * store recorded none.
+   */
+  credentialKind: string;
+  /**
+   * attributes is what the consumer recorded about the login's device -- a
+   * device name, a user agent, an address -- as the server's sign-in annotator
+   * answered for this family. The platform stores none of it and names none of
+   * its keys. It is empty on a server built without an annotator, and for a
+   * login the annotator had nothing for.
+   */
+  attributes: { [key: string]: string };
+}
+
+export interface ActiveSignIn_AttributesEntry {
+  key: string;
+  value: string;
+}
+
+/**
+ * ListSignInsRequest asks for the calling user's live logins, most recently
+ * refreshed first.
+ *
+ * It requires a caller and names nobody, which is SignOutEverywhereRequest's
+ * rule for SignOutEverywhereRequest's reason: an operator listing somebody
+ * else's logins is a different act with a different permission, and it is
+ * SignInAdministrationService.ListSignInsForUser rather than this RPC.
+ */
+export interface ListSignInsRequest {
+  /**
+   * limit is how many to answer with. Zero is the service's default and a
+   * value past its ceiling is the ceiling; see signin.DefaultSignInListLimit and
+   * signin.MaxSignInListLimit. What a limit leaves out is what has been idle
+   * longest.
+   */
+  limit: number;
+}
+
+export interface ListSignInsResponse {
+  signIns: ActiveSignIn[];
+}
+
+/**
+ * EndSignInRequest ends one of the calling user's logins, named by its family.
+ *
+ * It is the door SignOutRequest could not be. That one carries the login's
+ * refresh token, which only the device holding it has; this one carries the
+ * family identifier a ListSignInsResponse handed out, so a person can end the
+ * login on the phone they lost from the laptop in front of them.
+ *
+ * A family identifier is not a secret, and that is why this requires a caller
+ * and why the caller is part of the key: a family that is not theirs matches
+ * nothing. The answer does not say whether anything was ended -- a family that
+ * is somebody else's, one that never existed and one already ended all answer
+ * the same, so the RPC cannot be used to learn which identifiers are live.
+ *
+ * Ending the login the request was made through is allowed and is a sign-out.
+ * Like SignOut, it stops that login's access tokens being replaced rather than
+ * stopping the one already issued.
+ */
+export interface EndSignInRequest {
+  familyId: string;
+}
+
+/** EndSignInResponse is empty -- see SignOutResponse. */
+export interface EndSignInResponse {}
+
+/**
+ * EndOtherSignInsRequest ends every login the calling user holds except the one
+ * the request was made through: "sign out my other devices".
+ *
+ * It names nobody and no login. The subject is the caller, and the login it
+ * keeps is read off the caller's access token -- its "sid" claim, the family_id
+ * ListSignIns marks current -- rather than taken from a field, so a request
+ * cannot keep a login other than its own. A caller whose token names no login is
+ * refused with FAILED_PRECONDITION and the reason SIGN_IN_NOT_IDENTIFIED rather
+ * than having every login ended: that is SignOutEverywhere, which is a request a
+ * client makes on purpose.
+ *
+ * It is one revocation on the server rather than ListSignIns followed by an
+ * EndSignIn for each entry, and that is what it is for. The loop decides which
+ * logins are "other" a round trip before it ends them, so one made in between
+ * survives; here the decision and the revocation are the same statement.
+ */
+export interface EndOtherSignInsRequest {}
+
+/**
+ * EndOtherSignInsResponse is empty -- see SignOutResponse. A client that wants
+ * to show what is left calls ListSignIns.
+ */
+export interface EndOtherSignInsResponse {}
 
 /**
  * GetAuthStatusRequest names nobody. The subject is whoever is calling, and a
@@ -336,6 +515,62 @@ export interface UpdatePasswordRequest {
  * breaking change.
  */
 export interface UpdatePasswordResponse {}
+
+/**
+ * UpdateEmailAddressRequest moves the calling user's own address. There is no
+ * field naming a user, for UpdatePasswordRequest's reason.
+ *
+ * An address is where a password reset is mailed, so moving it is guarded as a
+ * password change is, by one of two proofs. current_password, with totp_code
+ * from a user who holds a proven second factor. Or, with no password sent, the
+ * sign-in this request came through, if it began recently enough -- read off
+ * the caller's token rather than off this message, so there is no field for
+ * it. A user who holds no password has only the second, and a stale sign-in is
+ * refused with REAUTHENTICATION_REQUIRED: sign in again, then ask.
+ *
+ * The address's proof goes with the old address, and a deployment that mails
+ * verification links mails the new address one.
+ */
+export interface UpdateEmailAddressRequest {
+  /**
+   * current_password is checked when it is sent. Empty offers the recent
+   * sign-in instead.
+   */
+  currentPassword: string;
+  /**
+   * totp_code is required alongside current_password from a user who holds a
+   * proven second factor.
+   */
+  totpCode: string;
+  /** new_email_address is the address that replaces the current one. */
+  newEmailAddress: string;
+}
+
+/** UpdateEmailAddressResponse carries the user as they stand after the change. */
+export interface UpdateEmailAddressResponse {
+  user: User | undefined;
+}
+
+/**
+ * UpdateUsernameRequest renames the calling user, guarded exactly as
+ * UpdateEmailAddressRequest is: a username is what somebody signs in with.
+ */
+export interface UpdateUsernameRequest {
+  /** current_password is UpdateEmailAddressRequest.current_password. */
+  currentPassword: string;
+  /** totp_code is UpdateEmailAddressRequest.totp_code. */
+  totpCode: string;
+  /**
+   * new_username is the handle that replaces the current one, as the person
+   * spelled it.
+   */
+  newUsername: string;
+}
+
+/** UpdateUsernameResponse carries the user as they stand after the change. */
+export interface UpdateUsernameResponse {
+  user: User | undefined;
+}
 
 /**
  * RefreshTOTPSecretRequest asks for a new second-factor secret for the calling
@@ -436,14 +671,6 @@ export interface RegisterRequest {
    */
   account: AccountCreationInput | undefined;
   /**
-   * owner_roles are the roles the registrant holds in the account they own,
-   * and are the consumer's own role names. A membership with none is a member
-   * who may do nothing, so a registration that mints an account names at least
-   * one. They are ignored by a registration that answers an invitation, which
-   * takes its roles off the invitation.
-   */
-  ownerRoles: string[];
-  /**
    * password is the plaintext the registrant chose. It is hashed by the
    * service with the consumer's own authenticator and never stored, logged or
    * traced as it arrived, and it is the second reason this service requires
@@ -461,6 +688,28 @@ export interface RegisterRequest {
    * an ordinary one.
    */
   invitation: RegistrationInvitation | undefined;
+  /**
+   * agreements are the documents the registrant accepted in registering. They
+   * are stamped on the user the registration writes, on the same transaction,
+   * and AGREEMENT_UNSPECIFIED refuses the request. Whether any are required is
+   * the consumer's, through signin.RegistrationPolicy.
+   */
+  agreements: Agreement[];
+}
+
+/**
+ * TOTPEnrollment is a second-factor secret minted with a registration: the
+ * same pair RefreshTOTPSecretResponse carries, costing the same to hand around.
+ * It is unproven until VerifyTOTPSecret succeeds.
+ */
+export interface TOTPEnrollment {
+  /** secret is the base32 shared secret, for somebody typing it in. */
+  secret: string;
+  /**
+   * provisioning_uri is the otpauth:// URI that same secret encodes to, for a
+   * client rendering a QR code.
+   */
+  provisioningUri: string;
 }
 
 /**
@@ -475,6 +724,13 @@ export interface Registered {
   account: Account | undefined;
   membership: Membership | undefined;
   invitation: Invitation | undefined;
+  /**
+   * totp_enrollment is the second factor minted with the registration, and is
+   * absent unless the consumer's registration policy asked for one. It makes
+   * this response, where it is set, one that must not be logged, cached or
+   * rendered anywhere it will be read twice -- see RefreshTOTPSecretResponse.
+   */
+  totpEnrollment: TOTPEnrollment | undefined;
 }
 
 export interface RegisterResponse {
@@ -532,6 +788,50 @@ export interface VerifyEmailAddressRequest {
 
 /** VerifyEmailAddressResponse is empty -- see UpdatePasswordResponse. */
 export interface VerifyEmailAddressResponse {}
+
+/**
+ * RequestVerificationEmailRequest asks for a fresh link proving the calling
+ * user's address, mailed to it, and retires the link they were sent before.
+ *
+ * It requires a caller and names nobody, for SignOutEverywhereRequest's reason:
+ * the subject is whoever is calling, and a field naming somebody else would be a
+ * way to mail strangers from this deployment's domain. An address that is
+ * already proven is refused as EMAIL_ADDRESS_ALREADY_VERIFIED and keeps its
+ * proof, so asking again can never un-verify anybody.
+ *
+ * Rate limiting is the deployment's, in front of it: every request sends mail.
+ */
+export interface RequestVerificationEmailRequest {}
+
+/**
+ * RequestVerificationEmailResponse is empty. The link goes to the address and
+ * never back to the caller -- a response carrying it would let whoever holds a
+ * session prove an inbox they have never seen.
+ */
+export interface RequestVerificationEmailResponse {}
+
+/**
+ * RequestVerificationEmailByAddressRequest asks for a fresh verification link
+ * mailed to an address, from somebody who cannot sign in to ask: a registrant
+ * whose first link never arrived, told USER_UNVERIFIED at the password door.
+ *
+ * It is anonymous, and so it is answered identically whoever holds the address
+ * -- nobody, a registrant it mailed, somebody already proven, somebody whose
+ * standing admits no mail -- and held to the magic-link door's timing floor, for
+ * RequestMagicLinkRequest's reason. A client renders "if that address is waiting
+ * on a link, we sent another" and nothing that depends on the answer.
+ *
+ * Rate limiting is the deployment's, in front of it: anybody can send it.
+ */
+export interface RequestVerificationEmailByAddressRequest {
+  emailAddress: string;
+}
+
+/**
+ * RequestVerificationEmailByAddressResponse is empty, and the same for every
+ * address -- see RequestMagicLinkResponse.
+ */
+export interface RequestVerificationEmailByAddressResponse {}
 
 /**
  * RequestMagicLinkRequest asks for a link that signs the holder of an address
@@ -613,6 +913,83 @@ export interface RedeemMagicLinkRequest {
 export interface RedeemMagicLinkResponse {
   token: IssuedToken | undefined;
 }
+
+/**
+ * RequestHandleReminderRequest asks for the handle the holder of an address signs
+ * in with to be mailed to them.
+ *
+ * There is no scope field, for RequestMagicLinkRequest's reason.
+ */
+export interface RequestHandleReminderRequest {
+  /**
+   * email_address is who to mail. It is folded the way the directory folds a
+   * handle, so it reads the row the password door would have read.
+   */
+  emailAddress: string;
+}
+
+/**
+ * RequestHandleReminderResponse is empty, for RequestMagicLinkResponse's reason:
+ * no field here could differ between an address somebody holds and one nobody
+ * does, and a consumer's own handler owes the same silence.
+ */
+export interface RequestHandleReminderResponse {}
+
+/**
+ * ListSignInsForUserRequest asks for the live logins of the user it names, most
+ * recently refreshed first: an operator's view of somebody else's "where you're
+ * signed in" screen.
+ */
+export interface ListSignInsForUserRequest {
+  /** user_id is whose logins to list. Empty is INVALID_ARGUMENT. */
+  userId: string;
+  /** limit is ListSignInsRequest.limit, read the same way. */
+  limit: number;
+}
+
+/**
+ * ListSignInsForUserResponse carries ActiveSignIn exactly as ListSignIns does,
+ * except that current is false on every entry: the request was made through the
+ * operator's login, which is never one of these.
+ */
+export interface ListSignInsForUserResponse {
+  signIns: ActiveSignIn[];
+}
+
+/**
+ * EndSignInForUserRequest ends one of the named user's logins, named by its
+ * family.
+ *
+ * Both fields are the key, as the caller and the family are for EndSignIn: a
+ * family that is not user_id's ends nothing, so an operator who pasted the
+ * wrong identifier ends nobody's login rather than a stranger's. The answer
+ * does not say whether anything ended; ListSignInsForUser does.
+ */
+export interface EndSignInForUserRequest {
+  /** user_id is whose login to end. Empty is INVALID_ARGUMENT. */
+  userId: string;
+  /**
+   * family_id is the login, as ListSignInsForUser answered it. Empty is
+   * INVALID_ARGUMENT.
+   */
+  familyId: string;
+}
+
+/** EndSignInForUserResponse is empty -- see SignOutResponse. */
+export interface EndSignInForUserResponse {}
+
+/**
+ * EndAllSignInsForUserRequest ends every login the named user holds: what an
+ * operator runs for an account they think is compromised, and
+ * SignOutEverywhere done to somebody rather than by them.
+ */
+export interface EndAllSignInsForUserRequest {
+  /** user_id is whose logins to end. Empty is INVALID_ARGUMENT. */
+  userId: string;
+}
+
+/** EndAllSignInsForUserResponse is empty -- see SignOutEverywhereResponse. */
+export interface EndAllSignInsForUserResponse {}
 
 function createBaseCredentials(): Credentials {
   return { username: '', emailAddress: '', password: '', totpCode: '', activeAccountId: '' };
@@ -1506,6 +1883,149 @@ export const ExchangeRefreshTokenResponse: MessageFns<ExchangeRefreshTokenRespon
   },
 };
 
+function createBaseSwitchAccountRequest(): SwitchAccountRequest {
+  return { refreshToken: '', accountId: '' };
+}
+
+export const SwitchAccountRequest: MessageFns<SwitchAccountRequest> = {
+  encode(message: SwitchAccountRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.refreshToken !== '') {
+      writer.uint32(10).string(message.refreshToken);
+    }
+    if (message.accountId !== '') {
+      writer.uint32(18).string(message.accountId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SwitchAccountRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSwitchAccountRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.refreshToken = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.accountId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): SwitchAccountRequest {
+    return {
+      refreshToken: isSet(object.refreshToken)
+        ? globalThis.String(object.refreshToken)
+        : isSet(object.refresh_token)
+          ? globalThis.String(object.refresh_token)
+          : '',
+      accountId: isSet(object.accountID)
+        ? globalThis.String(object.accountID)
+        : isSet(object.account_id)
+          ? globalThis.String(object.account_id)
+          : '',
+    };
+  },
+
+  toJSON(message: SwitchAccountRequest): unknown {
+    const obj: any = {};
+    if (message.refreshToken !== '') {
+      obj.refreshToken = message.refreshToken;
+    }
+    if (message.accountId !== '') {
+      obj.accountID = message.accountId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<SwitchAccountRequest>, I>>(base?: I): SwitchAccountRequest {
+    return SwitchAccountRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<SwitchAccountRequest>, I>>(object: I): SwitchAccountRequest {
+    const message = createBaseSwitchAccountRequest();
+    message.refreshToken = object.refreshToken ?? '';
+    message.accountId = object.accountId ?? '';
+    return message;
+  },
+};
+
+function createBaseSwitchAccountResponse(): SwitchAccountResponse {
+  return { token: undefined };
+}
+
+export const SwitchAccountResponse: MessageFns<SwitchAccountResponse> = {
+  encode(message: SwitchAccountResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.token !== undefined) {
+      IssuedToken.encode(message.token, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): SwitchAccountResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseSwitchAccountResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.token = IssuedToken.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): SwitchAccountResponse {
+    return { token: isSet(object.token) ? IssuedToken.fromJSON(object.token) : undefined };
+  },
+
+  toJSON(message: SwitchAccountResponse): unknown {
+    const obj: any = {};
+    if (message.token !== undefined) {
+      obj.token = IssuedToken.toJSON(message.token);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<SwitchAccountResponse>, I>>(base?: I): SwitchAccountResponse {
+    return SwitchAccountResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<SwitchAccountResponse>, I>>(object: I): SwitchAccountResponse {
+    const message = createBaseSwitchAccountResponse();
+    message.token =
+      object.token !== undefined && object.token !== null ? IssuedToken.fromPartial(object.token) : undefined;
+    return message;
+  },
+};
+
 function createBaseSignOutRequest(): SignOutRequest {
   return { refreshToken: '' };
 }
@@ -1695,6 +2215,665 @@ export const SignOutEverywhereResponse: MessageFns<SignOutEverywhereResponse> = 
   },
   fromPartial<I extends Exact<DeepPartial<SignOutEverywhereResponse>, I>>(_: I): SignOutEverywhereResponse {
     const message = createBaseSignOutEverywhereResponse();
+    return message;
+  },
+};
+
+function createBaseActiveSignIn(): ActiveSignIn {
+  return {
+    familyId: '',
+    signedInAt: undefined,
+    lastRefreshedAt: undefined,
+    expiresAt: undefined,
+    activeAccountId: '',
+    administrative: false,
+    current: false,
+    actorId: '',
+    credentialKind: '',
+    attributes: {},
+  };
+}
+
+export const ActiveSignIn: MessageFns<ActiveSignIn> = {
+  encode(message: ActiveSignIn, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.familyId !== '') {
+      writer.uint32(10).string(message.familyId);
+    }
+    if (message.signedInAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.signedInAt), writer.uint32(18).fork()).join();
+    }
+    if (message.lastRefreshedAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.lastRefreshedAt), writer.uint32(26).fork()).join();
+    }
+    if (message.expiresAt !== undefined) {
+      Timestamp.encode(toTimestamp(message.expiresAt), writer.uint32(34).fork()).join();
+    }
+    if (message.activeAccountId !== '') {
+      writer.uint32(42).string(message.activeAccountId);
+    }
+    if (message.administrative !== false) {
+      writer.uint32(48).bool(message.administrative);
+    }
+    if (message.current !== false) {
+      writer.uint32(56).bool(message.current);
+    }
+    if (message.actorId !== '') {
+      writer.uint32(66).string(message.actorId);
+    }
+    if (message.credentialKind !== '') {
+      writer.uint32(74).string(message.credentialKind);
+    }
+    globalThis.Object.entries(message.attributes).forEach(([key, value]: [string, string]) => {
+      ActiveSignIn_AttributesEntry.encode({ key: key as any, value }, writer.uint32(82).fork()).join();
+    });
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ActiveSignIn {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseActiveSignIn();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.familyId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.signedInAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.lastRefreshedAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.expiresAt = fromTimestamp(Timestamp.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.activeAccountId = reader.string();
+          continue;
+        }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.administrative = reader.bool();
+          continue;
+        }
+        case 7: {
+          if (tag !== 56) {
+            break;
+          }
+
+          message.current = reader.bool();
+          continue;
+        }
+        case 8: {
+          if (tag !== 66) {
+            break;
+          }
+
+          message.actorId = reader.string();
+          continue;
+        }
+        case 9: {
+          if (tag !== 74) {
+            break;
+          }
+
+          message.credentialKind = reader.string();
+          continue;
+        }
+        case 10: {
+          if (tag !== 82) {
+            break;
+          }
+
+          const entry10 = ActiveSignIn_AttributesEntry.decode(reader, reader.uint32());
+          if (entry10.value !== undefined) {
+            message.attributes[entry10.key] = entry10.value;
+          }
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ActiveSignIn {
+    return {
+      familyId: isSet(object.familyID)
+        ? globalThis.String(object.familyID)
+        : isSet(object.family_id)
+          ? globalThis.String(object.family_id)
+          : '',
+      signedInAt: isSet(object.signedInAt)
+        ? fromJsonTimestamp(object.signedInAt)
+        : isSet(object.signed_in_at)
+          ? fromJsonTimestamp(object.signed_in_at)
+          : undefined,
+      lastRefreshedAt: isSet(object.lastRefreshedAt)
+        ? fromJsonTimestamp(object.lastRefreshedAt)
+        : isSet(object.last_refreshed_at)
+          ? fromJsonTimestamp(object.last_refreshed_at)
+          : undefined,
+      expiresAt: isSet(object.expiresAt)
+        ? fromJsonTimestamp(object.expiresAt)
+        : isSet(object.expires_at)
+          ? fromJsonTimestamp(object.expires_at)
+          : undefined,
+      activeAccountId: isSet(object.activeAccountID)
+        ? globalThis.String(object.activeAccountID)
+        : isSet(object.active_account_id)
+          ? globalThis.String(object.active_account_id)
+          : '',
+      administrative: isSet(object.administrative) ? globalThis.Boolean(object.administrative) : false,
+      current: isSet(object.current) ? globalThis.Boolean(object.current) : false,
+      actorId: isSet(object.actorID)
+        ? globalThis.String(object.actorID)
+        : isSet(object.actor_id)
+          ? globalThis.String(object.actor_id)
+          : '',
+      credentialKind: isSet(object.credentialKind)
+        ? globalThis.String(object.credentialKind)
+        : isSet(object.credential_kind)
+          ? globalThis.String(object.credential_kind)
+          : '',
+      attributes: isObject(object.attributes)
+        ? (globalThis.Object.entries(object.attributes) as [string, any][]).reduce(
+            (acc: { [key: string]: string }, [key, value]: [string, any]) => {
+              acc[key] = globalThis.String(value);
+              return acc;
+            },
+            {},
+          )
+        : {},
+    };
+  },
+
+  toJSON(message: ActiveSignIn): unknown {
+    const obj: any = {};
+    if (message.familyId !== '') {
+      obj.familyID = message.familyId;
+    }
+    if (message.signedInAt !== undefined) {
+      obj.signedInAt = message.signedInAt.toISOString();
+    }
+    if (message.lastRefreshedAt !== undefined) {
+      obj.lastRefreshedAt = message.lastRefreshedAt.toISOString();
+    }
+    if (message.expiresAt !== undefined) {
+      obj.expiresAt = message.expiresAt.toISOString();
+    }
+    if (message.activeAccountId !== '') {
+      obj.activeAccountID = message.activeAccountId;
+    }
+    if (message.administrative !== false) {
+      obj.administrative = message.administrative;
+    }
+    if (message.current !== false) {
+      obj.current = message.current;
+    }
+    if (message.actorId !== '') {
+      obj.actorID = message.actorId;
+    }
+    if (message.credentialKind !== '') {
+      obj.credentialKind = message.credentialKind;
+    }
+    if (message.attributes) {
+      const entries = globalThis.Object.entries(message.attributes) as [string, string][];
+      if (entries.length > 0) {
+        obj.attributes = {};
+        entries.forEach(([k, v]) => {
+          obj.attributes[k] = v;
+        });
+      }
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ActiveSignIn>, I>>(base?: I): ActiveSignIn {
+    return ActiveSignIn.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ActiveSignIn>, I>>(object: I): ActiveSignIn {
+    const message = createBaseActiveSignIn();
+    message.familyId = object.familyId ?? '';
+    message.signedInAt = object.signedInAt ?? undefined;
+    message.lastRefreshedAt = object.lastRefreshedAt ?? undefined;
+    message.expiresAt = object.expiresAt ?? undefined;
+    message.activeAccountId = object.activeAccountId ?? '';
+    message.administrative = object.administrative ?? false;
+    message.current = object.current ?? false;
+    message.actorId = object.actorId ?? '';
+    message.credentialKind = object.credentialKind ?? '';
+    message.attributes = (globalThis.Object.entries(object.attributes ?? {}) as [string, string][]).reduce(
+      (acc: { [key: string]: string }, [key, value]: [string, string]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    return message;
+  },
+};
+
+function createBaseActiveSignIn_AttributesEntry(): ActiveSignIn_AttributesEntry {
+  return { key: '', value: '' };
+}
+
+export const ActiveSignIn_AttributesEntry: MessageFns<ActiveSignIn_AttributesEntry> = {
+  encode(message: ActiveSignIn_AttributesEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.key !== '') {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== '') {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ActiveSignIn_AttributesEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseActiveSignIn_AttributesEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ActiveSignIn_AttributesEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : '',
+      value: isSet(object.value) ? globalThis.String(object.value) : '',
+    };
+  },
+
+  toJSON(message: ActiveSignIn_AttributesEntry): unknown {
+    const obj: any = {};
+    if (message.key !== '') {
+      obj.key = message.key;
+    }
+    if (message.value !== '') {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ActiveSignIn_AttributesEntry>, I>>(base?: I): ActiveSignIn_AttributesEntry {
+    return ActiveSignIn_AttributesEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ActiveSignIn_AttributesEntry>, I>>(object: I): ActiveSignIn_AttributesEntry {
+    const message = createBaseActiveSignIn_AttributesEntry();
+    message.key = object.key ?? '';
+    message.value = object.value ?? '';
+    return message;
+  },
+};
+
+function createBaseListSignInsRequest(): ListSignInsRequest {
+  return { limit: 0 };
+}
+
+export const ListSignInsRequest: MessageFns<ListSignInsRequest> = {
+  encode(message: ListSignInsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.limit !== 0) {
+      writer.uint32(8).uint32(message.limit);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListSignInsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListSignInsRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.limit = reader.uint32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListSignInsRequest {
+    return { limit: isSet(object.limit) ? globalThis.Number(object.limit) : 0 };
+  },
+
+  toJSON(message: ListSignInsRequest): unknown {
+    const obj: any = {};
+    if (message.limit !== 0) {
+      obj.limit = Math.round(message.limit);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListSignInsRequest>, I>>(base?: I): ListSignInsRequest {
+    return ListSignInsRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListSignInsRequest>, I>>(object: I): ListSignInsRequest {
+    const message = createBaseListSignInsRequest();
+    message.limit = object.limit ?? 0;
+    return message;
+  },
+};
+
+function createBaseListSignInsResponse(): ListSignInsResponse {
+  return { signIns: [] };
+}
+
+export const ListSignInsResponse: MessageFns<ListSignInsResponse> = {
+  encode(message: ListSignInsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.signIns) {
+      ActiveSignIn.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListSignInsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListSignInsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.signIns.push(ActiveSignIn.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListSignInsResponse {
+    return {
+      signIns: globalThis.Array.isArray(object?.signIns)
+        ? object.signIns.map((e: any) => ActiveSignIn.fromJSON(e))
+        : globalThis.Array.isArray(object?.sign_ins)
+          ? object.sign_ins.map((e: any) => ActiveSignIn.fromJSON(e))
+          : [],
+    };
+  },
+
+  toJSON(message: ListSignInsResponse): unknown {
+    const obj: any = {};
+    if (message.signIns?.length) {
+      obj.signIns = message.signIns.map((e) => ActiveSignIn.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListSignInsResponse>, I>>(base?: I): ListSignInsResponse {
+    return ListSignInsResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListSignInsResponse>, I>>(object: I): ListSignInsResponse {
+    const message = createBaseListSignInsResponse();
+    message.signIns = object.signIns?.map((e) => ActiveSignIn.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseEndSignInRequest(): EndSignInRequest {
+  return { familyId: '' };
+}
+
+export const EndSignInRequest: MessageFns<EndSignInRequest> = {
+  encode(message: EndSignInRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.familyId !== '') {
+      writer.uint32(10).string(message.familyId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EndSignInRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEndSignInRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.familyId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EndSignInRequest {
+    return {
+      familyId: isSet(object.familyID)
+        ? globalThis.String(object.familyID)
+        : isSet(object.family_id)
+          ? globalThis.String(object.family_id)
+          : '',
+    };
+  },
+
+  toJSON(message: EndSignInRequest): unknown {
+    const obj: any = {};
+    if (message.familyId !== '') {
+      obj.familyID = message.familyId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<EndSignInRequest>, I>>(base?: I): EndSignInRequest {
+    return EndSignInRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<EndSignInRequest>, I>>(object: I): EndSignInRequest {
+    const message = createBaseEndSignInRequest();
+    message.familyId = object.familyId ?? '';
+    return message;
+  },
+};
+
+function createBaseEndSignInResponse(): EndSignInResponse {
+  return {};
+}
+
+export const EndSignInResponse: MessageFns<EndSignInResponse> = {
+  encode(_: EndSignInResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EndSignInResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEndSignInResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): EndSignInResponse {
+    return {};
+  },
+
+  toJSON(_: EndSignInResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<EndSignInResponse>, I>>(base?: I): EndSignInResponse {
+    return EndSignInResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<EndSignInResponse>, I>>(_: I): EndSignInResponse {
+    const message = createBaseEndSignInResponse();
+    return message;
+  },
+};
+
+function createBaseEndOtherSignInsRequest(): EndOtherSignInsRequest {
+  return {};
+}
+
+export const EndOtherSignInsRequest: MessageFns<EndOtherSignInsRequest> = {
+  encode(_: EndOtherSignInsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EndOtherSignInsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEndOtherSignInsRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): EndOtherSignInsRequest {
+    return {};
+  },
+
+  toJSON(_: EndOtherSignInsRequest): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<EndOtherSignInsRequest>, I>>(base?: I): EndOtherSignInsRequest {
+    return EndOtherSignInsRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<EndOtherSignInsRequest>, I>>(_: I): EndOtherSignInsRequest {
+    const message = createBaseEndOtherSignInsRequest();
+    return message;
+  },
+};
+
+function createBaseEndOtherSignInsResponse(): EndOtherSignInsResponse {
+  return {};
+}
+
+export const EndOtherSignInsResponse: MessageFns<EndOtherSignInsResponse> = {
+  encode(_: EndOtherSignInsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EndOtherSignInsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEndOtherSignInsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): EndOtherSignInsResponse {
+    return {};
+  },
+
+  toJSON(_: EndOtherSignInsResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<EndOtherSignInsResponse>, I>>(base?: I): EndOtherSignInsResponse {
+    return EndOtherSignInsResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<EndOtherSignInsResponse>, I>>(_: I): EndOtherSignInsResponse {
+    const message = createBaseEndOtherSignInsResponse();
     return message;
   },
 };
@@ -2063,6 +3242,330 @@ export const UpdatePasswordResponse: MessageFns<UpdatePasswordResponse> = {
   },
   fromPartial<I extends Exact<DeepPartial<UpdatePasswordResponse>, I>>(_: I): UpdatePasswordResponse {
     const message = createBaseUpdatePasswordResponse();
+    return message;
+  },
+};
+
+function createBaseUpdateEmailAddressRequest(): UpdateEmailAddressRequest {
+  return { currentPassword: '', totpCode: '', newEmailAddress: '' };
+}
+
+export const UpdateEmailAddressRequest: MessageFns<UpdateEmailAddressRequest> = {
+  encode(message: UpdateEmailAddressRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.currentPassword !== '') {
+      writer.uint32(10).string(message.currentPassword);
+    }
+    if (message.totpCode !== '') {
+      writer.uint32(18).string(message.totpCode);
+    }
+    if (message.newEmailAddress !== '') {
+      writer.uint32(26).string(message.newEmailAddress);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateEmailAddressRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateEmailAddressRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.currentPassword = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.totpCode = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.newEmailAddress = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): UpdateEmailAddressRequest {
+    return {
+      currentPassword: isSet(object.currentPassword)
+        ? globalThis.String(object.currentPassword)
+        : isSet(object.current_password)
+          ? globalThis.String(object.current_password)
+          : '',
+      totpCode: isSet(object.totpCode)
+        ? globalThis.String(object.totpCode)
+        : isSet(object.totp_code)
+          ? globalThis.String(object.totp_code)
+          : '',
+      newEmailAddress: isSet(object.newEmailAddress)
+        ? globalThis.String(object.newEmailAddress)
+        : isSet(object.new_email_address)
+          ? globalThis.String(object.new_email_address)
+          : '',
+    };
+  },
+
+  toJSON(message: UpdateEmailAddressRequest): unknown {
+    const obj: any = {};
+    if (message.currentPassword !== '') {
+      obj.currentPassword = message.currentPassword;
+    }
+    if (message.totpCode !== '') {
+      obj.totpCode = message.totpCode;
+    }
+    if (message.newEmailAddress !== '') {
+      obj.newEmailAddress = message.newEmailAddress;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UpdateEmailAddressRequest>, I>>(base?: I): UpdateEmailAddressRequest {
+    return UpdateEmailAddressRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UpdateEmailAddressRequest>, I>>(object: I): UpdateEmailAddressRequest {
+    const message = createBaseUpdateEmailAddressRequest();
+    message.currentPassword = object.currentPassword ?? '';
+    message.totpCode = object.totpCode ?? '';
+    message.newEmailAddress = object.newEmailAddress ?? '';
+    return message;
+  },
+};
+
+function createBaseUpdateEmailAddressResponse(): UpdateEmailAddressResponse {
+  return { user: undefined };
+}
+
+export const UpdateEmailAddressResponse: MessageFns<UpdateEmailAddressResponse> = {
+  encode(message: UpdateEmailAddressResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateEmailAddressResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateEmailAddressResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): UpdateEmailAddressResponse {
+    return { user: isSet(object.user) ? User.fromJSON(object.user) : undefined };
+  },
+
+  toJSON(message: UpdateEmailAddressResponse): unknown {
+    const obj: any = {};
+    if (message.user !== undefined) {
+      obj.user = User.toJSON(message.user);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UpdateEmailAddressResponse>, I>>(base?: I): UpdateEmailAddressResponse {
+    return UpdateEmailAddressResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UpdateEmailAddressResponse>, I>>(object: I): UpdateEmailAddressResponse {
+    const message = createBaseUpdateEmailAddressResponse();
+    message.user = object.user !== undefined && object.user !== null ? User.fromPartial(object.user) : undefined;
+    return message;
+  },
+};
+
+function createBaseUpdateUsernameRequest(): UpdateUsernameRequest {
+  return { currentPassword: '', totpCode: '', newUsername: '' };
+}
+
+export const UpdateUsernameRequest: MessageFns<UpdateUsernameRequest> = {
+  encode(message: UpdateUsernameRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.currentPassword !== '') {
+      writer.uint32(10).string(message.currentPassword);
+    }
+    if (message.totpCode !== '') {
+      writer.uint32(18).string(message.totpCode);
+    }
+    if (message.newUsername !== '') {
+      writer.uint32(26).string(message.newUsername);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateUsernameRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateUsernameRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.currentPassword = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.totpCode = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.newUsername = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): UpdateUsernameRequest {
+    return {
+      currentPassword: isSet(object.currentPassword)
+        ? globalThis.String(object.currentPassword)
+        : isSet(object.current_password)
+          ? globalThis.String(object.current_password)
+          : '',
+      totpCode: isSet(object.totpCode)
+        ? globalThis.String(object.totpCode)
+        : isSet(object.totp_code)
+          ? globalThis.String(object.totp_code)
+          : '',
+      newUsername: isSet(object.newUsername)
+        ? globalThis.String(object.newUsername)
+        : isSet(object.new_username)
+          ? globalThis.String(object.new_username)
+          : '',
+    };
+  },
+
+  toJSON(message: UpdateUsernameRequest): unknown {
+    const obj: any = {};
+    if (message.currentPassword !== '') {
+      obj.currentPassword = message.currentPassword;
+    }
+    if (message.totpCode !== '') {
+      obj.totpCode = message.totpCode;
+    }
+    if (message.newUsername !== '') {
+      obj.newUsername = message.newUsername;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UpdateUsernameRequest>, I>>(base?: I): UpdateUsernameRequest {
+    return UpdateUsernameRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UpdateUsernameRequest>, I>>(object: I): UpdateUsernameRequest {
+    const message = createBaseUpdateUsernameRequest();
+    message.currentPassword = object.currentPassword ?? '';
+    message.totpCode = object.totpCode ?? '';
+    message.newUsername = object.newUsername ?? '';
+    return message;
+  },
+};
+
+function createBaseUpdateUsernameResponse(): UpdateUsernameResponse {
+  return { user: undefined };
+}
+
+export const UpdateUsernameResponse: MessageFns<UpdateUsernameResponse> = {
+  encode(message: UpdateUsernameResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.user !== undefined) {
+      User.encode(message.user, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UpdateUsernameResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUpdateUsernameResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.user = User.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): UpdateUsernameResponse {
+    return { user: isSet(object.user) ? User.fromJSON(object.user) : undefined };
+  },
+
+  toJSON(message: UpdateUsernameResponse): unknown {
+    const obj: any = {};
+    if (message.user !== undefined) {
+      obj.user = User.toJSON(message.user);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UpdateUsernameResponse>, I>>(base?: I): UpdateUsernameResponse {
+    return UpdateUsernameResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UpdateUsernameResponse>, I>>(object: I): UpdateUsernameResponse {
+    const message = createBaseUpdateUsernameResponse();
+    message.user = object.user !== undefined && object.user !== null ? User.fromPartial(object.user) : undefined;
     return message;
   },
 };
@@ -2485,10 +3988,10 @@ function createBaseRegisterRequest(): RegisterRequest {
   return {
     user: undefined,
     account: undefined,
-    ownerRoles: [],
     password: undefined,
     noPassword: undefined,
     invitation: undefined,
+    agreements: [],
   };
 }
 
@@ -2500,9 +4003,6 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
     if (message.account !== undefined) {
       AccountCreationInput.encode(message.account, writer.uint32(18).fork()).join();
     }
-    for (const v of message.ownerRoles) {
-      writer.uint32(26).string(v!);
-    }
     if (message.password !== undefined) {
       writer.uint32(34).string(message.password);
     }
@@ -2512,6 +4012,11 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
     if (message.invitation !== undefined) {
       RegistrationInvitation.encode(message.invitation, writer.uint32(50).fork()).join();
     }
+    writer.uint32(58).fork();
+    for (const v of message.agreements) {
+      writer.int32(v);
+    }
+    writer.join();
     return writer;
   },
 
@@ -2538,14 +4043,6 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
           message.account = AccountCreationInput.decode(reader, reader.uint32());
           continue;
         }
-        case 3: {
-          if (tag !== 26) {
-            break;
-          }
-
-          message.ownerRoles.push(reader.string());
-          continue;
-        }
         case 4: {
           if (tag !== 34) {
             break;
@@ -2570,6 +4067,24 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
           message.invitation = RegistrationInvitation.decode(reader, reader.uint32());
           continue;
         }
+        case 7: {
+          if (tag === 56) {
+            message.agreements.push(reader.int32() as any);
+
+            continue;
+          }
+
+          if (tag === 58) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.agreements.push(reader.int32() as any);
+            }
+
+            continue;
+          }
+
+          break;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2583,11 +4098,6 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
     return {
       user: isSet(object.user) ? UserRegistrationInput.fromJSON(object.user) : undefined,
       account: isSet(object.account) ? AccountCreationInput.fromJSON(object.account) : undefined,
-      ownerRoles: globalThis.Array.isArray(object?.ownerRoles)
-        ? object.ownerRoles.map((e: any) => globalThis.String(e))
-        : globalThis.Array.isArray(object?.owner_roles)
-          ? object.owner_roles.map((e: any) => globalThis.String(e))
-          : [],
       password: isSet(object.password) ? globalThis.String(object.password) : undefined,
       noPassword: isSet(object.noPassword)
         ? NoPassword.fromJSON(object.noPassword)
@@ -2595,6 +4105,9 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
           ? NoPassword.fromJSON(object.no_password)
           : undefined,
       invitation: isSet(object.invitation) ? RegistrationInvitation.fromJSON(object.invitation) : undefined,
+      agreements: globalThis.Array.isArray(object?.agreements)
+        ? object.agreements.map((e: any) => agreementFromJSON(e))
+        : [],
     };
   },
 
@@ -2606,9 +4119,6 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
     if (message.account !== undefined) {
       obj.account = AccountCreationInput.toJSON(message.account);
     }
-    if (message.ownerRoles?.length) {
-      obj.ownerRoles = message.ownerRoles;
-    }
     if (message.password !== undefined) {
       obj.password = message.password;
     }
@@ -2617,6 +4127,9 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
     }
     if (message.invitation !== undefined) {
       obj.invitation = RegistrationInvitation.toJSON(message.invitation);
+    }
+    if (message.agreements?.length) {
+      obj.agreements = message.agreements.map((e) => agreementToJSON(e));
     }
     return obj;
   },
@@ -2632,7 +4145,6 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
       object.account !== undefined && object.account !== null
         ? AccountCreationInput.fromPartial(object.account)
         : undefined;
-    message.ownerRoles = object.ownerRoles?.map((e) => e) || [];
     message.password = object.password ?? undefined;
     message.noPassword =
       object.noPassword !== undefined && object.noPassword !== null
@@ -2642,12 +4154,99 @@ export const RegisterRequest: MessageFns<RegisterRequest> = {
       object.invitation !== undefined && object.invitation !== null
         ? RegistrationInvitation.fromPartial(object.invitation)
         : undefined;
+    message.agreements = object.agreements?.map((e) => e) || [];
+    return message;
+  },
+};
+
+function createBaseTOTPEnrollment(): TOTPEnrollment {
+  return { secret: '', provisioningUri: '' };
+}
+
+export const TOTPEnrollment: MessageFns<TOTPEnrollment> = {
+  encode(message: TOTPEnrollment, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.secret !== '') {
+      writer.uint32(10).string(message.secret);
+    }
+    if (message.provisioningUri !== '') {
+      writer.uint32(18).string(message.provisioningUri);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TOTPEnrollment {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTOTPEnrollment();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.secret = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.provisioningUri = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): TOTPEnrollment {
+    return {
+      secret: isSet(object.secret) ? globalThis.String(object.secret) : '',
+      provisioningUri: isSet(object.provisioningUri)
+        ? globalThis.String(object.provisioningUri)
+        : isSet(object.provisioning_uri)
+          ? globalThis.String(object.provisioning_uri)
+          : '',
+    };
+  },
+
+  toJSON(message: TOTPEnrollment): unknown {
+    const obj: any = {};
+    if (message.secret !== '') {
+      obj.secret = message.secret;
+    }
+    if (message.provisioningUri !== '') {
+      obj.provisioningUri = message.provisioningUri;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<TOTPEnrollment>, I>>(base?: I): TOTPEnrollment {
+    return TOTPEnrollment.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<TOTPEnrollment>, I>>(object: I): TOTPEnrollment {
+    const message = createBaseTOTPEnrollment();
+    message.secret = object.secret ?? '';
+    message.provisioningUri = object.provisioningUri ?? '';
     return message;
   },
 };
 
 function createBaseRegistered(): Registered {
-  return { user: undefined, account: undefined, membership: undefined, invitation: undefined };
+  return {
+    user: undefined,
+    account: undefined,
+    membership: undefined,
+    invitation: undefined,
+    totpEnrollment: undefined,
+  };
 }
 
 export const Registered: MessageFns<Registered> = {
@@ -2663,6 +4262,9 @@ export const Registered: MessageFns<Registered> = {
     }
     if (message.invitation !== undefined) {
       Invitation.encode(message.invitation, writer.uint32(34).fork()).join();
+    }
+    if (message.totpEnrollment !== undefined) {
+      TOTPEnrollment.encode(message.totpEnrollment, writer.uint32(42).fork()).join();
     }
     return writer;
   },
@@ -2706,6 +4308,14 @@ export const Registered: MessageFns<Registered> = {
           message.invitation = Invitation.decode(reader, reader.uint32());
           continue;
         }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.totpEnrollment = TOTPEnrollment.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2721,6 +4331,11 @@ export const Registered: MessageFns<Registered> = {
       account: isSet(object.account) ? Account.fromJSON(object.account) : undefined,
       membership: isSet(object.membership) ? Membership.fromJSON(object.membership) : undefined,
       invitation: isSet(object.invitation) ? Invitation.fromJSON(object.invitation) : undefined,
+      totpEnrollment: isSet(object.totpEnrollment)
+        ? TOTPEnrollment.fromJSON(object.totpEnrollment)
+        : isSet(object.totp_enrollment)
+          ? TOTPEnrollment.fromJSON(object.totp_enrollment)
+          : undefined,
     };
   },
 
@@ -2737,6 +4352,9 @@ export const Registered: MessageFns<Registered> = {
     }
     if (message.invitation !== undefined) {
       obj.invitation = Invitation.toJSON(message.invitation);
+    }
+    if (message.totpEnrollment !== undefined) {
+      obj.totpEnrollment = TOTPEnrollment.toJSON(message.totpEnrollment);
     }
     return obj;
   },
@@ -2756,6 +4374,10 @@ export const Registered: MessageFns<Registered> = {
     message.invitation =
       object.invitation !== undefined && object.invitation !== null
         ? Invitation.fromPartial(object.invitation)
+        : undefined;
+    message.totpEnrollment =
+      object.totpEnrollment !== undefined && object.totpEnrollment !== null
+        ? TOTPEnrollment.fromPartial(object.totpEnrollment)
         : undefined;
     return message;
   },
@@ -3046,6 +4668,211 @@ export const VerifyEmailAddressResponse: MessageFns<VerifyEmailAddressResponse> 
   },
 };
 
+function createBaseRequestVerificationEmailRequest(): RequestVerificationEmailRequest {
+  return {};
+}
+
+export const RequestVerificationEmailRequest: MessageFns<RequestVerificationEmailRequest> = {
+  encode(_: RequestVerificationEmailRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RequestVerificationEmailRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRequestVerificationEmailRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): RequestVerificationEmailRequest {
+    return {};
+  },
+
+  toJSON(_: RequestVerificationEmailRequest): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<RequestVerificationEmailRequest>, I>>(base?: I): RequestVerificationEmailRequest {
+    return RequestVerificationEmailRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<RequestVerificationEmailRequest>, I>>(_: I): RequestVerificationEmailRequest {
+    const message = createBaseRequestVerificationEmailRequest();
+    return message;
+  },
+};
+
+function createBaseRequestVerificationEmailResponse(): RequestVerificationEmailResponse {
+  return {};
+}
+
+export const RequestVerificationEmailResponse: MessageFns<RequestVerificationEmailResponse> = {
+  encode(_: RequestVerificationEmailResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RequestVerificationEmailResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRequestVerificationEmailResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): RequestVerificationEmailResponse {
+    return {};
+  },
+
+  toJSON(_: RequestVerificationEmailResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<RequestVerificationEmailResponse>, I>>(
+    base?: I,
+  ): RequestVerificationEmailResponse {
+    return RequestVerificationEmailResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<RequestVerificationEmailResponse>, I>>(
+    _: I,
+  ): RequestVerificationEmailResponse {
+    const message = createBaseRequestVerificationEmailResponse();
+    return message;
+  },
+};
+
+function createBaseRequestVerificationEmailByAddressRequest(): RequestVerificationEmailByAddressRequest {
+  return { emailAddress: '' };
+}
+
+export const RequestVerificationEmailByAddressRequest: MessageFns<RequestVerificationEmailByAddressRequest> = {
+  encode(message: RequestVerificationEmailByAddressRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.emailAddress !== '') {
+      writer.uint32(10).string(message.emailAddress);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RequestVerificationEmailByAddressRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRequestVerificationEmailByAddressRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.emailAddress = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RequestVerificationEmailByAddressRequest {
+    return {
+      emailAddress: isSet(object.emailAddress)
+        ? globalThis.String(object.emailAddress)
+        : isSet(object.email_address)
+          ? globalThis.String(object.email_address)
+          : '',
+    };
+  },
+
+  toJSON(message: RequestVerificationEmailByAddressRequest): unknown {
+    const obj: any = {};
+    if (message.emailAddress !== '') {
+      obj.emailAddress = message.emailAddress;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<RequestVerificationEmailByAddressRequest>, I>>(
+    base?: I,
+  ): RequestVerificationEmailByAddressRequest {
+    return RequestVerificationEmailByAddressRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<RequestVerificationEmailByAddressRequest>, I>>(
+    object: I,
+  ): RequestVerificationEmailByAddressRequest {
+    const message = createBaseRequestVerificationEmailByAddressRequest();
+    message.emailAddress = object.emailAddress ?? '';
+    return message;
+  },
+};
+
+function createBaseRequestVerificationEmailByAddressResponse(): RequestVerificationEmailByAddressResponse {
+  return {};
+}
+
+export const RequestVerificationEmailByAddressResponse: MessageFns<RequestVerificationEmailByAddressResponse> = {
+  encode(_: RequestVerificationEmailByAddressResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RequestVerificationEmailByAddressResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRequestVerificationEmailByAddressResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): RequestVerificationEmailByAddressResponse {
+    return {};
+  },
+
+  toJSON(_: RequestVerificationEmailByAddressResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<RequestVerificationEmailByAddressResponse>, I>>(
+    base?: I,
+  ): RequestVerificationEmailByAddressResponse {
+    return RequestVerificationEmailByAddressResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<RequestVerificationEmailByAddressResponse>, I>>(
+    _: I,
+  ): RequestVerificationEmailByAddressResponse {
+    const message = createBaseRequestVerificationEmailByAddressResponse();
+    return message;
+  },
+};
+
 function createBaseRequestMagicLinkRequest(): RequestMagicLinkRequest {
   return { emailAddress: '' };
 }
@@ -3312,25 +5139,522 @@ export const RedeemMagicLinkResponse: MessageFns<RedeemMagicLinkResponse> = {
   },
 };
 
+function createBaseRequestHandleReminderRequest(): RequestHandleReminderRequest {
+  return { emailAddress: '' };
+}
+
+export const RequestHandleReminderRequest: MessageFns<RequestHandleReminderRequest> = {
+  encode(message: RequestHandleReminderRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.emailAddress !== '') {
+      writer.uint32(10).string(message.emailAddress);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RequestHandleReminderRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRequestHandleReminderRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.emailAddress = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RequestHandleReminderRequest {
+    return {
+      emailAddress: isSet(object.emailAddress)
+        ? globalThis.String(object.emailAddress)
+        : isSet(object.email_address)
+          ? globalThis.String(object.email_address)
+          : '',
+    };
+  },
+
+  toJSON(message: RequestHandleReminderRequest): unknown {
+    const obj: any = {};
+    if (message.emailAddress !== '') {
+      obj.emailAddress = message.emailAddress;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<RequestHandleReminderRequest>, I>>(base?: I): RequestHandleReminderRequest {
+    return RequestHandleReminderRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<RequestHandleReminderRequest>, I>>(object: I): RequestHandleReminderRequest {
+    const message = createBaseRequestHandleReminderRequest();
+    message.emailAddress = object.emailAddress ?? '';
+    return message;
+  },
+};
+
+function createBaseRequestHandleReminderResponse(): RequestHandleReminderResponse {
+  return {};
+}
+
+export const RequestHandleReminderResponse: MessageFns<RequestHandleReminderResponse> = {
+  encode(_: RequestHandleReminderResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RequestHandleReminderResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRequestHandleReminderResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): RequestHandleReminderResponse {
+    return {};
+  },
+
+  toJSON(_: RequestHandleReminderResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<RequestHandleReminderResponse>, I>>(base?: I): RequestHandleReminderResponse {
+    return RequestHandleReminderResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<RequestHandleReminderResponse>, I>>(_: I): RequestHandleReminderResponse {
+    const message = createBaseRequestHandleReminderResponse();
+    return message;
+  },
+};
+
+function createBaseListSignInsForUserRequest(): ListSignInsForUserRequest {
+  return { userId: '', limit: 0 };
+}
+
+export const ListSignInsForUserRequest: MessageFns<ListSignInsForUserRequest> = {
+  encode(message: ListSignInsForUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== '') {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.limit !== 0) {
+      writer.uint32(16).uint32(message.limit);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListSignInsForUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListSignInsForUserRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.limit = reader.uint32();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListSignInsForUserRequest {
+    return {
+      userId: isSet(object.userID)
+        ? globalThis.String(object.userID)
+        : isSet(object.user_id)
+          ? globalThis.String(object.user_id)
+          : '',
+      limit: isSet(object.limit) ? globalThis.Number(object.limit) : 0,
+    };
+  },
+
+  toJSON(message: ListSignInsForUserRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== '') {
+      obj.userID = message.userId;
+    }
+    if (message.limit !== 0) {
+      obj.limit = Math.round(message.limit);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListSignInsForUserRequest>, I>>(base?: I): ListSignInsForUserRequest {
+    return ListSignInsForUserRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListSignInsForUserRequest>, I>>(object: I): ListSignInsForUserRequest {
+    const message = createBaseListSignInsForUserRequest();
+    message.userId = object.userId ?? '';
+    message.limit = object.limit ?? 0;
+    return message;
+  },
+};
+
+function createBaseListSignInsForUserResponse(): ListSignInsForUserResponse {
+  return { signIns: [] };
+}
+
+export const ListSignInsForUserResponse: MessageFns<ListSignInsForUserResponse> = {
+  encode(message: ListSignInsForUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    for (const v of message.signIns) {
+      ActiveSignIn.encode(v!, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListSignInsForUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListSignInsForUserResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.signIns.push(ActiveSignIn.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListSignInsForUserResponse {
+    return {
+      signIns: globalThis.Array.isArray(object?.signIns)
+        ? object.signIns.map((e: any) => ActiveSignIn.fromJSON(e))
+        : globalThis.Array.isArray(object?.sign_ins)
+          ? object.sign_ins.map((e: any) => ActiveSignIn.fromJSON(e))
+          : [],
+    };
+  },
+
+  toJSON(message: ListSignInsForUserResponse): unknown {
+    const obj: any = {};
+    if (message.signIns?.length) {
+      obj.signIns = message.signIns.map((e) => ActiveSignIn.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListSignInsForUserResponse>, I>>(base?: I): ListSignInsForUserResponse {
+    return ListSignInsForUserResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListSignInsForUserResponse>, I>>(object: I): ListSignInsForUserResponse {
+    const message = createBaseListSignInsForUserResponse();
+    message.signIns = object.signIns?.map((e) => ActiveSignIn.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseEndSignInForUserRequest(): EndSignInForUserRequest {
+  return { userId: '', familyId: '' };
+}
+
+export const EndSignInForUserRequest: MessageFns<EndSignInForUserRequest> = {
+  encode(message: EndSignInForUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== '') {
+      writer.uint32(10).string(message.userId);
+    }
+    if (message.familyId !== '') {
+      writer.uint32(18).string(message.familyId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EndSignInForUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEndSignInForUserRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.familyId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EndSignInForUserRequest {
+    return {
+      userId: isSet(object.userID)
+        ? globalThis.String(object.userID)
+        : isSet(object.user_id)
+          ? globalThis.String(object.user_id)
+          : '',
+      familyId: isSet(object.familyID)
+        ? globalThis.String(object.familyID)
+        : isSet(object.family_id)
+          ? globalThis.String(object.family_id)
+          : '',
+    };
+  },
+
+  toJSON(message: EndSignInForUserRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== '') {
+      obj.userID = message.userId;
+    }
+    if (message.familyId !== '') {
+      obj.familyID = message.familyId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<EndSignInForUserRequest>, I>>(base?: I): EndSignInForUserRequest {
+    return EndSignInForUserRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<EndSignInForUserRequest>, I>>(object: I): EndSignInForUserRequest {
+    const message = createBaseEndSignInForUserRequest();
+    message.userId = object.userId ?? '';
+    message.familyId = object.familyId ?? '';
+    return message;
+  },
+};
+
+function createBaseEndSignInForUserResponse(): EndSignInForUserResponse {
+  return {};
+}
+
+export const EndSignInForUserResponse: MessageFns<EndSignInForUserResponse> = {
+  encode(_: EndSignInForUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EndSignInForUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEndSignInForUserResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): EndSignInForUserResponse {
+    return {};
+  },
+
+  toJSON(_: EndSignInForUserResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<EndSignInForUserResponse>, I>>(base?: I): EndSignInForUserResponse {
+    return EndSignInForUserResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<EndSignInForUserResponse>, I>>(_: I): EndSignInForUserResponse {
+    const message = createBaseEndSignInForUserResponse();
+    return message;
+  },
+};
+
+function createBaseEndAllSignInsForUserRequest(): EndAllSignInsForUserRequest {
+  return { userId: '' };
+}
+
+export const EndAllSignInsForUserRequest: MessageFns<EndAllSignInsForUserRequest> = {
+  encode(message: EndAllSignInsForUserRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.userId !== '') {
+      writer.uint32(10).string(message.userId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EndAllSignInsForUserRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEndAllSignInsForUserRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.userId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): EndAllSignInsForUserRequest {
+    return {
+      userId: isSet(object.userID)
+        ? globalThis.String(object.userID)
+        : isSet(object.user_id)
+          ? globalThis.String(object.user_id)
+          : '',
+    };
+  },
+
+  toJSON(message: EndAllSignInsForUserRequest): unknown {
+    const obj: any = {};
+    if (message.userId !== '') {
+      obj.userID = message.userId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<EndAllSignInsForUserRequest>, I>>(base?: I): EndAllSignInsForUserRequest {
+    return EndAllSignInsForUserRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<EndAllSignInsForUserRequest>, I>>(object: I): EndAllSignInsForUserRequest {
+    const message = createBaseEndAllSignInsForUserRequest();
+    message.userId = object.userId ?? '';
+    return message;
+  },
+};
+
+function createBaseEndAllSignInsForUserResponse(): EndAllSignInsForUserResponse {
+  return {};
+}
+
+export const EndAllSignInsForUserResponse: MessageFns<EndAllSignInsForUserResponse> = {
+  encode(_: EndAllSignInsForUserResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): EndAllSignInsForUserResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseEndAllSignInsForUserResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): EndAllSignInsForUserResponse {
+    return {};
+  },
+
+  toJSON(_: EndAllSignInsForUserResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<EndAllSignInsForUserResponse>, I>>(base?: I): EndAllSignInsForUserResponse {
+    return EndAllSignInsForUserResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<EndAllSignInsForUserResponse>, I>>(_: I): EndAllSignInsForUserResponse {
+    const message = createBaseEndAllSignInsForUserResponse();
+    return message;
+  },
+};
+
 /**
  * SignInService is sign-in.
  *
- * Nine of its RPCs are anonymous by definition and six require a caller. What
- * none of them requires is a permission: there is no grant that would make
- * "sign in" safer, and the four authenticated ones take their subject from the
- * caller and have no field that could name anybody else. See
+ * Some of its RPCs are anonymous by definition and the rest require a caller.
+ * What none of them requires is a permission: there is no grant that would make
+ * "sign in" safer, and every authenticated one takes its subject from the
+ * caller and has no field that could name anybody else. See
  * authentication/signin/grpc's Require for how that is declared to an
  * authorization policy, which is not the same thing as being left out of one.
+ * What an operator does to somebody else's logins is
+ * SignInAdministrationService, which is permissioned, and which is a service of
+ * its own so that this statement stays true of this one.
  */
 export type SignInServiceService = typeof SignInServiceService;
 export const SignInServiceService = {
   /**
-   * Arriving, and the two ways a registration is finished. Register requires a
-   * caller -- the consumer's own registrar, for the reason identity's Register
-   * requires one: an open sign-up is a flow with policy in it, a captcha, a rate
-   * limit, an email domain rule, and this service holds none of that. The other
-   * two are anonymous and carry their own authority, which is the token that was
-   * mailed to the person they are about.
+   * Arriving, and the two ways a registration is finished. All three are
+   * anonymous. Register is the sign-up door, and it is open by default: the
+   * policy an open sign-up has in it -- who may register, which agreements
+   * they must accept, what standing and roles they start with -- is the
+   * deployment's registration policy, which the service runs on every
+   * registration before anything is hashed, minted or written, and the roles
+   * a registrant owns their account with are the deployment's, never the
+   * request's. A caller who is signed in still reaches it, and an operator
+   * provisioning users calls it that way. A deployment that does not want
+   * sign-up closes the door by name, and is then answered with
+   * UNIMPLEMENTED carrying REGISTRATION_CLOSED, so a client can tell a closed
+   * door from a broken one. Rate limiting it is the consumer's, in front of
+   * it, as it is for the sign-in doors. The other two carry their own
+   * authority, which is the token that was mailed to the person they are
+   * about.
    */
   register: {
     path: '/primandproper.platform.signin.v1.SignInService/Register' as const,
@@ -3364,13 +5688,45 @@ export const SignInServiceService = {
     responseDeserialize: (value: Buffer): VerifyEmailAddressResponse => VerifyEmailAddressResponse.decode(value),
   },
   /**
+   * Asking for another verification link. The first requires a caller and
+   * names nobody, for somebody signed in whose address changed; the second is
+   * anonymous and names an address, for a registrant who cannot sign in until
+   * they answer one, and is answered the same way whoever holds it.
+   */
+  requestVerificationEmail: {
+    path: '/primandproper.platform.signin.v1.SignInService/RequestVerificationEmail' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: RequestVerificationEmailRequest): Buffer =>
+      Buffer.from(RequestVerificationEmailRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RequestVerificationEmailRequest =>
+      RequestVerificationEmailRequest.decode(value),
+    responseSerialize: (value: RequestVerificationEmailResponse): Buffer =>
+      Buffer.from(RequestVerificationEmailResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RequestVerificationEmailResponse =>
+      RequestVerificationEmailResponse.decode(value),
+  },
+  requestVerificationEmailByAddress: {
+    path: '/primandproper.platform.signin.v1.SignInService/RequestVerificationEmailByAddress' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: RequestVerificationEmailByAddressRequest): Buffer =>
+      Buffer.from(RequestVerificationEmailByAddressRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RequestVerificationEmailByAddressRequest =>
+      RequestVerificationEmailByAddressRequest.decode(value),
+    responseSerialize: (value: RequestVerificationEmailByAddressResponse): Buffer =>
+      Buffer.from(RequestVerificationEmailByAddressResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RequestVerificationEmailByAddressResponse =>
+      RequestVerificationEmailByAddressResponse.decode(value),
+  },
+  /**
    * The passwordless door, both halves anonymous. Requesting a link names an
    * address and is answered the same way whoever holds it; redeeming one carries
    * the token that was mailed, which is the whole of its authority. Neither can
    * name a user, so neither is a way to ask about one.
    *
    * Rate limiting is the consumer's, in front of RequestMagicLink, and it is not
-   * optional: this is the one RPC in this service that sends mail on request.
+   * optional: it sends mail on request.
    */
   requestMagicLink: {
     path: '/primandproper.platform.signin.v1.SignInService/RequestMagicLink' as const,
@@ -3395,8 +5751,26 @@ export const SignInServiceService = {
     responseDeserialize: (value: Buffer): RedeemMagicLinkResponse => RedeemMagicLinkResponse.decode(value),
   },
   /**
-   * The two doors, and the one that keeps a sign-in alive without reopening
-   * either of them.
+   * The door for somebody who has forgotten what they sign in as. It is
+   * anonymous and answered the same way whoever holds the address, as
+   * RequestMagicLink is, and its rate limit is the consumer's for the same
+   * reason: it sends mail on request.
+   */
+  requestHandleReminder: {
+    path: '/primandproper.platform.signin.v1.SignInService/RequestHandleReminder' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: RequestHandleReminderRequest): Buffer =>
+      Buffer.from(RequestHandleReminderRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): RequestHandleReminderRequest => RequestHandleReminderRequest.decode(value),
+    responseSerialize: (value: RequestHandleReminderResponse): Buffer =>
+      Buffer.from(RequestHandleReminderResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): RequestHandleReminderResponse => RequestHandleReminderResponse.decode(value),
+  },
+  /**
+   * The two doors, the one that keeps a sign-in alive without reopening
+   * either of them, and the one that moves it to another of the person's
+   * accounts without reopening them either.
    */
   loginForToken: {
     path: '/primandproper.platform.signin.v1.SignInService/LoginForToken' as const,
@@ -3430,13 +5804,22 @@ export const SignInServiceService = {
       Buffer.from(ExchangeRefreshTokenResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): ExchangeRefreshTokenResponse => ExchangeRefreshTokenResponse.decode(value),
   },
+  switchAccount: {
+    path: '/primandproper.platform.signin.v1.SignInService/SwitchAccount' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: SwitchAccountRequest): Buffer => Buffer.from(SwitchAccountRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): SwitchAccountRequest => SwitchAccountRequest.decode(value),
+    responseSerialize: (value: SwitchAccountResponse): Buffer =>
+      Buffer.from(SwitchAccountResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): SwitchAccountResponse => SwitchAccountResponse.decode(value),
+  },
   /**
    * The way out, in its two sizes. Ending this login carries the credential and
    * needs no caller, so an application whose access token expired while it was
    * closed can still sign out; ending every login needs a caller and names
    * nobody. Both are a client's to call and neither is an operator's tool --
-   * revoking somebody else's sessions is signin.Service's method, reached
-   * through a consumer's own administrative surface.
+   * revoking somebody else's sessions is SignInAdministrationService's.
    */
   signOut: {
     path: '/primandproper.platform.signin.v1.SignInService/SignOut' as const,
@@ -3458,6 +5841,41 @@ export const SignInServiceService = {
       Buffer.from(SignOutEverywhereResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): SignOutEverywhereResponse => SignOutEverywhereResponse.decode(value),
   },
+  /**
+   * The screen between those two sizes: the calling user's live logins, ending
+   * one of them by name, and ending all of them but the one asking. All three
+   * need a caller and name nobody else; an operator doing any of them for
+   * somebody else calls SignInAdministrationService.
+   */
+  listSignIns: {
+    path: '/primandproper.platform.signin.v1.SignInService/ListSignIns' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListSignInsRequest): Buffer => Buffer.from(ListSignInsRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListSignInsRequest => ListSignInsRequest.decode(value),
+    responseSerialize: (value: ListSignInsResponse): Buffer => Buffer.from(ListSignInsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListSignInsResponse => ListSignInsResponse.decode(value),
+  },
+  endSignIn: {
+    path: '/primandproper.platform.signin.v1.SignInService/EndSignIn' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: EndSignInRequest): Buffer => Buffer.from(EndSignInRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): EndSignInRequest => EndSignInRequest.decode(value),
+    responseSerialize: (value: EndSignInResponse): Buffer => Buffer.from(EndSignInResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): EndSignInResponse => EndSignInResponse.decode(value),
+  },
+  endOtherSignIns: {
+    path: '/primandproper.platform.signin.v1.SignInService/EndOtherSignIns' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: EndOtherSignInsRequest): Buffer =>
+      Buffer.from(EndOtherSignInsRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): EndOtherSignInsRequest => EndOtherSignInsRequest.decode(value),
+    responseSerialize: (value: EndOtherSignInsResponse): Buffer =>
+      Buffer.from(EndOtherSignInsResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): EndOtherSignInsResponse => EndOtherSignInsResponse.decode(value),
+  },
   /** The two reads a client makes on load. */
   getAuthStatus: {
     path: '/primandproper.platform.signin.v1.SignInService/GetAuthStatus' as const,
@@ -3478,7 +5896,11 @@ export const SignInServiceService = {
     responseSerialize: (value: GetSelfResponse): Buffer => Buffer.from(GetSelfResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): GetSelfResponse => GetSelfResponse.decode(value),
   },
-  /** The three writes a signed-in person makes about their own credentials. */
+  /**
+   * The writes a signed-in person makes about their own credentials, and the
+   * two handles that are credentials in all but name. identity's UpdateProfile
+   * refuses both handles; these are where they change.
+   */
   updatePassword: {
     path: '/primandproper.platform.signin.v1.SignInService/UpdatePassword' as const,
     requestStream: false as const,
@@ -3512,65 +5934,139 @@ export const SignInServiceService = {
       Buffer.from(VerifyTOTPSecretResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): VerifyTOTPSecretResponse => VerifyTOTPSecretResponse.decode(value),
   },
+  updateEmailAddress: {
+    path: '/primandproper.platform.signin.v1.SignInService/UpdateEmailAddress' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateEmailAddressRequest): Buffer =>
+      Buffer.from(UpdateEmailAddressRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateEmailAddressRequest => UpdateEmailAddressRequest.decode(value),
+    responseSerialize: (value: UpdateEmailAddressResponse): Buffer =>
+      Buffer.from(UpdateEmailAddressResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UpdateEmailAddressResponse => UpdateEmailAddressResponse.decode(value),
+  },
+  updateUsername: {
+    path: '/primandproper.platform.signin.v1.SignInService/UpdateUsername' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UpdateUsernameRequest): Buffer =>
+      Buffer.from(UpdateUsernameRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UpdateUsernameRequest => UpdateUsernameRequest.decode(value),
+    responseSerialize: (value: UpdateUsernameResponse): Buffer =>
+      Buffer.from(UpdateUsernameResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UpdateUsernameResponse => UpdateUsernameResponse.decode(value),
+  },
 } as const;
 
 export interface SignInServiceServer extends UntypedServiceImplementation {
   /**
-   * Arriving, and the two ways a registration is finished. Register requires a
-   * caller -- the consumer's own registrar, for the reason identity's Register
-   * requires one: an open sign-up is a flow with policy in it, a captcha, a rate
-   * limit, an email domain rule, and this service holds none of that. The other
-   * two are anonymous and carry their own authority, which is the token that was
-   * mailed to the person they are about.
+   * Arriving, and the two ways a registration is finished. All three are
+   * anonymous. Register is the sign-up door, and it is open by default: the
+   * policy an open sign-up has in it -- who may register, which agreements
+   * they must accept, what standing and roles they start with -- is the
+   * deployment's registration policy, which the service runs on every
+   * registration before anything is hashed, minted or written, and the roles
+   * a registrant owns their account with are the deployment's, never the
+   * request's. A caller who is signed in still reaches it, and an operator
+   * provisioning users calls it that way. A deployment that does not want
+   * sign-up closes the door by name, and is then answered with
+   * UNIMPLEMENTED carrying REGISTRATION_CLOSED, so a client can tell a closed
+   * door from a broken one. Rate limiting it is the consumer's, in front of
+   * it, as it is for the sign-in doors. The other two carry their own
+   * authority, which is the token that was mailed to the person they are
+   * about.
    */
   register: handleUnaryCall<RegisterRequest, RegisterResponse>;
   attachPassword: handleUnaryCall<AttachPasswordRequest, AttachPasswordResponse>;
   verifyEmailAddress: handleUnaryCall<VerifyEmailAddressRequest, VerifyEmailAddressResponse>;
   /**
+   * Asking for another verification link. The first requires a caller and
+   * names nobody, for somebody signed in whose address changed; the second is
+   * anonymous and names an address, for a registrant who cannot sign in until
+   * they answer one, and is answered the same way whoever holds it.
+   */
+  requestVerificationEmail: handleUnaryCall<RequestVerificationEmailRequest, RequestVerificationEmailResponse>;
+  requestVerificationEmailByAddress: handleUnaryCall<
+    RequestVerificationEmailByAddressRequest,
+    RequestVerificationEmailByAddressResponse
+  >;
+  /**
    * The passwordless door, both halves anonymous. Requesting a link names an
    * address and is answered the same way whoever holds it; redeeming one carries
    * the token that was mailed, which is the whole of its authority. Neither can
    * name a user, so neither is a way to ask about one.
    *
    * Rate limiting is the consumer's, in front of RequestMagicLink, and it is not
-   * optional: this is the one RPC in this service that sends mail on request.
+   * optional: it sends mail on request.
    */
   requestMagicLink: handleUnaryCall<RequestMagicLinkRequest, RequestMagicLinkResponse>;
   redeemMagicLink: handleUnaryCall<RedeemMagicLinkRequest, RedeemMagicLinkResponse>;
   /**
-   * The two doors, and the one that keeps a sign-in alive without reopening
-   * either of them.
+   * The door for somebody who has forgotten what they sign in as. It is
+   * anonymous and answered the same way whoever holds the address, as
+   * RequestMagicLink is, and its rate limit is the consumer's for the same
+   * reason: it sends mail on request.
+   */
+  requestHandleReminder: handleUnaryCall<RequestHandleReminderRequest, RequestHandleReminderResponse>;
+  /**
+   * The two doors, the one that keeps a sign-in alive without reopening
+   * either of them, and the one that moves it to another of the person's
+   * accounts without reopening them either.
    */
   loginForToken: handleUnaryCall<LoginForTokenRequest, LoginForTokenResponse>;
   adminLoginForToken: handleUnaryCall<AdminLoginForTokenRequest, AdminLoginForTokenResponse>;
   exchangeRefreshToken: handleUnaryCall<ExchangeRefreshTokenRequest, ExchangeRefreshTokenResponse>;
+  switchAccount: handleUnaryCall<SwitchAccountRequest, SwitchAccountResponse>;
   /**
    * The way out, in its two sizes. Ending this login carries the credential and
    * needs no caller, so an application whose access token expired while it was
    * closed can still sign out; ending every login needs a caller and names
    * nobody. Both are a client's to call and neither is an operator's tool --
-   * revoking somebody else's sessions is signin.Service's method, reached
-   * through a consumer's own administrative surface.
+   * revoking somebody else's sessions is SignInAdministrationService's.
    */
   signOut: handleUnaryCall<SignOutRequest, SignOutResponse>;
   signOutEverywhere: handleUnaryCall<SignOutEverywhereRequest, SignOutEverywhereResponse>;
+  /**
+   * The screen between those two sizes: the calling user's live logins, ending
+   * one of them by name, and ending all of them but the one asking. All three
+   * need a caller and name nobody else; an operator doing any of them for
+   * somebody else calls SignInAdministrationService.
+   */
+  listSignIns: handleUnaryCall<ListSignInsRequest, ListSignInsResponse>;
+  endSignIn: handleUnaryCall<EndSignInRequest, EndSignInResponse>;
+  endOtherSignIns: handleUnaryCall<EndOtherSignInsRequest, EndOtherSignInsResponse>;
   /** The two reads a client makes on load. */
   getAuthStatus: handleUnaryCall<GetAuthStatusRequest, GetAuthStatusResponse>;
   getSelf: handleUnaryCall<GetSelfRequest, GetSelfResponse>;
-  /** The three writes a signed-in person makes about their own credentials. */
+  /**
+   * The writes a signed-in person makes about their own credentials, and the
+   * two handles that are credentials in all but name. identity's UpdateProfile
+   * refuses both handles; these are where they change.
+   */
   updatePassword: handleUnaryCall<UpdatePasswordRequest, UpdatePasswordResponse>;
   refreshTotpSecret: handleUnaryCall<RefreshTOTPSecretRequest, RefreshTOTPSecretResponse>;
   verifyTotpSecret: handleUnaryCall<VerifyTOTPSecretRequest, VerifyTOTPSecretResponse>;
+  updateEmailAddress: handleUnaryCall<UpdateEmailAddressRequest, UpdateEmailAddressResponse>;
+  updateUsername: handleUnaryCall<UpdateUsernameRequest, UpdateUsernameResponse>;
 }
 
 export interface SignInServiceClient extends Client {
   /**
-   * Arriving, and the two ways a registration is finished. Register requires a
-   * caller -- the consumer's own registrar, for the reason identity's Register
-   * requires one: an open sign-up is a flow with policy in it, a captcha, a rate
-   * limit, an email domain rule, and this service holds none of that. The other
-   * two are anonymous and carry their own authority, which is the token that was
-   * mailed to the person they are about.
+   * Arriving, and the two ways a registration is finished. All three are
+   * anonymous. Register is the sign-up door, and it is open by default: the
+   * policy an open sign-up has in it -- who may register, which agreements
+   * they must accept, what standing and roles they start with -- is the
+   * deployment's registration policy, which the service runs on every
+   * registration before anything is hashed, minted or written, and the roles
+   * a registrant owns their account with are the deployment's, never the
+   * request's. A caller who is signed in still reaches it, and an operator
+   * provisioning users calls it that way. A deployment that does not want
+   * sign-up closes the door by name, and is then answered with
+   * UNIMPLEMENTED carrying REGISTRATION_CLOSED, so a client can tell a closed
+   * door from a broken one. Rate limiting it is the consumer's, in front of
+   * it, as it is for the sign-in doors. The other two carry their own
+   * authority, which is the token that was mailed to the person they are
+   * about.
    */
   register(
     request: RegisterRequest,
@@ -3616,6 +6112,42 @@ export interface SignInServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: VerifyEmailAddressResponse) => void,
+  ): ClientUnaryCall;
+  /**
+   * Asking for another verification link. The first requires a caller and
+   * names nobody, for somebody signed in whose address changed; the second is
+   * anonymous and names an address, for a registrant who cannot sign in until
+   * they answer one, and is answered the same way whoever holds it.
+   */
+  requestVerificationEmail(
+    request: RequestVerificationEmailRequest,
+    callback: (error: ServiceError | null, response: RequestVerificationEmailResponse) => void,
+  ): ClientUnaryCall;
+  requestVerificationEmail(
+    request: RequestVerificationEmailRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: RequestVerificationEmailResponse) => void,
+  ): ClientUnaryCall;
+  requestVerificationEmail(
+    request: RequestVerificationEmailRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: RequestVerificationEmailResponse) => void,
+  ): ClientUnaryCall;
+  requestVerificationEmailByAddress(
+    request: RequestVerificationEmailByAddressRequest,
+    callback: (error: ServiceError | null, response: RequestVerificationEmailByAddressResponse) => void,
+  ): ClientUnaryCall;
+  requestVerificationEmailByAddress(
+    request: RequestVerificationEmailByAddressRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: RequestVerificationEmailByAddressResponse) => void,
+  ): ClientUnaryCall;
+  requestVerificationEmailByAddress(
+    request: RequestVerificationEmailByAddressRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: RequestVerificationEmailByAddressResponse) => void,
   ): ClientUnaryCall;
   /**
    * The passwordless door, both halves anonymous. Requesting a link names an
@@ -3624,7 +6156,7 @@ export interface SignInServiceClient extends Client {
    * name a user, so neither is a way to ask about one.
    *
    * Rate limiting is the consumer's, in front of RequestMagicLink, and it is not
-   * optional: this is the one RPC in this service that sends mail on request.
+   * optional: it sends mail on request.
    */
   requestMagicLink(
     request: RequestMagicLinkRequest,
@@ -3657,8 +6189,30 @@ export interface SignInServiceClient extends Client {
     callback: (error: ServiceError | null, response: RedeemMagicLinkResponse) => void,
   ): ClientUnaryCall;
   /**
-   * The two doors, and the one that keeps a sign-in alive without reopening
-   * either of them.
+   * The door for somebody who has forgotten what they sign in as. It is
+   * anonymous and answered the same way whoever holds the address, as
+   * RequestMagicLink is, and its rate limit is the consumer's for the same
+   * reason: it sends mail on request.
+   */
+  requestHandleReminder(
+    request: RequestHandleReminderRequest,
+    callback: (error: ServiceError | null, response: RequestHandleReminderResponse) => void,
+  ): ClientUnaryCall;
+  requestHandleReminder(
+    request: RequestHandleReminderRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: RequestHandleReminderResponse) => void,
+  ): ClientUnaryCall;
+  requestHandleReminder(
+    request: RequestHandleReminderRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: RequestHandleReminderResponse) => void,
+  ): ClientUnaryCall;
+  /**
+   * The two doors, the one that keeps a sign-in alive without reopening
+   * either of them, and the one that moves it to another of the person's
+   * accounts without reopening them either.
    */
   loginForToken(
     request: LoginForTokenRequest,
@@ -3704,14 +6258,28 @@ export interface SignInServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: ExchangeRefreshTokenResponse) => void,
+  ): ClientUnaryCall;
+  switchAccount(
+    request: SwitchAccountRequest,
+    callback: (error: ServiceError | null, response: SwitchAccountResponse) => void,
+  ): ClientUnaryCall;
+  switchAccount(
+    request: SwitchAccountRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: SwitchAccountResponse) => void,
+  ): ClientUnaryCall;
+  switchAccount(
+    request: SwitchAccountRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: SwitchAccountResponse) => void,
   ): ClientUnaryCall;
   /**
    * The way out, in its two sizes. Ending this login carries the credential and
    * needs no caller, so an application whose access token expired while it was
    * closed can still sign out; ending every login needs a caller and names
    * nobody. Both are a client's to call and neither is an operator's tool --
-   * revoking somebody else's sessions is signin.Service's method, reached
-   * through a consumer's own administrative surface.
+   * revoking somebody else's sessions is SignInAdministrationService's.
    */
   signOut(
     request: SignOutRequest,
@@ -3742,6 +6310,57 @@ export interface SignInServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: SignOutEverywhereResponse) => void,
+  ): ClientUnaryCall;
+  /**
+   * The screen between those two sizes: the calling user's live logins, ending
+   * one of them by name, and ending all of them but the one asking. All three
+   * need a caller and name nobody else; an operator doing any of them for
+   * somebody else calls SignInAdministrationService.
+   */
+  listSignIns(
+    request: ListSignInsRequest,
+    callback: (error: ServiceError | null, response: ListSignInsResponse) => void,
+  ): ClientUnaryCall;
+  listSignIns(
+    request: ListSignInsRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: ListSignInsResponse) => void,
+  ): ClientUnaryCall;
+  listSignIns(
+    request: ListSignInsRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: ListSignInsResponse) => void,
+  ): ClientUnaryCall;
+  endSignIn(
+    request: EndSignInRequest,
+    callback: (error: ServiceError | null, response: EndSignInResponse) => void,
+  ): ClientUnaryCall;
+  endSignIn(
+    request: EndSignInRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: EndSignInResponse) => void,
+  ): ClientUnaryCall;
+  endSignIn(
+    request: EndSignInRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: EndSignInResponse) => void,
+  ): ClientUnaryCall;
+  endOtherSignIns(
+    request: EndOtherSignInsRequest,
+    callback: (error: ServiceError | null, response: EndOtherSignInsResponse) => void,
+  ): ClientUnaryCall;
+  endOtherSignIns(
+    request: EndOtherSignInsRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: EndOtherSignInsResponse) => void,
+  ): ClientUnaryCall;
+  endOtherSignIns(
+    request: EndOtherSignInsRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: EndOtherSignInsResponse) => void,
   ): ClientUnaryCall;
   /** The two reads a client makes on load. */
   getAuthStatus(
@@ -3774,7 +6393,11 @@ export interface SignInServiceClient extends Client {
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: GetSelfResponse) => void,
   ): ClientUnaryCall;
-  /** The three writes a signed-in person makes about their own credentials. */
+  /**
+   * The writes a signed-in person makes about their own credentials, and the
+   * two handles that are credentials in all but name. identity's UpdateProfile
+   * refuses both handles; these are where they change.
+   */
   updatePassword(
     request: UpdatePasswordRequest,
     callback: (error: ServiceError | null, response: UpdatePasswordResponse) => void,
@@ -3819,6 +6442,36 @@ export interface SignInServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: VerifyTOTPSecretResponse) => void,
+  ): ClientUnaryCall;
+  updateEmailAddress(
+    request: UpdateEmailAddressRequest,
+    callback: (error: ServiceError | null, response: UpdateEmailAddressResponse) => void,
+  ): ClientUnaryCall;
+  updateEmailAddress(
+    request: UpdateEmailAddressRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: UpdateEmailAddressResponse) => void,
+  ): ClientUnaryCall;
+  updateEmailAddress(
+    request: UpdateEmailAddressRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: UpdateEmailAddressResponse) => void,
+  ): ClientUnaryCall;
+  updateUsername(
+    request: UpdateUsernameRequest,
+    callback: (error: ServiceError | null, response: UpdateUsernameResponse) => void,
+  ): ClientUnaryCall;
+  updateUsername(
+    request: UpdateUsernameRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: UpdateUsernameResponse) => void,
+  ): ClientUnaryCall;
+  updateUsername(
+    request: UpdateUsernameRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: UpdateUsernameResponse) => void,
   ): ClientUnaryCall;
 }
 
@@ -3828,6 +6481,126 @@ export const SignInServiceClient = makeGenericClientConstructor(
 ) as unknown as {
   new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): SignInServiceClient;
   service: typeof SignInServiceService;
+  serviceName: string;
+};
+
+/**
+ * SignInAdministrationService is what an operator does to somebody else's
+ * logins: read them, end one, end all of them.
+ *
+ * Every RPC requires a caller and names a user, and each is gated by a
+ * permission authentication/signin/grpc declares -- signin.sign_ins.read_any
+ * for the read, signin.sign_ins.end_any for the two ends -- which no role holds
+ * by default. Who holds them is the deployment's policy; this schema codifies
+ * nothing about who an operator is.
+ *
+ * An end is reported to the sign-in service's revocation hook as an
+ * operator's, with the caller as the actor, so an audit trail tells "an
+ * operator signed me out" from "I signed out". Like every end, it stops the
+ * login's access tokens being replaced rather than stopping the one already
+ * issued, unless the deployment checks each token's login on every request.
+ */
+export type SignInAdministrationServiceService = typeof SignInAdministrationServiceService;
+export const SignInAdministrationServiceService = {
+  listSignInsForUser: {
+    path: '/primandproper.platform.signin.v1.SignInAdministrationService/ListSignInsForUser' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListSignInsForUserRequest): Buffer =>
+      Buffer.from(ListSignInsForUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListSignInsForUserRequest => ListSignInsForUserRequest.decode(value),
+    responseSerialize: (value: ListSignInsForUserResponse): Buffer =>
+      Buffer.from(ListSignInsForUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListSignInsForUserResponse => ListSignInsForUserResponse.decode(value),
+  },
+  endSignInForUser: {
+    path: '/primandproper.platform.signin.v1.SignInAdministrationService/EndSignInForUser' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: EndSignInForUserRequest): Buffer =>
+      Buffer.from(EndSignInForUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): EndSignInForUserRequest => EndSignInForUserRequest.decode(value),
+    responseSerialize: (value: EndSignInForUserResponse): Buffer =>
+      Buffer.from(EndSignInForUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): EndSignInForUserResponse => EndSignInForUserResponse.decode(value),
+  },
+  endAllSignInsForUser: {
+    path: '/primandproper.platform.signin.v1.SignInAdministrationService/EndAllSignInsForUser' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: EndAllSignInsForUserRequest): Buffer =>
+      Buffer.from(EndAllSignInsForUserRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): EndAllSignInsForUserRequest => EndAllSignInsForUserRequest.decode(value),
+    responseSerialize: (value: EndAllSignInsForUserResponse): Buffer =>
+      Buffer.from(EndAllSignInsForUserResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): EndAllSignInsForUserResponse => EndAllSignInsForUserResponse.decode(value),
+  },
+} as const;
+
+export interface SignInAdministrationServiceServer extends UntypedServiceImplementation {
+  listSignInsForUser: handleUnaryCall<ListSignInsForUserRequest, ListSignInsForUserResponse>;
+  endSignInForUser: handleUnaryCall<EndSignInForUserRequest, EndSignInForUserResponse>;
+  endAllSignInsForUser: handleUnaryCall<EndAllSignInsForUserRequest, EndAllSignInsForUserResponse>;
+}
+
+export interface SignInAdministrationServiceClient extends Client {
+  listSignInsForUser(
+    request: ListSignInsForUserRequest,
+    callback: (error: ServiceError | null, response: ListSignInsForUserResponse) => void,
+  ): ClientUnaryCall;
+  listSignInsForUser(
+    request: ListSignInsForUserRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: ListSignInsForUserResponse) => void,
+  ): ClientUnaryCall;
+  listSignInsForUser(
+    request: ListSignInsForUserRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: ListSignInsForUserResponse) => void,
+  ): ClientUnaryCall;
+  endSignInForUser(
+    request: EndSignInForUserRequest,
+    callback: (error: ServiceError | null, response: EndSignInForUserResponse) => void,
+  ): ClientUnaryCall;
+  endSignInForUser(
+    request: EndSignInForUserRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: EndSignInForUserResponse) => void,
+  ): ClientUnaryCall;
+  endSignInForUser(
+    request: EndSignInForUserRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: EndSignInForUserResponse) => void,
+  ): ClientUnaryCall;
+  endAllSignInsForUser(
+    request: EndAllSignInsForUserRequest,
+    callback: (error: ServiceError | null, response: EndAllSignInsForUserResponse) => void,
+  ): ClientUnaryCall;
+  endAllSignInsForUser(
+    request: EndAllSignInsForUserRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: EndAllSignInsForUserResponse) => void,
+  ): ClientUnaryCall;
+  endAllSignInsForUser(
+    request: EndAllSignInsForUserRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: EndAllSignInsForUserResponse) => void,
+  ): ClientUnaryCall;
+}
+
+export const SignInAdministrationServiceClient = makeGenericClientConstructor(
+  SignInAdministrationServiceService,
+  'primandproper.platform.signin.v1.SignInAdministrationService',
+) as unknown as {
+  new (
+    address: string,
+    credentials: ChannelCredentials,
+    options?: Partial<ClientOptions>,
+  ): SignInAdministrationServiceClient;
+  service: typeof SignInAdministrationServiceService;
   serviceName: string;
 };
 
@@ -3868,6 +6641,10 @@ function fromJsonTimestamp(o: any): Date {
   } else {
     return fromTimestamp(Timestamp.fromJSON(o));
   }
+}
+
+function isObject(value: any): boolean {
+  return typeof value === 'object' && value !== null;
 }
 
 function isSet(value: any): boolean {

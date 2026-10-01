@@ -112,6 +112,13 @@ export interface Actor {
    * not recoverable afterwards.
    */
   ip: string;
+  /**
+   * impersonator is who was really acting when id was acting through somebody
+   * else's identity -- an operator signed in as a customer -- and empty when id
+   * was acting for themselves. id stays the subject the entry is filed under;
+   * this is what stops that entry saying the subject did it.
+   */
+  impersonator: string;
 }
 
 /**
@@ -224,6 +231,12 @@ export interface EntryQuery {
   resourceType: string;
   /** event_type restricts to one kind of event. */
   eventType: string;
+  /**
+   * impersonator_id restricts to the entries one principal recorded while
+   * acting through somebody else's identity. actor_id does not find those: an
+   * impersonated entry is filed under the subject.
+   */
+  impersonatorId: string;
 }
 
 /** Break is where and how a chain stopped verifying. */
@@ -349,8 +362,51 @@ export interface VerifyChainResponse {
   result: VerificationResult | undefined;
 }
 
+/**
+ * OwnedEntry is an entry together with the tenant whose chain it is in, as
+ * AuditAdministrationService answers it.
+ *
+ * Entry carries no scope because every entry AuditService returns belongs to
+ * the connection's. An operator's read spans tenants, so the owner is
+ * carried beside the entry rather than added to it: Entry stays the one shape
+ * both services describe an entry with.
+ */
+export interface OwnedEntry {
+  entry: Entry | undefined;
+  /**
+   * owner_id is the tenant whose chain holds the entry: the identifier a
+   * tenancy.Scope stores. Empty is the global scope, the chain of events that
+   * belong to no tenant.
+   */
+  ownerId: string;
+}
+
+export interface GetAnyEntryRequest {
+  entryId: string;
+}
+
+export interface GetAnyEntryResponse {
+  entry: OwnedEntry | undefined;
+}
+
+export interface ListAnyEntriesRequest {
+  query: EntryQuery | undefined;
+  filter: QueryFilter | undefined;
+  /**
+   * owner_id narrows the page to one tenant's chain, where it is set. Unset
+   * pages every tenant's. Set and empty is the global chain, which is a
+   * tenant's worth of events as well: the ones that belong to no tenant.
+   */
+  ownerId?: string | undefined;
+}
+
+export interface ListAnyEntriesResponse {
+  pagination: Pagination | undefined;
+  results: OwnedEntry[];
+}
+
 function createBaseActor(): Actor {
-  return { id: '', type: '', ip: '' };
+  return { id: '', type: '', ip: '', impersonator: '' };
 }
 
 export const Actor: MessageFns<Actor> = {
@@ -363,6 +419,9 @@ export const Actor: MessageFns<Actor> = {
     }
     if (message.ip !== '') {
       writer.uint32(26).string(message.ip);
+    }
+    if (message.impersonator !== '') {
+      writer.uint32(34).string(message.impersonator);
     }
     return writer;
   },
@@ -398,6 +457,14 @@ export const Actor: MessageFns<Actor> = {
           message.ip = reader.string();
           continue;
         }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.impersonator = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -412,6 +479,7 @@ export const Actor: MessageFns<Actor> = {
       id: isSet(object.id) ? globalThis.String(object.id) : '',
       type: isSet(object.type) ? globalThis.String(object.type) : '',
       ip: isSet(object.ip) ? globalThis.String(object.ip) : '',
+      impersonator: isSet(object.impersonator) ? globalThis.String(object.impersonator) : '',
     };
   },
 
@@ -426,6 +494,9 @@ export const Actor: MessageFns<Actor> = {
     if (message.ip !== '') {
       obj.ip = message.ip;
     }
+    if (message.impersonator !== '') {
+      obj.impersonator = message.impersonator;
+    }
     return obj;
   },
 
@@ -437,6 +508,7 @@ export const Actor: MessageFns<Actor> = {
     message.id = object.id ?? '';
     message.type = object.type ?? '';
     message.ip = object.ip ?? '';
+    message.impersonator = object.impersonator ?? '';
     return message;
   },
 };
@@ -972,7 +1044,7 @@ export const Entry_MetadataEntry: MessageFns<Entry_MetadataEntry> = {
 };
 
 function createBaseEntryQuery(): EntryQuery {
-  return { actorId: '', actorType: '', resourceId: '', resourceType: '', eventType: '' };
+  return { actorId: '', actorType: '', resourceId: '', resourceType: '', eventType: '', impersonatorId: '' };
 }
 
 export const EntryQuery: MessageFns<EntryQuery> = {
@@ -991,6 +1063,9 @@ export const EntryQuery: MessageFns<EntryQuery> = {
     }
     if (message.eventType !== '') {
       writer.uint32(42).string(message.eventType);
+    }
+    if (message.impersonatorId !== '') {
+      writer.uint32(50).string(message.impersonatorId);
     }
     return writer;
   },
@@ -1042,6 +1117,14 @@ export const EntryQuery: MessageFns<EntryQuery> = {
           message.eventType = reader.string();
           continue;
         }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.impersonatorId = reader.string();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1078,6 +1161,11 @@ export const EntryQuery: MessageFns<EntryQuery> = {
         : isSet(object.event_type)
           ? globalThis.String(object.event_type)
           : '',
+      impersonatorId: isSet(object.impersonatorID)
+        ? globalThis.String(object.impersonatorID)
+        : isSet(object.impersonator_id)
+          ? globalThis.String(object.impersonator_id)
+          : '',
     };
   },
 
@@ -1098,6 +1186,9 @@ export const EntryQuery: MessageFns<EntryQuery> = {
     if (message.eventType !== '') {
       obj.eventType = message.eventType;
     }
+    if (message.impersonatorId !== '') {
+      obj.impersonatorID = message.impersonatorId;
+    }
     return obj;
   },
 
@@ -1111,6 +1202,7 @@ export const EntryQuery: MessageFns<EntryQuery> = {
     message.resourceId = object.resourceId ?? '';
     message.resourceType = object.resourceType ?? '';
     message.eventType = object.eventType ?? '';
+    message.impersonatorId = object.impersonatorId ?? '';
     return message;
   },
 };
@@ -1826,11 +1918,392 @@ export const VerifyChainResponse: MessageFns<VerifyChainResponse> = {
   },
 };
 
+function createBaseOwnedEntry(): OwnedEntry {
+  return { entry: undefined, ownerId: '' };
+}
+
+export const OwnedEntry: MessageFns<OwnedEntry> = {
+  encode(message: OwnedEntry, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.entry !== undefined) {
+      Entry.encode(message.entry, writer.uint32(10).fork()).join();
+    }
+    if (message.ownerId !== '') {
+      writer.uint32(18).string(message.ownerId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): OwnedEntry {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseOwnedEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.entry = Entry.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.ownerId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): OwnedEntry {
+    return {
+      entry: isSet(object.entry) ? Entry.fromJSON(object.entry) : undefined,
+      ownerId: isSet(object.ownerID)
+        ? globalThis.String(object.ownerID)
+        : isSet(object.owner_id)
+          ? globalThis.String(object.owner_id)
+          : '',
+    };
+  },
+
+  toJSON(message: OwnedEntry): unknown {
+    const obj: any = {};
+    if (message.entry !== undefined) {
+      obj.entry = Entry.toJSON(message.entry);
+    }
+    if (message.ownerId !== '') {
+      obj.ownerID = message.ownerId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<OwnedEntry>, I>>(base?: I): OwnedEntry {
+    return OwnedEntry.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<OwnedEntry>, I>>(object: I): OwnedEntry {
+    const message = createBaseOwnedEntry();
+    message.entry = object.entry !== undefined && object.entry !== null ? Entry.fromPartial(object.entry) : undefined;
+    message.ownerId = object.ownerId ?? '';
+    return message;
+  },
+};
+
+function createBaseGetAnyEntryRequest(): GetAnyEntryRequest {
+  return { entryId: '' };
+}
+
+export const GetAnyEntryRequest: MessageFns<GetAnyEntryRequest> = {
+  encode(message: GetAnyEntryRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.entryId !== '') {
+      writer.uint32(10).string(message.entryId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetAnyEntryRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetAnyEntryRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.entryId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): GetAnyEntryRequest {
+    return {
+      entryId: isSet(object.entryID)
+        ? globalThis.String(object.entryID)
+        : isSet(object.entry_id)
+          ? globalThis.String(object.entry_id)
+          : '',
+    };
+  },
+
+  toJSON(message: GetAnyEntryRequest): unknown {
+    const obj: any = {};
+    if (message.entryId !== '') {
+      obj.entryID = message.entryId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<GetAnyEntryRequest>, I>>(base?: I): GetAnyEntryRequest {
+    return GetAnyEntryRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<GetAnyEntryRequest>, I>>(object: I): GetAnyEntryRequest {
+    const message = createBaseGetAnyEntryRequest();
+    message.entryId = object.entryId ?? '';
+    return message;
+  },
+};
+
+function createBaseGetAnyEntryResponse(): GetAnyEntryResponse {
+  return { entry: undefined };
+}
+
+export const GetAnyEntryResponse: MessageFns<GetAnyEntryResponse> = {
+  encode(message: GetAnyEntryResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.entry !== undefined) {
+      OwnedEntry.encode(message.entry, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): GetAnyEntryResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseGetAnyEntryResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.entry = OwnedEntry.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): GetAnyEntryResponse {
+    return { entry: isSet(object.entry) ? OwnedEntry.fromJSON(object.entry) : undefined };
+  },
+
+  toJSON(message: GetAnyEntryResponse): unknown {
+    const obj: any = {};
+    if (message.entry !== undefined) {
+      obj.entry = OwnedEntry.toJSON(message.entry);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<GetAnyEntryResponse>, I>>(base?: I): GetAnyEntryResponse {
+    return GetAnyEntryResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<GetAnyEntryResponse>, I>>(object: I): GetAnyEntryResponse {
+    const message = createBaseGetAnyEntryResponse();
+    message.entry =
+      object.entry !== undefined && object.entry !== null ? OwnedEntry.fromPartial(object.entry) : undefined;
+    return message;
+  },
+};
+
+function createBaseListAnyEntriesRequest(): ListAnyEntriesRequest {
+  return { query: undefined, filter: undefined, ownerId: undefined };
+}
+
+export const ListAnyEntriesRequest: MessageFns<ListAnyEntriesRequest> = {
+  encode(message: ListAnyEntriesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.query !== undefined) {
+      EntryQuery.encode(message.query, writer.uint32(10).fork()).join();
+    }
+    if (message.filter !== undefined) {
+      QueryFilter.encode(message.filter, writer.uint32(18).fork()).join();
+    }
+    if (message.ownerId !== undefined) {
+      writer.uint32(26).string(message.ownerId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListAnyEntriesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListAnyEntriesRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.query = EntryQuery.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.filter = QueryFilter.decode(reader, reader.uint32());
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.ownerId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListAnyEntriesRequest {
+    return {
+      query: isSet(object.query) ? EntryQuery.fromJSON(object.query) : undefined,
+      filter: isSet(object.filter) ? QueryFilter.fromJSON(object.filter) : undefined,
+      ownerId: isSet(object.ownerID)
+        ? globalThis.String(object.ownerID)
+        : isSet(object.owner_id)
+          ? globalThis.String(object.owner_id)
+          : undefined,
+    };
+  },
+
+  toJSON(message: ListAnyEntriesRequest): unknown {
+    const obj: any = {};
+    if (message.query !== undefined) {
+      obj.query = EntryQuery.toJSON(message.query);
+    }
+    if (message.filter !== undefined) {
+      obj.filter = QueryFilter.toJSON(message.filter);
+    }
+    if (message.ownerId !== undefined) {
+      obj.ownerID = message.ownerId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListAnyEntriesRequest>, I>>(base?: I): ListAnyEntriesRequest {
+    return ListAnyEntriesRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListAnyEntriesRequest>, I>>(object: I): ListAnyEntriesRequest {
+    const message = createBaseListAnyEntriesRequest();
+    message.query =
+      object.query !== undefined && object.query !== null ? EntryQuery.fromPartial(object.query) : undefined;
+    message.filter =
+      object.filter !== undefined && object.filter !== null ? QueryFilter.fromPartial(object.filter) : undefined;
+    message.ownerId = object.ownerId ?? undefined;
+    return message;
+  },
+};
+
+function createBaseListAnyEntriesResponse(): ListAnyEntriesResponse {
+  return { pagination: undefined, results: [] };
+}
+
+export const ListAnyEntriesResponse: MessageFns<ListAnyEntriesResponse> = {
+  encode(message: ListAnyEntriesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.pagination !== undefined) {
+      Pagination.encode(message.pagination, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.results) {
+      OwnedEntry.encode(v!, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListAnyEntriesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListAnyEntriesResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.pagination = Pagination.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.results.push(OwnedEntry.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListAnyEntriesResponse {
+    return {
+      pagination: isSet(object.pagination) ? Pagination.fromJSON(object.pagination) : undefined,
+      results: globalThis.Array.isArray(object?.results) ? object.results.map((e: any) => OwnedEntry.fromJSON(e)) : [],
+    };
+  },
+
+  toJSON(message: ListAnyEntriesResponse): unknown {
+    const obj: any = {};
+    if (message.pagination !== undefined) {
+      obj.pagination = Pagination.toJSON(message.pagination);
+    }
+    if (message.results?.length) {
+      obj.results = message.results.map((e) => OwnedEntry.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListAnyEntriesResponse>, I>>(base?: I): ListAnyEntriesResponse {
+    return ListAnyEntriesResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListAnyEntriesResponse>, I>>(object: I): ListAnyEntriesResponse {
+    const message = createBaseListAnyEntriesResponse();
+    message.pagination =
+      object.pagination !== undefined && object.pagination !== null
+        ? Pagination.fromPartial(object.pagination)
+        : undefined;
+    message.results = object.results?.map((e) => OwnedEntry.fromPartial(e)) || [];
+    return message;
+  },
+};
+
 /**
  * AuditService is the audit log on the wire: read one, page them, verify the
  * chain.
  *
- * Three RPCs, all reads, all against the one scope the connection resolved.
+ * Every RPC is a read, and every one is against the one scope the connection
+ * resolved.
  * What is absent is the recording -- see this file's documentation for why a
  * write that belongs inside the caller's transaction cannot be an RPC.
  */
@@ -1970,6 +2443,122 @@ export const AuditServiceClient = makeGenericClientConstructor(
 ) as unknown as {
   new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): AuditServiceClient;
   service: typeof AuditServiceService;
+  serviceName: string;
+};
+
+/**
+ * AuditAdministrationService is an operator's read of the audit log: an entry
+ * in any tenant's chain, and a page of every tenant's, or of one they name.
+ *
+ * It is a service of its own rather than a widening of AuditService, so that
+ * reading one's own log never becomes reading everybody's. AuditService answers
+ * every caller from the chain the connection resolved, whoever they are; this
+ * answers only the callers a deployment's policy grants its methods to, and
+ * records each call in the caller's own chain before it answers -- a server with
+ * nowhere to record one answers every call here Unimplemented.
+ */
+export type AuditAdministrationServiceService = typeof AuditAdministrationServiceService;
+export const AuditAdministrationServiceService = {
+  /**
+   * GetAnyEntry reads one entry by id from whichever tenant's chain holds it.
+   *
+   * An id no chain holds is NotFound and is not recorded: the read found
+   * nothing to disclose.
+   */
+  getAnyEntry: {
+    path: '/primandproper.platform.audit.v1.AuditAdministrationService/GetAnyEntry' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: GetAnyEntryRequest): Buffer => Buffer.from(GetAnyEntryRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): GetAnyEntryRequest => GetAnyEntryRequest.decode(value),
+    responseSerialize: (value: GetAnyEntryResponse): Buffer => Buffer.from(GetAnyEntryResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): GetAnyEntryResponse => GetAnyEntryResponse.decode(value),
+  },
+  /**
+   * ListAnyEntries pages every tenant's entries, or one tenant's where
+   * owner_id names it, narrowed by the query.
+   */
+  listAnyEntries: {
+    path: '/primandproper.platform.audit.v1.AuditAdministrationService/ListAnyEntries' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListAnyEntriesRequest): Buffer =>
+      Buffer.from(ListAnyEntriesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListAnyEntriesRequest => ListAnyEntriesRequest.decode(value),
+    responseSerialize: (value: ListAnyEntriesResponse): Buffer =>
+      Buffer.from(ListAnyEntriesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListAnyEntriesResponse => ListAnyEntriesResponse.decode(value),
+  },
+} as const;
+
+export interface AuditAdministrationServiceServer extends UntypedServiceImplementation {
+  /**
+   * GetAnyEntry reads one entry by id from whichever tenant's chain holds it.
+   *
+   * An id no chain holds is NotFound and is not recorded: the read found
+   * nothing to disclose.
+   */
+  getAnyEntry: handleUnaryCall<GetAnyEntryRequest, GetAnyEntryResponse>;
+  /**
+   * ListAnyEntries pages every tenant's entries, or one tenant's where
+   * owner_id names it, narrowed by the query.
+   */
+  listAnyEntries: handleUnaryCall<ListAnyEntriesRequest, ListAnyEntriesResponse>;
+}
+
+export interface AuditAdministrationServiceClient extends Client {
+  /**
+   * GetAnyEntry reads one entry by id from whichever tenant's chain holds it.
+   *
+   * An id no chain holds is NotFound and is not recorded: the read found
+   * nothing to disclose.
+   */
+  getAnyEntry(
+    request: GetAnyEntryRequest,
+    callback: (error: ServiceError | null, response: GetAnyEntryResponse) => void,
+  ): ClientUnaryCall;
+  getAnyEntry(
+    request: GetAnyEntryRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: GetAnyEntryResponse) => void,
+  ): ClientUnaryCall;
+  getAnyEntry(
+    request: GetAnyEntryRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: GetAnyEntryResponse) => void,
+  ): ClientUnaryCall;
+  /**
+   * ListAnyEntries pages every tenant's entries, or one tenant's where
+   * owner_id names it, narrowed by the query.
+   */
+  listAnyEntries(
+    request: ListAnyEntriesRequest,
+    callback: (error: ServiceError | null, response: ListAnyEntriesResponse) => void,
+  ): ClientUnaryCall;
+  listAnyEntries(
+    request: ListAnyEntriesRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: ListAnyEntriesResponse) => void,
+  ): ClientUnaryCall;
+  listAnyEntries(
+    request: ListAnyEntriesRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: ListAnyEntriesResponse) => void,
+  ): ClientUnaryCall;
+}
+
+export const AuditAdministrationServiceClient = makeGenericClientConstructor(
+  AuditAdministrationServiceService,
+  'primandproper.platform.audit.v1.AuditAdministrationService',
+) as unknown as {
+  new (
+    address: string,
+    credentials: ChannelCredentials,
+    options?: Partial<ClientOptions>,
+  ): AuditAdministrationServiceClient;
+  service: typeof AuditAdministrationServiceService;
   serviceName: string;
 };
 

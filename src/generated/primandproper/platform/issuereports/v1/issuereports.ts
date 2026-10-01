@@ -333,7 +333,7 @@ export interface ListReportsByReporterResponse {
 export interface ListReportsBySubjectTypeRequest {
   /**
    * subject_type is the kind of thing to page reports about -- everything
-   * anybody has said about recipes.
+   * anybody has said about articles.
    */
   subjectType: string;
   /**
@@ -368,6 +368,64 @@ export interface ListReportsForSubjectRequest {
 export interface ListReportsForSubjectResponse {
   pagination: Pagination | undefined;
   results: IssueReport[];
+}
+
+/**
+ * ScopedIssueReport is a report read across tenants, with the tenant it
+ * belongs to. It is the only message in this file that carries a scope, and
+ * only as output: the operator's reads answer with every tenant's reports, and
+ * a console that could not say whose each one is could not act on any of them.
+ */
+export interface ScopedIssueReport {
+  /**
+   * scope is the tenant the report was filed in, as the opaque owner identifier
+   * the store holds. Empty is the global scope -- a report belonging to no
+   * tenant -- rather than an unknown one.
+   */
+  scope: string;
+  report: IssueReport | undefined;
+}
+
+/**
+ * ListReportsAcrossScopesRequest pages every tenant's reports. There is no
+ * scope to name, which is the point: this is the operator's queue, and it is
+ * behind issues.reports.read_any, a grant this module gives to nobody.
+ */
+export interface ListReportsAcrossScopesRequest {
+  /**
+   * filter pages the result. Its include_archived is a request rather than an
+   * instruction, exactly as on every other paged read here. See the file
+   * comment.
+   */
+  filter: QueryFilter | undefined;
+}
+
+export interface ListReportsAcrossScopesResponse {
+  pagination: Pagination | undefined;
+  results: ScopedIssueReport[];
+}
+
+/**
+ * ListReportsByStatusAcrossScopesRequest pages one status's queue in every
+ * tenant, behind the same grant as ListReportsAcrossScopesRequest.
+ */
+export interface ListReportsByStatusAcrossScopesRequest {
+  /**
+   * status is the queue to page. REPORT_STATUS_UNSPECIFIED is refused rather
+   * than treated as "any", for ListReportsByStatusRequest's reason: a caller
+   * wanting every status sends ListReportsAcrossScopes.
+   */
+  status: ReportStatus;
+  /**
+   * filter pages the result. Its include_archived is a request rather than an
+   * instruction. See the file comment.
+   */
+  filter: QueryFilter | undefined;
+}
+
+export interface ListReportsByStatusAcrossScopesResponse {
+  pagination: Pagination | undefined;
+  results: ScopedIssueReport[];
 }
 
 export interface UpdateReportRequest {
@@ -1971,6 +2029,393 @@ export const ListReportsForSubjectResponse: MessageFns<ListReportsForSubjectResp
   },
 };
 
+function createBaseScopedIssueReport(): ScopedIssueReport {
+  return { scope: '', report: undefined };
+}
+
+export const ScopedIssueReport: MessageFns<ScopedIssueReport> = {
+  encode(message: ScopedIssueReport, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.scope !== '') {
+      writer.uint32(10).string(message.scope);
+    }
+    if (message.report !== undefined) {
+      IssueReport.encode(message.report, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ScopedIssueReport {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseScopedIssueReport();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.scope = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.report = IssueReport.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ScopedIssueReport {
+    return {
+      scope: isSet(object.scope) ? globalThis.String(object.scope) : '',
+      report: isSet(object.report) ? IssueReport.fromJSON(object.report) : undefined,
+    };
+  },
+
+  toJSON(message: ScopedIssueReport): unknown {
+    const obj: any = {};
+    if (message.scope !== '') {
+      obj.scope = message.scope;
+    }
+    if (message.report !== undefined) {
+      obj.report = IssueReport.toJSON(message.report);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ScopedIssueReport>, I>>(base?: I): ScopedIssueReport {
+    return ScopedIssueReport.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ScopedIssueReport>, I>>(object: I): ScopedIssueReport {
+    const message = createBaseScopedIssueReport();
+    message.scope = object.scope ?? '';
+    message.report =
+      object.report !== undefined && object.report !== null ? IssueReport.fromPartial(object.report) : undefined;
+    return message;
+  },
+};
+
+function createBaseListReportsAcrossScopesRequest(): ListReportsAcrossScopesRequest {
+  return { filter: undefined };
+}
+
+export const ListReportsAcrossScopesRequest: MessageFns<ListReportsAcrossScopesRequest> = {
+  encode(message: ListReportsAcrossScopesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.filter !== undefined) {
+      QueryFilter.encode(message.filter, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListReportsAcrossScopesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListReportsAcrossScopesRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.filter = QueryFilter.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListReportsAcrossScopesRequest {
+    return { filter: isSet(object.filter) ? QueryFilter.fromJSON(object.filter) : undefined };
+  },
+
+  toJSON(message: ListReportsAcrossScopesRequest): unknown {
+    const obj: any = {};
+    if (message.filter !== undefined) {
+      obj.filter = QueryFilter.toJSON(message.filter);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListReportsAcrossScopesRequest>, I>>(base?: I): ListReportsAcrossScopesRequest {
+    return ListReportsAcrossScopesRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListReportsAcrossScopesRequest>, I>>(
+    object: I,
+  ): ListReportsAcrossScopesRequest {
+    const message = createBaseListReportsAcrossScopesRequest();
+    message.filter =
+      object.filter !== undefined && object.filter !== null ? QueryFilter.fromPartial(object.filter) : undefined;
+    return message;
+  },
+};
+
+function createBaseListReportsAcrossScopesResponse(): ListReportsAcrossScopesResponse {
+  return { pagination: undefined, results: [] };
+}
+
+export const ListReportsAcrossScopesResponse: MessageFns<ListReportsAcrossScopesResponse> = {
+  encode(message: ListReportsAcrossScopesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.pagination !== undefined) {
+      Pagination.encode(message.pagination, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.results) {
+      ScopedIssueReport.encode(v!, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListReportsAcrossScopesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListReportsAcrossScopesResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.pagination = Pagination.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.results.push(ScopedIssueReport.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListReportsAcrossScopesResponse {
+    return {
+      pagination: isSet(object.pagination) ? Pagination.fromJSON(object.pagination) : undefined,
+      results: globalThis.Array.isArray(object?.results)
+        ? object.results.map((e: any) => ScopedIssueReport.fromJSON(e))
+        : [],
+    };
+  },
+
+  toJSON(message: ListReportsAcrossScopesResponse): unknown {
+    const obj: any = {};
+    if (message.pagination !== undefined) {
+      obj.pagination = Pagination.toJSON(message.pagination);
+    }
+    if (message.results?.length) {
+      obj.results = message.results.map((e) => ScopedIssueReport.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListReportsAcrossScopesResponse>, I>>(base?: I): ListReportsAcrossScopesResponse {
+    return ListReportsAcrossScopesResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListReportsAcrossScopesResponse>, I>>(
+    object: I,
+  ): ListReportsAcrossScopesResponse {
+    const message = createBaseListReportsAcrossScopesResponse();
+    message.pagination =
+      object.pagination !== undefined && object.pagination !== null
+        ? Pagination.fromPartial(object.pagination)
+        : undefined;
+    message.results = object.results?.map((e) => ScopedIssueReport.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseListReportsByStatusAcrossScopesRequest(): ListReportsByStatusAcrossScopesRequest {
+  return { status: 0, filter: undefined };
+}
+
+export const ListReportsByStatusAcrossScopesRequest: MessageFns<ListReportsByStatusAcrossScopesRequest> = {
+  encode(message: ListReportsByStatusAcrossScopesRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.status !== 0) {
+      writer.uint32(8).int32(message.status);
+    }
+    if (message.filter !== undefined) {
+      QueryFilter.encode(message.filter, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListReportsByStatusAcrossScopesRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListReportsByStatusAcrossScopesRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.status = reader.int32() as any;
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.filter = QueryFilter.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListReportsByStatusAcrossScopesRequest {
+    return {
+      status: isSet(object.status) ? reportStatusFromJSON(object.status) : 0,
+      filter: isSet(object.filter) ? QueryFilter.fromJSON(object.filter) : undefined,
+    };
+  },
+
+  toJSON(message: ListReportsByStatusAcrossScopesRequest): unknown {
+    const obj: any = {};
+    if (message.status !== 0) {
+      obj.status = reportStatusToJSON(message.status);
+    }
+    if (message.filter !== undefined) {
+      obj.filter = QueryFilter.toJSON(message.filter);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListReportsByStatusAcrossScopesRequest>, I>>(
+    base?: I,
+  ): ListReportsByStatusAcrossScopesRequest {
+    return ListReportsByStatusAcrossScopesRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListReportsByStatusAcrossScopesRequest>, I>>(
+    object: I,
+  ): ListReportsByStatusAcrossScopesRequest {
+    const message = createBaseListReportsByStatusAcrossScopesRequest();
+    message.status = object.status ?? 0;
+    message.filter =
+      object.filter !== undefined && object.filter !== null ? QueryFilter.fromPartial(object.filter) : undefined;
+    return message;
+  },
+};
+
+function createBaseListReportsByStatusAcrossScopesResponse(): ListReportsByStatusAcrossScopesResponse {
+  return { pagination: undefined, results: [] };
+}
+
+export const ListReportsByStatusAcrossScopesResponse: MessageFns<ListReportsByStatusAcrossScopesResponse> = {
+  encode(message: ListReportsByStatusAcrossScopesResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.pagination !== undefined) {
+      Pagination.encode(message.pagination, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.results) {
+      ScopedIssueReport.encode(v!, writer.uint32(18).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ListReportsByStatusAcrossScopesResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseListReportsByStatusAcrossScopesResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.pagination = Pagination.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.results.push(ScopedIssueReport.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ListReportsByStatusAcrossScopesResponse {
+    return {
+      pagination: isSet(object.pagination) ? Pagination.fromJSON(object.pagination) : undefined,
+      results: globalThis.Array.isArray(object?.results)
+        ? object.results.map((e: any) => ScopedIssueReport.fromJSON(e))
+        : [],
+    };
+  },
+
+  toJSON(message: ListReportsByStatusAcrossScopesResponse): unknown {
+    const obj: any = {};
+    if (message.pagination !== undefined) {
+      obj.pagination = Pagination.toJSON(message.pagination);
+    }
+    if (message.results?.length) {
+      obj.results = message.results.map((e) => ScopedIssueReport.toJSON(e));
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ListReportsByStatusAcrossScopesResponse>, I>>(
+    base?: I,
+  ): ListReportsByStatusAcrossScopesResponse {
+    return ListReportsByStatusAcrossScopesResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ListReportsByStatusAcrossScopesResponse>, I>>(
+    object: I,
+  ): ListReportsByStatusAcrossScopesResponse {
+    const message = createBaseListReportsByStatusAcrossScopesResponse();
+    message.pagination =
+      object.pagination !== undefined && object.pagination !== null
+        ? Pagination.fromPartial(object.pagination)
+        : undefined;
+    message.results = object.results?.map((e) => ScopedIssueReport.fromPartial(e)) || [];
+    return message;
+  },
+};
+
 function createBaseUpdateReportRequest(): UpdateReportRequest {
   return { reportId: '', input: undefined };
 }
@@ -2403,16 +2848,21 @@ export const ArchiveReportResponse: MessageFns<ArchiveReportResponse> = {
  * IssueReportsService is the report queue: what your users filed, and the
  * lifecycle a triager works it through.
  *
- * Ten methods, over the two audiences this table has. A reporter files, reads
+ * Its methods serve the two audiences this table has. A reporter files, reads
  * what they filed, and reads their own list; a triager pages the queue by
  * status, by what a report is about, or whole, and moves, revises and archives.
  * Every method requires a grant -- see issuereports/grpc's Permissions -- and
  * the two whose target is a person or somebody's row ask a second question of
  * the consumer's own rule.
  *
- * The tenant is not among the ten's arguments, on any of them. It comes off the
- * principal the consumer's interceptor resolved, so there is no listing across
- * tenants here and no way to ask for one.
+ * The tenant is not among any method's arguments. It comes off the principal
+ * the consumer's interceptor resolved, and no request can name another one.
+ *
+ * The two exceptions are the operator's, and they are exceptions by being
+ * separate methods rather than by a request field: ListReportsAcrossScopes and
+ * ListReportsByStatusAcrossScopes read every tenant's reports, behind
+ * issues.reports.read_any, which issuereports/grpc declares and grants to
+ * nobody. A deployment gives it to its operators or to no one.
  */
 export type IssueReportsServiceService = typeof IssueReportsServiceService;
 export const IssueReportsServiceService = {
@@ -2490,6 +2940,31 @@ export const IssueReportsServiceService = {
       Buffer.from(ListReportsForSubjectResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): ListReportsForSubjectResponse => ListReportsForSubjectResponse.decode(value),
   },
+  listReportsAcrossScopes: {
+    path: '/primandproper.platform.issuereports.v1.IssueReportsService/ListReportsAcrossScopes' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListReportsAcrossScopesRequest): Buffer =>
+      Buffer.from(ListReportsAcrossScopesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListReportsAcrossScopesRequest => ListReportsAcrossScopesRequest.decode(value),
+    responseSerialize: (value: ListReportsAcrossScopesResponse): Buffer =>
+      Buffer.from(ListReportsAcrossScopesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListReportsAcrossScopesResponse =>
+      ListReportsAcrossScopesResponse.decode(value),
+  },
+  listReportsByStatusAcrossScopes: {
+    path: '/primandproper.platform.issuereports.v1.IssueReportsService/ListReportsByStatusAcrossScopes' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ListReportsByStatusAcrossScopesRequest): Buffer =>
+      Buffer.from(ListReportsByStatusAcrossScopesRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ListReportsByStatusAcrossScopesRequest =>
+      ListReportsByStatusAcrossScopesRequest.decode(value),
+    responseSerialize: (value: ListReportsByStatusAcrossScopesResponse): Buffer =>
+      Buffer.from(ListReportsByStatusAcrossScopesResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ListReportsByStatusAcrossScopesResponse =>
+      ListReportsByStatusAcrossScopesResponse.decode(value),
+  },
   updateReport: {
     path: '/primandproper.platform.issuereports.v1.IssueReportsService/UpdateReport' as const,
     requestStream: false as const,
@@ -2531,6 +3006,11 @@ export interface IssueReportsServiceServer extends UntypedServiceImplementation 
   listReportsByReporter: handleUnaryCall<ListReportsByReporterRequest, ListReportsByReporterResponse>;
   listReportsBySubjectType: handleUnaryCall<ListReportsBySubjectTypeRequest, ListReportsBySubjectTypeResponse>;
   listReportsForSubject: handleUnaryCall<ListReportsForSubjectRequest, ListReportsForSubjectResponse>;
+  listReportsAcrossScopes: handleUnaryCall<ListReportsAcrossScopesRequest, ListReportsAcrossScopesResponse>;
+  listReportsByStatusAcrossScopes: handleUnaryCall<
+    ListReportsByStatusAcrossScopesRequest,
+    ListReportsByStatusAcrossScopesResponse
+  >;
   updateReport: handleUnaryCall<UpdateReportRequest, UpdateReportResponse>;
   transitionReport: handleUnaryCall<TransitionReportRequest, TransitionReportResponse>;
   archiveReport: handleUnaryCall<ArchiveReportRequest, ArchiveReportResponse>;
@@ -2641,6 +3121,36 @@ export interface IssueReportsServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: ListReportsForSubjectResponse) => void,
+  ): ClientUnaryCall;
+  listReportsAcrossScopes(
+    request: ListReportsAcrossScopesRequest,
+    callback: (error: ServiceError | null, response: ListReportsAcrossScopesResponse) => void,
+  ): ClientUnaryCall;
+  listReportsAcrossScopes(
+    request: ListReportsAcrossScopesRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: ListReportsAcrossScopesResponse) => void,
+  ): ClientUnaryCall;
+  listReportsAcrossScopes(
+    request: ListReportsAcrossScopesRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: ListReportsAcrossScopesResponse) => void,
+  ): ClientUnaryCall;
+  listReportsByStatusAcrossScopes(
+    request: ListReportsByStatusAcrossScopesRequest,
+    callback: (error: ServiceError | null, response: ListReportsByStatusAcrossScopesResponse) => void,
+  ): ClientUnaryCall;
+  listReportsByStatusAcrossScopes(
+    request: ListReportsByStatusAcrossScopesRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: ListReportsByStatusAcrossScopesResponse) => void,
+  ): ClientUnaryCall;
+  listReportsByStatusAcrossScopes(
+    request: ListReportsByStatusAcrossScopesRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: ListReportsByStatusAcrossScopesResponse) => void,
   ): ClientUnaryCall;
   updateReport(
     request: UpdateReportRequest,
