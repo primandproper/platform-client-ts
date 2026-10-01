@@ -493,7 +493,7 @@ export const CompletePasswordResetResponse: MessageFns<CompletePasswordResetResp
 /**
  * PasswordResetService is the way back in for somebody who cannot sign in.
  *
- * All three of its RPCs are anonymous by definition, and that is the whole shape
+ * Every one of its RPCs is anonymous by definition, and that is the whole shape
  * of the service: a caller who could prove who they are would be changing their
  * password through sign-in instead. None of them requires a permission -- there
  * is no grant that would make "I forgot my password" safer, and an anonymous

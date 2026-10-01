@@ -2990,9 +2990,9 @@ export const ListAttemptsResponse: MessageFns<ListAttemptsResponse> = {
  * webhooks that is a resource rather than a protocol, and the only half a
  * person ever touches.
  *
- * Ten RPCs over webhooks.Store's nineteen methods, each behind a grant and
- * each acting only within the tenant the caller's principal names. The other
- * nine are absent on purpose, in three groups.
+ * Every RPC here is behind a grant and acts only within the tenant the caller's
+ * principal names. The methods of webhooks.Store that are not here are absent
+ * on purpose, in three groups.
  *
  * Seven are the delivery machinery, which webhooks.Store already documents
  * under "The delivery machinery takes neither": Claim, MarkDelivered,
@@ -3003,13 +3003,13 @@ export const ListAttemptsResponse: MessageFns<ListAttemptsResponse> = {
  * supplying a transaction -- which is what an RPC is -- would be choosing when
  * that commit happens.
  *
- * EndpointsForEvent is the eighth, and it is the internal fan-out: the
+ * EndpointsForEvent is the second group, and it is the internal fan-out: the
  * dispatcher asking itself who is subscribed on the way to its own work. Its
  * own documentation calls it "the query whose missing filter delivers one
  * account's event to every other account's subscribers," which is a sentence
  * about a query nobody outside the component should be issuing.
  *
- * Enqueue is the ninth and is the sharpest of them, because it is the one that
+ * Enqueue is the third and is the sharpest of them, because it is the one that
  * looks like it belongs here. It is consumer-facing: an application calls it to
  * fan an event out. But it "writes a delivery and one dispatch per endpoint, in
  * the caller's transaction, so both commit with whatever else that transaction

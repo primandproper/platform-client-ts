@@ -4328,11 +4328,11 @@ export const ArchiveTransactionResponse: MessageFns<ArchiveTransactionResponse> 
  * BillingService serves the record of what a deployment sells and what its
  * customers paid.
  *
- * Eighteen RPCs over thirty store methods, and the shape of the subset is the
- * decision worth reading before the list. Twelve of the eighteen are reads,
- * because the writes on this table have a caller who is not a client: seven of
- * them are made by a processor callback or a checkout handler already inside the
- * consumer's own transaction, and they are named in this file's opening comment
+ * A subset of the store's methods, and the shape of the subset is the decision
+ * worth reading before the list. Most of it is reads, because the writes on this
+ * table have a caller who is not a client: the ones left off are made by a
+ * processor callback or a checkout handler already inside the consumer's own
+ * transaction, and they are named in this file's opening comment
  * along with why an RPC would break them. What is left on the write side is
  * administrative -- stocking and revising the catalog, and withdrawing a row
  * from each of the four tables.
@@ -4349,8 +4349,8 @@ export const ArchiveTransactionResponse: MessageFns<ArchiveTransactionResponse> 
 export type BillingServiceService = typeof BillingServiceService;
 export const BillingServiceService = {
   /**
-   * The catalog: two reads any member of the scope may make, and three
-   * administrative writes.
+   * The catalog: reads any member of the scope may make, and administrative
+   * writes.
    */
   createProduct: {
     path: '/primandproper.platform.billing.v1.BillingService/CreateProduct' as const,
@@ -4561,8 +4561,8 @@ export const BillingServiceService = {
 
 export interface BillingServiceServer extends UntypedServiceImplementation {
   /**
-   * The catalog: two reads any member of the scope may make, and three
-   * administrative writes.
+   * The catalog: reads any member of the scope may make, and administrative
+   * writes.
    */
   createProduct: handleUnaryCall<CreateProductRequest, CreateProductResponse>;
   getProduct: handleUnaryCall<GetProductRequest, GetProductResponse>;
@@ -4594,8 +4594,8 @@ export interface BillingServiceServer extends UntypedServiceImplementation {
 
 export interface BillingServiceClient extends Client {
   /**
-   * The catalog: two reads any member of the scope may make, and three
-   * administrative writes.
+   * The catalog: reads any member of the scope may make, and administrative
+   * writes.
    */
   createProduct(
     request: CreateProductRequest,

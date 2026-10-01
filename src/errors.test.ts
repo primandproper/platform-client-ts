@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { isAmbiguous, PlatformError, SignInReason, signInReasonDomain, toPlatformError } from './errors';
+import {
+  isAmbiguous,
+  PasskeyReason,
+  PasswordResetReason,
+  passwordResetReasonDomain,
+  PlatformError,
+  SignInReason,
+  signInReasonDomain,
+  toPlatformError,
+} from './errors';
 import { DebugInfo, ErrorInfo } from './generated/google/rpc/error_details';
 import { Status } from './generated/google/rpc/status';
 import type { Any } from './generated/google/protobuf/any';
@@ -157,5 +166,27 @@ describe('isAmbiguous', () => {
 
   it('treats a failure with no status as ambiguous', () => {
     expect(isAmbiguous(new Error('socket hang up'))).toBe(true);
+  });
+});
+
+describe('reason tables', () => {
+  it('share no name, since is() matches a name without its domain', () => {
+    const names = [SignInReason, PasskeyReason, PasswordResetReason].flatMap((t) => Object.values(t));
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('reads a reset refusal as known in its own domain', () => {
+    const err = PlatformError.fromStatus(
+      new StatusError(
+        Code.INVALID_ARGUMENT,
+        'too short',
+        statusDetails(Code.INVALID_ARGUMENT, 'too short', [
+          errorInfo(passwordResetReasonDomain, 'REPLACEMENT_PASSWORD_REFUSED'),
+        ]),
+      ),
+    );
+
+    expect(err.reason).toMatchObject({ known: true, domain: passwordResetReasonDomain });
+    expect(err.is(PasswordResetReason.REPLACEMENT_PASSWORD_REFUSED)).toBe(true);
   });
 });

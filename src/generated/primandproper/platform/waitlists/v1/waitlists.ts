@@ -36,7 +36,8 @@ export enum SignupStatus {
   SIGNUP_STATUS_UNSPECIFIED = 0,
   /**
    * SIGNUP_STATUS_WAITING - SIGNUP_STATUS_WAITING is somebody who has joined and not yet been invited.
-   * It is where every signup starts, and it is the only status Join writes.
+   * It is where a signup starts on a deployment that does not confirm
+   * addresses, and where a confirmed one lands.
    */
   SIGNUP_STATUS_WAITING = 1,
   /**
@@ -58,6 +59,15 @@ export enum SignupStatus {
    * refused rather than quietly re-subscribing whoever asked to be left alone.
    */
   SIGNUP_STATUS_WITHDRAWN = 4,
+  /**
+   * SIGNUP_STATUS_PENDING - SIGNUP_STATUS_PENDING is somebody whose address was given and not yet
+   * confirmed. It is where Join starts a signup on a deployment that confirms
+   * addresses, and Confirm is the one move out of it besides a withdrawal:
+   * Invite requires waiting, so nobody reaches the front of the queue with an
+   * address that has not said yes. It is numbered last rather than first
+   * because numbers are never reused, not because it comes last.
+   */
+  SIGNUP_STATUS_PENDING = 5,
   UNRECOGNIZED = -1,
 }
 
@@ -78,6 +88,9 @@ export function signupStatusFromJSON(object: any): SignupStatus {
     case 4:
     case 'SIGNUP_STATUS_WITHDRAWN':
       return SignupStatus.SIGNUP_STATUS_WITHDRAWN;
+    case 5:
+    case 'SIGNUP_STATUS_PENDING':
+      return SignupStatus.SIGNUP_STATUS_PENDING;
     case -1:
     case 'UNRECOGNIZED':
     default:
@@ -97,6 +110,8 @@ export function signupStatusToJSON(object: SignupStatus): string {
       return 'SIGNUP_STATUS_CONVERTED';
     case SignupStatus.SIGNUP_STATUS_WITHDRAWN:
       return 'SIGNUP_STATUS_WITHDRAWN';
+    case SignupStatus.SIGNUP_STATUS_PENDING:
+      return 'SIGNUP_STATUS_PENDING';
     case SignupStatus.UNRECOGNIZED:
     default:
       return 'UNRECOGNIZED';
@@ -347,10 +362,17 @@ export interface JoinRequest {
  * GetSignupByContact is where an authenticated caller asks the same question on
  * the wire.
  *
- * A public Join is therefore not a subscription. Nothing here has established
- * that the person at that address asked for anything, and confirming it is the
- * consumer's -- see the waitlists package documentation, which states the
- * obligation and why this module cannot ship the send.
+ * A public Join is therefore not a subscription by itself. Nothing here has
+ * established that the person at that address asked for anything. A deployment
+ * built with waitlists/grpc's WithConfirmation writes the signup pending and
+ * mails a confirmation link, which lands on Confirm; one built without it owes
+ * that loop itself -- see the waitlists package documentation.
+ *
+ * The uniform answer covers the mail too. A new address is sent a confirmation,
+ * and so is an address whose signup is still pending, since the person who lost
+ * the first message is the one most likely to fill the form in again; an
+ * address already confirmed and one that withdrew are sent nothing. The caller
+ * is told none of that.
  */
 export interface JoinResponse {}
 
@@ -471,8 +493,8 @@ export interface ConvertResponse {
 /**
  * WithdrawRequest is somebody asking to come off a list, at their own request.
  *
- * It is the second of the three RPCs a caller reaches without a grant, and it is
- * the one that names a row. A grant on the method could not have said whose row
+ * It is one of the RPCs a caller reaches without a grant, and the only one
+ * of them that names a row. A grant on the method could not have said whose row
  * this is, and neither can a signup identifier, which is minted by the store and
  * is not a credential -- so the standing to withdraw this signup is asked of the
  * consumer's own [waitlists/grpc.SignupAuthorizer], from inside the handler,
@@ -490,6 +512,59 @@ export interface WithdrawRequest {
  * asked to be forgotten is not the caller to hand it to.
  */
 export interface WithdrawResponse {}
+
+/**
+ * ConfirmRequest is the confirmation link somebody followed: the reply half of a
+ * double opt-in, reachable without a grant because the person at the address
+ * has frequently never signed in to anything.
+ *
+ * It carries the token and nothing else. The link was minted against one signup
+ * on one list, and the token is what names both -- a request that could also
+ * name a signup is a request that could name somebody else's. Which tenant it is
+ * in is the connection's, exactly as it is for Join, and a link minted in
+ * another tenant is refused as though it had never been minted.
+ *
+ * It spends the link, so it is what a POST calls and not what a GET does. Mail
+ * security fetches every URL in every message before the person sees it, and a
+ * page that confirmed on load would be confirmed by the scanner; render a page
+ * with a button on the GET and call this from the button.
+ */
+export interface ConfirmRequest {
+  token: string;
+}
+
+/**
+ * ConfirmResponse is empty. The person holding the link already knows which
+ * list they asked to join, and every refusal -- a link that expired, was spent,
+ * was never minted, or names a signup that has since withdrawn -- is one
+ * answer, so a holder of a guessed token learns nothing.
+ */
+export interface ConfirmResponse {}
+
+/**
+ * UnsubscribeRequest is the unsubscribe link somebody followed: a withdrawal
+ * whose standing is the link rather than a caller.
+ *
+ * It is Withdraw's second door, and it exists because Withdraw's request names a
+ * signup, which is a row identifier and not a credential. This one names only
+ * the token, which was minted against exactly one signup, so nothing about it
+ * asks the deployment's SignupAuthorizer: the link is the authorization. A
+ * confirmation mail carries one -- "this was not me" is a withdrawal, and it
+ * suppresses the address whether or not the signup was ever confirmed -- and a
+ * consumer puts one in every later message to the list through
+ * waitlists/grpc's MintUnsubscribeLink.
+ *
+ * It spends the link, for Confirm's reason; the GET renders, the POST calls.
+ */
+export interface UnsubscribeRequest {
+  token: string;
+}
+
+/**
+ * UnsubscribeResponse is empty, for WithdrawResponse's reason, and every refusal
+ * is one answer, for ConfirmResponse's.
+ */
+export interface UnsubscribeResponse {}
 
 /**
  * WithdrawSignupsForSubjectRequest withdraws every signup one principal holds in
@@ -3173,6 +3248,208 @@ export const WithdrawResponse: MessageFns<WithdrawResponse> = {
   },
 };
 
+function createBaseConfirmRequest(): ConfirmRequest {
+  return { token: '' };
+}
+
+export const ConfirmRequest: MessageFns<ConfirmRequest> = {
+  encode(message: ConfirmRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.token !== '') {
+      writer.uint32(10).string(message.token);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfirmRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfirmRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.token = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ConfirmRequest {
+    return { token: isSet(object.token) ? globalThis.String(object.token) : '' };
+  },
+
+  toJSON(message: ConfirmRequest): unknown {
+    const obj: any = {};
+    if (message.token !== '') {
+      obj.token = message.token;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ConfirmRequest>, I>>(base?: I): ConfirmRequest {
+    return ConfirmRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfirmRequest>, I>>(object: I): ConfirmRequest {
+    const message = createBaseConfirmRequest();
+    message.token = object.token ?? '';
+    return message;
+  },
+};
+
+function createBaseConfirmResponse(): ConfirmResponse {
+  return {};
+}
+
+export const ConfirmResponse: MessageFns<ConfirmResponse> = {
+  encode(_: ConfirmResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): ConfirmResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseConfirmResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): ConfirmResponse {
+    return {};
+  },
+
+  toJSON(_: ConfirmResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<ConfirmResponse>, I>>(base?: I): ConfirmResponse {
+    return ConfirmResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<ConfirmResponse>, I>>(_: I): ConfirmResponse {
+    const message = createBaseConfirmResponse();
+    return message;
+  },
+};
+
+function createBaseUnsubscribeRequest(): UnsubscribeRequest {
+  return { token: '' };
+}
+
+export const UnsubscribeRequest: MessageFns<UnsubscribeRequest> = {
+  encode(message: UnsubscribeRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.token !== '') {
+      writer.uint32(10).string(message.token);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UnsubscribeRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUnsubscribeRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.token = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): UnsubscribeRequest {
+    return { token: isSet(object.token) ? globalThis.String(object.token) : '' };
+  },
+
+  toJSON(message: UnsubscribeRequest): unknown {
+    const obj: any = {};
+    if (message.token !== '') {
+      obj.token = message.token;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UnsubscribeRequest>, I>>(base?: I): UnsubscribeRequest {
+    return UnsubscribeRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UnsubscribeRequest>, I>>(object: I): UnsubscribeRequest {
+    const message = createBaseUnsubscribeRequest();
+    message.token = object.token ?? '';
+    return message;
+  },
+};
+
+function createBaseUnsubscribeResponse(): UnsubscribeResponse {
+  return {};
+}
+
+export const UnsubscribeResponse: MessageFns<UnsubscribeResponse> = {
+  encode(_: UnsubscribeResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): UnsubscribeResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseUnsubscribeResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(_: any): UnsubscribeResponse {
+    return {};
+  },
+
+  toJSON(_: UnsubscribeResponse): unknown {
+    const obj: any = {};
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<UnsubscribeResponse>, I>>(base?: I): UnsubscribeResponse {
+    return UnsubscribeResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<UnsubscribeResponse>, I>>(_: I): UnsubscribeResponse {
+    const message = createBaseUnsubscribeResponse();
+    return message;
+  },
+};
+
 function createBaseWithdrawSignupsForSubjectRequest(): WithdrawSignupsForSubjectRequest {
   return { subject: undefined };
 }
@@ -3426,20 +3703,23 @@ export const ArchiveSignupResponse: MessageFns<ArchiveSignupResponse> = {
 };
 
 /**
- * WaitlistsService is the whole of waitlists on the wire: all seventeen methods
- * of waitlists.Store, split by who calls them.
+ * WaitlistsService is the whole of waitlists on the wire: every method of
+ * waitlists.Store, split by who calls them, and the second door onto
+ * Withdraw that an unsubscribe link lands on.
  *
  * There are no absences, which is unusual on this lane and is the reason this
- * was the first of the ten domains to cross. Every other surface in the module
+ * was the first domain to cross. Every other surface in the module
  * carves something out because its realistic caller is a worker on a timer, a
  * processor callback, or the consumer's own code inside its own transaction.
  * Nothing here has that shape: a waitlist has no queue protocol, no fan-out and
- * no provider callback, and every one of the seventeen is either a form
- * somebody submitted or a console somebody is looking at.
+ * no provider callback, and every one of them is either a form
+ * somebody submitted, a link somebody followed, or a console somebody is
+ * looking at.
  *
- * # The public three
+ * # The public methods
  *
- * ListOpenLists, Join and Withdraw are reachable without a grant, because the
+ * ListOpenLists, Join, Confirm, Withdraw and Unsubscribe are reachable without a
+ * grant, because the
  * caller is a person on a signup page who has not signed in and frequently has
  * no account to sign in to. That is the whole of what "public" means here: the
  * consumer's authentication interceptor still runs, and a caller who does arrive
@@ -3450,12 +3730,14 @@ export const ArchiveSignupResponse: MessageFns<ArchiveSignupResponse> = {
  * address, and it answers uniformly for every outcome that is about an address
  * -- see JoinResponse, which is empty for that reason. Withdraw names a row, so
  * the standing to move it is asked of a seam the consumer implements -- see
- * WithdrawRequest. And the read a public caller gets is the catalog of open
- * lists, which is what a signup page publishes anyway.
+ * WithdrawRequest. Confirm and Unsubscribe name only a token, which is their
+ * standing, and they are unimplemented on a deployment that mints none. And the
+ * read a public caller gets is the catalog of open lists, which is what a signup
+ * page publishes anyway.
  *
- * # The administrative fourteen
+ * # The administrative methods
  *
- * List CRUD, the signup reads, the two lifecycle transitions, the note, the
+ * List CRUD, the signup reads, the two operator transitions, the note, the
  * archive and the erasure. Each is behind a grant, and waitlists/grpc's
  * Permissions is the default map a consumer composes into their policy.
  *
@@ -3527,8 +3809,8 @@ export const WaitlistsServiceService = {
     responseDeserialize: (value: Buffer): ArchiveListResponse => ArchiveListResponse.decode(value),
   },
   /**
-   * The queue. Join and Withdraw are the person's own; the rest are the
-   * operator's.
+   * The queue. Join, Confirm, Withdraw and Unsubscribe are the person's own;
+   * the rest are the operator's.
    */
   join: {
     path: '/primandproper.platform.waitlists.v1.WaitlistsService/Join' as const,
@@ -3538,6 +3820,15 @@ export const WaitlistsServiceService = {
     requestDeserialize: (value: Buffer): JoinRequest => JoinRequest.decode(value),
     responseSerialize: (value: JoinResponse): Buffer => Buffer.from(JoinResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): JoinResponse => JoinResponse.decode(value),
+  },
+  confirm: {
+    path: '/primandproper.platform.waitlists.v1.WaitlistsService/Confirm' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: ConfirmRequest): Buffer => Buffer.from(ConfirmRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): ConfirmRequest => ConfirmRequest.decode(value),
+    responseSerialize: (value: ConfirmResponse): Buffer => Buffer.from(ConfirmResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): ConfirmResponse => ConfirmResponse.decode(value),
   },
   getSignup: {
     path: '/primandproper.platform.waitlists.v1.WaitlistsService/GetSignup' as const,
@@ -3617,6 +3908,15 @@ export const WaitlistsServiceService = {
     responseSerialize: (value: WithdrawResponse): Buffer => Buffer.from(WithdrawResponse.encode(value).finish()),
     responseDeserialize: (value: Buffer): WithdrawResponse => WithdrawResponse.decode(value),
   },
+  unsubscribe: {
+    path: '/primandproper.platform.waitlists.v1.WaitlistsService/Unsubscribe' as const,
+    requestStream: false as const,
+    responseStream: false as const,
+    requestSerialize: (value: UnsubscribeRequest): Buffer => Buffer.from(UnsubscribeRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer): UnsubscribeRequest => UnsubscribeRequest.decode(value),
+    responseSerialize: (value: UnsubscribeResponse): Buffer => Buffer.from(UnsubscribeResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer): UnsubscribeResponse => UnsubscribeResponse.decode(value),
+  },
   withdrawSignupsForSubject: {
     path: '/primandproper.platform.waitlists.v1.WaitlistsService/WithdrawSignupsForSubject' as const,
     requestStream: false as const,
@@ -3654,10 +3954,11 @@ export interface WaitlistsServiceServer extends UntypedServiceImplementation {
   updateList: handleUnaryCall<UpdateListRequest, UpdateListResponse>;
   archiveList: handleUnaryCall<ArchiveListRequest, ArchiveListResponse>;
   /**
-   * The queue. Join and Withdraw are the person's own; the rest are the
-   * operator's.
+   * The queue. Join, Confirm, Withdraw and Unsubscribe are the person's own;
+   * the rest are the operator's.
    */
   join: handleUnaryCall<JoinRequest, JoinResponse>;
+  confirm: handleUnaryCall<ConfirmRequest, ConfirmResponse>;
   getSignup: handleUnaryCall<GetSignupRequest, GetSignupResponse>;
   getSignupByContact: handleUnaryCall<GetSignupByContactRequest, GetSignupByContactResponse>;
   listSignups: handleUnaryCall<ListSignupsRequest, ListSignupsResponse>;
@@ -3666,6 +3967,7 @@ export interface WaitlistsServiceServer extends UntypedServiceImplementation {
   invite: handleUnaryCall<InviteRequest, InviteResponse>;
   convert: handleUnaryCall<ConvertRequest, ConvertResponse>;
   withdraw: handleUnaryCall<WithdrawRequest, WithdrawResponse>;
+  unsubscribe: handleUnaryCall<UnsubscribeRequest, UnsubscribeResponse>;
   withdrawSignupsForSubject: handleUnaryCall<WithdrawSignupsForSubjectRequest, WithdrawSignupsForSubjectResponse>;
   archiveSignup: handleUnaryCall<ArchiveSignupRequest, ArchiveSignupResponse>;
 }
@@ -3766,8 +4068,8 @@ export interface WaitlistsServiceClient extends Client {
     callback: (error: ServiceError | null, response: ArchiveListResponse) => void,
   ): ClientUnaryCall;
   /**
-   * The queue. Join and Withdraw are the person's own; the rest are the
-   * operator's.
+   * The queue. Join, Confirm, Withdraw and Unsubscribe are the person's own;
+   * the rest are the operator's.
    */
   join(request: JoinRequest, callback: (error: ServiceError | null, response: JoinResponse) => void): ClientUnaryCall;
   join(
@@ -3781,6 +4083,21 @@ export interface WaitlistsServiceClient extends Client {
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: JoinResponse) => void,
   ): ClientUnaryCall;
+  confirm(
+    request: ConfirmRequest,
+    callback: (error: ServiceError | null, response: ConfirmResponse) => void,
+  ): ClientUnaryCall;
+  confirm(
+    request: ConfirmRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: ConfirmResponse) => void,
+  ): ClientUnaryCall;
+  confirm(
+    request: ConfirmRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: ConfirmResponse) => void,
+  ): ClientUnaryCall;
   getSignup(
     request: GetSignupRequest,
     callback: (error: ServiceError | null, response: GetSignupResponse) => void,
@@ -3900,6 +4217,21 @@ export interface WaitlistsServiceClient extends Client {
     metadata: Metadata,
     options: Partial<CallOptions>,
     callback: (error: ServiceError | null, response: WithdrawResponse) => void,
+  ): ClientUnaryCall;
+  unsubscribe(
+    request: UnsubscribeRequest,
+    callback: (error: ServiceError | null, response: UnsubscribeResponse) => void,
+  ): ClientUnaryCall;
+  unsubscribe(
+    request: UnsubscribeRequest,
+    metadata: Metadata,
+    callback: (error: ServiceError | null, response: UnsubscribeResponse) => void,
+  ): ClientUnaryCall;
+  unsubscribe(
+    request: UnsubscribeRequest,
+    metadata: Metadata,
+    options: Partial<CallOptions>,
+    callback: (error: ServiceError | null, response: UnsubscribeResponse) => void,
   ): ClientUnaryCall;
   withdrawSignupsForSubject(
     request: WithdrawSignupsForSubjectRequest,

@@ -207,6 +207,91 @@ export class Session {
     }
   }
 
+  /**
+   * switchAccount moves this login to another of the person's accounts, with no password: the same login, an access
+   * token for `accountId`, and every exchange after it staying there. The accounts a person may name are
+   * `getAuthStatus`'s `accountIds`.
+   *
+   * A switch spends the refresh token, so it is a refresh as far as R1 is concerned (R20): it runs in the same single
+   * flight as an exchange, calls waiting on it get its successor, and across Sessions it goes through the coordinator.
+   *
+   * An account the person is not in is refused exactly as a dead refresh token is, and unlike one it leaves the token
+   * unspent. So a refused switch exchanges the token before it decides anything: if the exchange succeeds the login is
+   * fine and was kept, in the account it was in, and the refusal rejects with a PlatformError; if the exchange is refused
+   * too, the login was over, and the session is cleared as any refused exchange clears it.
+   */
+  async switchAccount(accountId: string, options?: CallOptions): Promise<IssuedToken> {
+    if (!accountId) {
+      throw new Error('switchAccount needs an account to switch to');
+    }
+    await this.ensureLoaded();
+    await this.signingIn?.catch(() => undefined);
+    await this.refreshing?.catch(() => undefined);
+
+    const attempt = this.switchTo(accountId, options);
+    const flight = attempt.finally(() => {
+      if (this.refreshing === flight) {
+        this.refreshing = undefined;
+      }
+    });
+    this.refreshing = flight;
+    return flight;
+  }
+
+  private async switchTo(accountId: string, options?: CallOptions): Promise<IssuedToken> {
+    // Twice at most: the second is for a token another Session exchanged out from under the first, whose successor is
+    // the login in the account it was already in.
+    for (let tries = 0; ; tries++) {
+      const held = this.current;
+      if (!held?.refreshToken) {
+        throw new NotSignedInError();
+      }
+      this.setState('refreshing');
+
+      let refused: PlatformError | undefined;
+      let successor: IssuedToken;
+      try {
+        successor = await this.coordinator.run(held.refreshToken, async (attempt) => {
+          if (attempt.takeover) {
+            // An earlier attempt may have spent the token, and a switch carries no idempotency key to retry under.
+            throw new Error('an earlier exchange of this refresh token never reported back');
+          }
+          try {
+            return await this.switchOnce(held.refreshToken, accountId, options);
+          } catch (err) {
+            if (!(err instanceof PlatformError && err.code === Code.UNAUTHENTICATED)) {
+              throw err;
+            }
+            refused = err;
+          }
+          return this.exchangeWith(held.refreshToken, { ...attempt, takeover: false });
+        });
+      } catch (err) {
+        await this.settleFailedExchange(held, err);
+        throw err;
+      }
+
+      await this.adopt(successor);
+      if (refused) {
+        throw refused;
+      }
+      if (successor.activeAccountId === accountId) {
+        return successor;
+      }
+      if (tries > 0) {
+        throw new Error(`the login was exchanged twice while switching it to ${accountId}; it is still where it was`);
+      }
+    }
+  }
+
+  private async switchOnce(refreshToken: string, accountId: string, options?: CallOptions): Promise<IssuedToken> {
+    const response = await this.callAnonymous(SignInServiceService.switchAccount, { refreshToken, accountId }, options);
+    if (!response.token) {
+      throw new Error(`${SignInServiceService.switchAccount.path} answered OK with no token`);
+    }
+    return response.token;
+  }
+
   private async adoptFrom<Req>(
     method: UnaryMethod<Req, TokenResponse>,
     request: Req,

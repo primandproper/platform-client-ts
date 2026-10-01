@@ -28,7 +28,7 @@ export const protobufPackage = 'primandproper.platform.comments.v1';
  *
  * It is two fields rather than one composite key, which is the same decision
  * comments.Target makes in Go and for the same reason: "everything anybody has
- * said about recipes" is a question two columns answer and a "recipe:1234"
+ * said about articles" is a question two columns answer and an "article:1234"
  * string does not.
  */
 export interface CommentTarget {
@@ -40,7 +40,7 @@ export interface CommentTarget {
   /**
    * id is which one, as the application spells it. The empty id is refused
    * rather than treated as a wildcard: a comment holding it would be about
-   * every recipe and no recipe at once.
+   * every article and no article at once.
    */
   id: string;
 }
@@ -1773,8 +1773,8 @@ export const ArchiveCommentResponse: MessageFns<ArchiveCommentResponse> = {
  * one, page a discussion, page a person's or a target type's, edit a body,
  * archive a row.
  *
- * Eight RPCs over comments.Store's ten methods, each behind a grant and each
- * acting only within the tenant the caller's principal names.
+ * Every comments.Store method but the bulk erasures, each behind a grant and
+ * each acting only within the tenant the caller's principal names.
  *
  * The two absences are the bulk erasures, and they are one case rather than
  * two. DeleteCommentsForTarget is called from the transaction that removes the

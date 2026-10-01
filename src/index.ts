@@ -17,6 +17,10 @@ export {
 export {
   ExchangeNotSentError,
   isAmbiguous,
+  PasskeyReason,
+  passkeyReasonDomain,
+  PasswordResetReason,
+  passwordResetReasonDomain,
   PlatformError,
   type Reason,
   SignInReason,
@@ -51,6 +55,7 @@ export {
   type SignInResult,
 } from './signin';
 export { signOut, signOutEverywhere } from './signout';
+export { beginPasskeySignIn, type PasskeySignIn, passkeySignIn, type PasskeySignInResult } from './passkeys';
 export {
   completePasswordReset,
   type CompleteResult,
