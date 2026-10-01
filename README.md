@@ -19,11 +19,12 @@ repository is what lets those domains land one at a time, against the real schem
 
 ## What it speaks
 
-**platform-go v14.1.0** (`PLATFORM_GO_VERSION`). The generated stubs are exactly that tag's protos, and the runtime
+**platform-go v14.2.0** (`PLATFORM_GO_VERSION`). The generated stubs are exactly that tag's protos, and the runtime
 implements
-[`platform-go`'s client contract](https://github.com/primandproper/platform-go/blob/v14.1.0/docs/client-contract.md) as
-it describes that tag. Two rules need a server at least that new: R10 (the keyed refresh retry, which is opt-in for that
-reason) and R11 (sign-in reasons, which an older server simply does not send).
+[`platform-go`'s client contract](https://github.com/primandproper/platform-go/blob/v14.2.0/docs/client-contract.md) as
+it describes that tag. Some rules need a server at least that new: R10 (the keyed refresh retry, which is opt-in for
+that reason) and R11 (sign-in reasons, which an older server simply does not send) from v14.1.0, and R18 to R20 (passkey
+sign-in and switching accounts, whose RPCs an older server does not have) from v14.2.0.
 
 The package is `0.x` until DDB's web frontend has adopted it. Its version is its own: it states the platform-go tag it
 speaks rather than mirroring it, because a client-only fix needs a version number of its own to ship under.
@@ -185,13 +186,16 @@ Connect transport behind the same `Transport` interface.
 | R8   | cursors are opaque                                             | `pages`, `items`                                                                                |
 | R9   | `counts_known` gates the counts                                | `counts`                                                                                        |
 | R10  | retry an ambiguous exchange once, same key                     | `SessionConfig.idempotentRefresh` (opt-in), `isAmbiguous`                                       |
-| R11  | branch on the reason, never the message                        | `PlatformError.is`, `SignInReason`                                                              |
+| R11  | branch on the reason, never the message                        | `PlatformError.is`, `SignInReason`, `PasskeyReason`, `PasswordResetReason`                      |
 | R12  | the tenant travels identically on every call                   | `SessionConfig.metadata`, `TokenCallerConfig.metadata`, `withConstantMetadata`                  |
 | R13  | the reason where there is one, the code where there is not     | `PlatformError`                                                                                 |
 | R14  | walk until a page has no rows                                  | `pages`                                                                                         |
 | R15  | the same screen whether the address exists or not              | `requestPasswordReset`, `requestMagicLink`                                                      |
 | R16  | verify a reset link before rendering the form                  | `verifyPasswordResetToken`                                                                      |
 | R17  | sign out on the server, then locally                           | `signOut`, `signOutEverywhere`                                                                  |
+| R18  | a passkey sign-in is a sign-in                                 | `passkeySignIn`                                                                                 |
+| R19  | a key tap is one factor                                        | `passkeySignIn`'s `second_factor_required`, `PasskeyReason`                                     |
+| R20  | a switch is a refresh                                          | `Session.switchAccount`                                                                         |
 
 Streams are not covered, because the contract parks them: no platform-go proto declares one.
 

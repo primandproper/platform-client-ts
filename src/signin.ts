@@ -20,8 +20,8 @@ export interface PasswordSignIn {
   totpCode?: string;
   /**
    * activeAccountId is which account the token is for; unset means the user's default. Moving a signed-in user to
-   * another account is a fresh sign-in naming it: no RPC re-points a live token, and `SetDefaultAccount` only changes
-   * where the next unnamed sign-in lands.
+   * another account is `Session.switchAccount`, which keeps the login; `SetDefaultAccount` only changes where the next
+   * unnamed sign-in lands.
    */
   activeAccountId?: string;
 }

@@ -4,9 +4,9 @@ import type { DeadLink } from './passwordreset';
 import type { Session } from './session';
 import { type CallOptions, Code } from './transport';
 
-// Register is deliberately absent. It requires a caller, and a client is not one: an open sign-up is a flow with policy
-// in it (a captcha, a rate limit, an email domain rule), so a public sign-up screen calls the consumer's own registrar,
-// which calls Register. What follows it, and is anonymous, is here.
+// Register has no helper: it is one anonymous call that mints no session, so a sign-up screen calls
+// `SignInServiceService.register` through `callAnonymous`, and branches on REGISTRATION_REFUSED and REGISTRATION_CLOSED.
+// What follows it, and is anonymous, is here.
 
 export type VerifyEmailResult = { kind: 'verified' } | DeadLink;
 

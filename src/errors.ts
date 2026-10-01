@@ -4,6 +4,10 @@ import { Code, StatusError } from './transport';
 
 export const signInReasonDomain = 'signin.platform-go.primandproper.github.com';
 
+export const passkeyReasonDomain = 'passkeys.platform-go.primandproper.github.com';
+
+export const passwordResetReasonDomain = 'passwordreset.platform-go.primandproper.github.com';
+
 const errorInfoTypeUrl = 'type.googleapis.com/google.rpc.ErrorInfo';
 
 /**
@@ -15,19 +19,60 @@ export const SignInReason = {
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   SECOND_FACTOR_REQUIRED: 'SECOND_FACTOR_REQUIRED',
   SECOND_FACTOR_NOT_ENROLLED: 'SECOND_FACTOR_NOT_ENROLLED',
+  MULTI_FACTOR_REQUIRED: 'MULTI_FACTOR_REQUIRED',
   USER_UNVERIFIED: 'USER_UNVERIFIED',
   USER_SUSPENDED: 'USER_SUSPENDED',
   USER_TERMINATED: 'USER_TERMINATED',
   NOT_AN_ADMINISTRATOR: 'NOT_AN_ADMINISTRATOR',
   ADMIN_SIGNIN_UNAVAILABLE: 'ADMIN_SIGNIN_UNAVAILABLE',
+  IMPERSONATION_UNAVAILABLE: 'IMPERSONATION_UNAVAILABLE',
   NO_PASSWORD_CREDENTIAL: 'NO_PASSWORD_CREDENTIAL',
   PASSWORD_ALREADY_SET: 'PASSWORD_ALREADY_SET',
+  EMAIL_ADDRESS_ALREADY_VERIFIED: 'EMAIL_ADDRESS_ALREADY_VERIFIED',
   NO_CREDENTIAL_NAMED: 'NO_CREDENTIAL_NAMED',
+  PASSWORD_REFUSED: 'PASSWORD_REFUSED',
+  REGISTRATION_REFUSED: 'REGISTRATION_REFUSED',
+  REGISTRATION_CLOSED: 'REGISTRATION_CLOSED',
+  PASSWORD_CHANGE_REQUIRED: 'PASSWORD_CHANGE_REQUIRED',
+  SIGN_IN_NOT_IDENTIFIED: 'SIGN_IN_NOT_IDENTIFIED',
+  REAUTHENTICATION_REQUIRED: 'REAUTHENTICATION_REQUIRED',
 } as const;
 
 export type SignInReason = (typeof SignInReason)[keyof typeof SignInReason];
 
-const signInReasons: ReadonlySet<string> = new Set(Object.values(SignInReason));
+/**
+ * PasskeyReason is the passkey service's table, in a domain of its own: the refusals a person in front of a passkey
+ * prompt or a settings page acts on. Its names are disjoint from every other table's.
+ */
+export const PasskeyReason = {
+  PASSKEY_LOGIN_FAILED: 'PASSKEY_LOGIN_FAILED',
+  PASSKEY_SIGN_COUNT_REGRESSED: 'PASSKEY_SIGN_COUNT_REGRESSED',
+  PASSKEY_NOT_FOUND: 'PASSKEY_NOT_FOUND',
+  PASSKEY_ALREADY_REGISTERED: 'PASSKEY_ALREADY_REGISTERED',
+  LAST_PASSKEY: 'LAST_PASSKEY',
+} as const;
+
+export type PasskeyReason = (typeof PasskeyReason)[keyof typeof PasskeyReason];
+
+/**
+ * PasswordResetReason is the reset service's table, in a domain of its own. The three about the link all answer
+ * FAILED_PRECONDITION, and `completePasswordReset` and `verifyPasswordResetToken` already read them as a dead link; the
+ * one a caller branches on is REPLACEMENT_PASSWORD_REFUSED, which leaves the link live and asks for another password.
+ */
+export const PasswordResetReason = {
+  RESET_TOKEN_NOT_FOUND: 'RESET_TOKEN_NOT_FOUND',
+  RESET_TOKEN_EXPIRED: 'RESET_TOKEN_EXPIRED',
+  RESET_TOKEN_REDEEMED: 'RESET_TOKEN_REDEEMED',
+  REPLACEMENT_PASSWORD_REFUSED: 'REPLACEMENT_PASSWORD_REFUSED',
+} as const;
+
+export type PasswordResetReason = (typeof PasswordResetReason)[keyof typeof PasswordResetReason];
+
+const knownReasons = new Map<string, ReadonlySet<string>>([
+  [signInReasonDomain, new Set<string>(Object.values(SignInReason))],
+  [passkeyReasonDomain, new Set<string>(Object.values(PasskeyReason))],
+  [passwordResetReasonDomain, new Set<string>(Object.values(PasswordResetReason))],
+]);
 
 /**
  * Reason is the structured refusal a status carried. `known` is false for a reason this client has no name for, which
@@ -35,6 +80,13 @@ const signInReasons: ReadonlySet<string> = new Set(Object.values(SignInReason));
  */
 export type Reason =
   | { known: true; domain: typeof signInReasonDomain; reason: SignInReason; metadata: Record<string, string> }
+  | { known: true; domain: typeof passkeyReasonDomain; reason: PasskeyReason; metadata: Record<string, string> }
+  | {
+      known: true;
+      domain: typeof passwordResetReasonDomain;
+      reason: PasswordResetReason;
+      metadata: Record<string, string>;
+    }
   | { known: false; domain: string; reason: string; metadata: Record<string, string> };
 
 const codeNames: Record<Code, string> = Object.fromEntries(
@@ -64,8 +116,8 @@ export class PlatformError extends Error {
     return new PlatformError(err.code, err.message, err.statusDetails ? readReason(err.statusDetails) : undefined);
   }
 
-  /** is reports whether this refusal carries the named sign-in reason. */
-  is(reason: SignInReason): boolean {
+  /** is reports whether this refusal carries the named reason, from any of the tables above. */
+  is(reason: SignInReason | PasskeyReason | PasswordResetReason): boolean {
     return this.reason?.known === true && this.reason.reason === reason;
   }
 }
@@ -126,8 +178,8 @@ function readReason(bytes: Uint8Array): Reason | undefined {
     } catch {
       continue;
     }
-    if (info.domain === signInReasonDomain && signInReasons.has(info.reason)) {
-      return { known: true, domain: signInReasonDomain, reason: info.reason as SignInReason, metadata: info.metadata };
+    if (knownReasons.get(info.domain)?.has(info.reason)) {
+      return { known: true, domain: info.domain, reason: info.reason, metadata: info.metadata } as Reason;
     }
     return { known: false, domain: info.domain, reason: info.reason, metadata: info.metadata };
   }
