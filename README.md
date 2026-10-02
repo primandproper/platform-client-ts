@@ -247,3 +247,15 @@ file — is a red build rather than a runtime surprise.
 The build writes `package.json`'s `exports` from the generated tree: every `<package>/<version>` under
 `src/generated/primandproper/platform` is published as `./<package>/<version>`. A package the new tag adds is exported
 with nothing to edit by hand, and CI fails if the committed `exports` are not what the build writes.
+
+## Releasing
+
+Bump `version` in `package.json` on a branch and merge it, then from an up-to-date `main`, logged in to npm:
+
+```bash
+pnpm run release
+```
+
+`scripts/publish.sh` refuses a version that is not valid semver, is already published, or is not after the highest
+published one, and a tree that is not exactly `origin/main`, all before it builds. It then runs the checks CI runs,
+publishes (a prerelease under the `next` dist-tag rather than `latest`), and pushes a `v<version>` tag.
