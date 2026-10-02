@@ -228,17 +228,28 @@ export class Session {
     await this.signingIn?.catch(() => undefined);
     await this.refreshing?.catch(() => undefined);
 
+    // The flight is the token every waiting call continues with; a refusal is the switch's alone (R20).
     const attempt = this.switchTo(accountId, options);
-    const flight = attempt.finally(() => {
-      if (this.refreshing === flight) {
-        this.refreshing = undefined;
-      }
-    });
+    const flight = attempt
+      .then((switched) => switched.token)
+      .finally(() => {
+        if (this.refreshing === flight) {
+          this.refreshing = undefined;
+        }
+      });
     this.refreshing = flight;
-    return flight;
+    await flight;
+    const { token, refused } = await attempt;
+    if (refused) {
+      throw refused;
+    }
+    return token;
   }
 
-  private async switchTo(accountId: string, options?: CallOptions): Promise<IssuedToken> {
+  private async switchTo(
+    accountId: string,
+    options?: CallOptions,
+  ): Promise<{ token: IssuedToken; refused?: PlatformError }> {
     // Twice at most: the second is for a token another Session exchanged out from under the first, whose successor is
     // the login in the account it was already in.
     for (let tries = 0; ; tries++) {
@@ -273,10 +284,10 @@ export class Session {
 
       await this.adopt(successor);
       if (refused) {
-        throw refused;
+        return { token: successor, refused };
       }
       if (successor.activeAccountId === accountId) {
-        return successor;
+        return { token: successor };
       }
       if (tries > 0) {
         throw new Error(`the login was exchanged twice while switching it to ${accountId}; it is still where it was`);
