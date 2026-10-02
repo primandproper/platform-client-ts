@@ -22,6 +22,10 @@ typecheck:
 test: typecheck
 	pnpm test
 
+.PHONY: coverage
+coverage: typecheck
+	pnpm exec vitest run --coverage
+
 .PHONY: build
 build:
 	pnpm run build

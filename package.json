@@ -50,6 +50,7 @@
     "@eslint/js": "10.0.1",
     "@grpc/grpc-js": "1.14.3",
     "@types/node": "22.13.1",
+    "@vitest/coverage-v8": "5.0.1",
     "eslint": "10.11.0",
     "prettier": "3.6.2",
     "ts-proto": "2.11.5",

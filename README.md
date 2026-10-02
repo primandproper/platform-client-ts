@@ -206,6 +206,7 @@ make install
 make codegen         # fetch the protos, then generate
 make format lint     # prettier, then eslint and shellcheck
 make test            # typecheck, then vitest
+make coverage        # typecheck, then vitest, failing below the floors in vitest.config.mjs
 make build           # ESM and .d.ts into dist/
 make check-package   # build, then import it from plain Node and typecheck a consumer on other runtime versions
 make check-generated # regenerate and fail if src/generated differs from what is committed (needs protoc)
