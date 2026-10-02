@@ -1,8 +1,12 @@
 {
   "name": "@primandproper/platform-client",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.0.1",
   "description": "Client for services built on platform-go",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/primandproper/platform-client-ts.git"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -28,6 +32,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsdown --config-loader native",
     "fetch-protos": "./scripts/fetch-protos.sh",
@@ -35,7 +42,8 @@
     "codegen": "pnpm run fetch-protos && pnpm run generate",
     "test": "vitest run",
     "check-build": "./scripts/check-build.sh",
-    "check-consumer": "./scripts/check-consumer.sh"
+    "check-consumer": "./scripts/check-consumer.sh",
+    "release": "./scripts/publish.sh"
   },
   "devDependencies": {
     "@bufbuild/protobuf": "2.10.1",
