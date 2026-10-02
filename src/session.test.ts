@@ -283,6 +283,175 @@ describe('Session', () => {
     expect(tokenSent(transport.callsTo(getSelf)[0]!.options)).toBe('Bearer access-2');
     expect(transport.callsTo(exchange)).toHaveLength(1);
   });
+
+  it('stops telling a listener that unsubscribed', async () => {
+    const { clock, transport, session } = setup();
+    transport.handle(login, () => ({ token: fakeIssuedToken(clock.now()) }));
+    const seen: SessionState[] = [];
+    const stop = session.onStateChange((s) => seen.push(s));
+
+    stop();
+    await session.signIn(login, { credentials: undefined });
+
+    expect(seen).toEqual([]);
+  });
+
+  it('loads the store again after a load that failed', async () => {
+    const { store, session } = setup((now) => fakeIssuedToken(now));
+    const load = store.load.bind(store);
+    store.load = () => {
+      store.load = load;
+      return Promise.reject(new Error('disk unreadable'));
+    };
+
+    await expect(session.call(getSelf, {})).rejects.toThrow('disk unreadable');
+    await session.call(getSelf, {});
+
+    expect(session.state).toBe('authenticated');
+  });
+
+  it('stays as it was when a sign-in door answers OK with no token', async () => {
+    const { store, transport, session, states } = setup();
+    transport.handle(login, () => ({ token: undefined }));
+
+    await expect(session.signIn(login, { credentials: undefined })).rejects.toThrow('answered OK with no token');
+
+    expect(await store.load()).toBeUndefined();
+    expect(states).toEqual(['authenticating', 'anonymous']);
+  });
+
+  it('refuses a call that was waiting on a sign-in that was refused', async () => {
+    const { transport, session } = setup();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    transport.handle(login, async () => {
+      await held;
+      throw new StatusError(Code.UNAUTHENTICATED, 'invalid credentials');
+    });
+
+    const signingIn = session.signIn(login, { credentials: undefined }).catch((e: unknown) => e);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const waiting = session.call(getSelf, {});
+    release();
+
+    expect(await signingIn).toBeInstanceOf(PlatformError);
+    await expect(waiting).rejects.toBeInstanceOf(NotSignedInError);
+    expect(transport.callsTo(getSelf)).toEqual([]);
+  });
+
+  it('answers what it held before a sign-in that was refused, once the sign-in settles', async () => {
+    const { transport, session } = setup((now) => fakeIssuedToken(now));
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    transport.handle(login, async () => {
+      await held;
+      throw new StatusError(Code.UNAUTHENTICATED, 'invalid credentials');
+    });
+
+    const signingIn = session.signIn(login, { credentials: undefined }).catch(() => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const answer = session.held();
+    release();
+    await signingIn;
+
+    expect((await answer)?.token).toBe('access-1');
+    expect(session.state).toBe('authenticated');
+  });
+
+  it('keeps the access token and drops the refresh token when an exchange answers OK with no token (R5)', async () => {
+    const { clock, store, transport, session } = setup((now) => fakeIssuedToken(now));
+    transport.handle(exchange, () => ({ token: undefined }));
+
+    clock.advance(60 * 60 * 1000 - 10_000);
+    await expect(session.call(getSelf, {})).rejects.toThrow('answered OK with no token');
+    await session.call(getSelf, {});
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    expect(await store.load()).toMatchObject({ token: 'access-1', refreshToken: '' });
+    expect(session.state).toBe('authenticated');
+  });
+
+  it('ends a session with no refresh token when a call is answered UNAUTHENTICATED', async () => {
+    const { store, transport, session } = setup((now) =>
+      fakeIssuedToken(now, { refreshToken: '', refreshTokenExpiresAt: undefined }),
+    );
+    transport.handle(getSelf, () => {
+      throw new StatusError(Code.UNAUTHENTICATED, 'invalid credentials');
+    });
+
+    await expect(session.call(getSelf, {})).rejects.toBeInstanceOf(NotSignedInError);
+
+    expect(transport.callsTo(getSelf)).toHaveLength(1);
+    expect(transport.callsTo(exchange)).toEqual([]);
+    expect(await store.load()).toBeUndefined();
+    expect(session.state).toBe('anonymous');
+  });
+
+  it('makes one exchange for calls answered UNAUTHENTICATED at the same time (R1, R3)', async () => {
+    const { clock, transport, session } = setup((now) => fakeIssuedToken(now));
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    transport.handle(exchange, async () => {
+      await held;
+      return { token: successor(clock.now(), 2) };
+    });
+    transport.handle(getSelf, (_req, options) => {
+      if (tokenSent(options) === 'Bearer access-1') {
+        throw new StatusError(Code.UNAUTHENTICATED, 'invalid credentials');
+      }
+      return { user: undefined };
+    });
+
+    const calls = Array.from({ length: 3 }, () => session.call(getSelf, {}));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    release();
+    await Promise.all(calls);
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    expect(transport.callsTo(getSelf).map((c) => tokenSent(c.options))).toEqual([
+      ...Array<string>(3).fill('Bearer access-1'),
+      ...Array<string>(3).fill('Bearer access-2'),
+    ]);
+  });
+
+  it('retries a refused call with the successor another call already refreshed to, without a second exchange', async () => {
+    const { clock, transport, session } = setup((now) => fakeIssuedToken(now));
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    transport.handle(exchange, () => ({ token: successor(clock.now(), 2) }));
+    transport.handle(getSelf, async (_req, options) => {
+      if (tokenSent(options) === 'Bearer access-1') {
+        await held;
+        throw new StatusError(Code.UNAUTHENTICATED, 'invalid credentials');
+      }
+      return { user: undefined };
+    });
+
+    const slow = session.call(getSelf, {});
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    clock.advance(60 * 60 * 1000 - 10_000);
+    await session.call(getSelf, {});
+    release();
+    await slow;
+
+    expect(transport.callsTo(exchange)).toHaveLength(1);
+    expect(transport.callsTo(getSelf).map((c) => tokenSent(c.options))).toEqual([
+      'Bearer access-1',
+      'Bearer access-2',
+      'Bearer access-2',
+    ]);
+  });
+
+  it('surfaces a failure from an optionally authenticated call rather than retrying it anonymously', async () => {
+    const { transport, session } = setup((now) => fakeIssuedToken(now));
+    transport.handle(getSelf, () => {
+      throw new StatusError(Code.NOT_FOUND, 'no');
+    });
+
+    await expect(session.callOptionallyAuthenticated(getSelf, {})).rejects.toMatchObject({ code: Code.NOT_FOUND });
+
+    expect(transport.callsTo(getSelf).map((c) => tokenSent(c.options))).toEqual(['Bearer access-1']);
+  });
 });
 
 const keyOf = (options: { metadata?: Record<string, string> }) => options.metadata?.['idempotency-key'];
