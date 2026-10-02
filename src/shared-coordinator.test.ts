@@ -64,13 +64,9 @@ describe('SharedExchangeCoordinator', () => {
     const { coordinators } = instances(2);
     const refused = PlatformError.fromStatus(refusal(Code.PERMISSION_DENIED, 'suspended', SignInReason.USER_SUSPENDED));
 
-    await expect(
-      coordinators[0]!.run('refresh-1', async () => {
-        throw refused;
-      }),
-    ).rejects.toBe(refused);
+    await expect(coordinators[0]!.run('refresh-1', () => Promise.reject(refused))).rejects.toBe(refused);
     const late = await coordinators[1]!
-      .run('refresh-1', async () => fakeIssuedToken(new Date()))
+      .run('refresh-1', () => Promise.resolve(fakeIssuedToken(new Date())))
       .catch((e: unknown) => e);
 
     expect(late).toBeInstanceOf(PlatformError);
@@ -82,12 +78,10 @@ describe('SharedExchangeCoordinator', () => {
     const { coordinators } = instances(2);
 
     await expect(
-      coordinators[0]!.run('refresh-1', async () => {
-        throw new Error('answered OK with no token');
-      }),
+      coordinators[0]!.run('refresh-1', () => Promise.reject(new Error('answered OK with no token'))),
     ).rejects.toThrow('answered OK with no token');
     const late = await coordinators[1]!
-      .run('refresh-1', async () => fakeIssuedToken(new Date()))
+      .run('refresh-1', () => Promise.resolve(fakeIssuedToken(new Date())))
       .catch((e: unknown) => e);
 
     expect(late).not.toBeInstanceOf(PlatformError);
@@ -101,12 +95,14 @@ describe('SharedExchangeCoordinator', () => {
     // The claimant never reports back: the process died mid-exchange.
     void coordinators[0]!.run('refresh-1', (attempt) => {
       attempts.push(attempt);
-      return new Promise<never>(() => {});
+      return new Promise<never>(() => undefined);
     });
-    await vi.waitFor(() => expect(attempts).toHaveLength(1));
-    const waiting = coordinators[1]!.run('refresh-1', async (attempt) => {
+    await vi.waitFor(() => {
+      expect(attempts).toHaveLength(1);
+    });
+    const waiting = coordinators[1]!.run('refresh-1', (attempt) => {
       attempts.push(attempt);
-      return successor(clock);
+      return Promise.resolve(successor(clock));
     });
     await settleMicrotasks();
     expect(attempts).toHaveLength(1);
@@ -122,7 +118,7 @@ describe('SharedExchangeCoordinator', () => {
   it('seals the outcome so that the store holds nothing usable without the spent refresh token', async () => {
     const { clock, store, coordinators } = instances(1);
 
-    await coordinators[0]!.run('refresh-1', async () => successor(clock));
+    await coordinators[0]!.run('refresh-1', () => Promise.resolve(successor(clock)));
 
     const raw = JSON.stringify([...store.entries]);
     for (const secret of ['refresh-1', 'refresh-2', 'access-2']) {
@@ -151,7 +147,9 @@ describe('SharedExchangeCoordinator', () => {
       },
     };
 
-    const result = await new SharedExchangeCoordinator({ store }).run('refresh-1', async () => successor(clock));
+    const result = await new SharedExchangeCoordinator({ store }).run('refresh-1', () =>
+      Promise.resolve(successor(clock)),
+    );
 
     expect(result.token).toBe('access-2');
   });
@@ -173,9 +171,9 @@ describe('SharedExchangeCoordinator', () => {
     };
     const coordinator = new SharedExchangeCoordinator({ store });
     const attempts: ExchangeAttempt[] = [];
-    const exchange = async (attempt: ExchangeAttempt) => {
+    const exchange = (attempt: ExchangeAttempt) => {
       attempts.push(attempt);
-      return successor(clock);
+      return Promise.resolve(successor(clock));
     };
 
     await expect(coordinator.run('refresh-1', exchange)).rejects.toBeInstanceOf(ExchangeNotSentError);
@@ -196,9 +194,9 @@ describe('Session over SharedExchangeCoordinator', () => {
     const clock = new FakeClock();
     const shared = new MemoryCoordinationStore(clock);
     const transport = new FakeTransport()
-      .handle(getSelf, () => ({ user: undefined }) as never)
+      .handle(getSelf, () => ({ user: undefined }))
       // The first instance's exchange never comes back: it died with the token possibly spent.
-      .handle(exchange, () => new Promise<never>(() => {}));
+      .handle(exchange, () => new Promise<never>(() => undefined));
     const cookie = fakeIssuedToken(clock.now());
     const instance = () => {
       const store = new MemoryCredentialStore(cookie);
@@ -208,7 +206,9 @@ describe('Session over SharedExchangeCoordinator', () => {
 
     clock.advance(60 * 60 * 1000 - 10_000);
     void instance().session.call(getSelf, {});
-    await vi.waitFor(() => expect(transport.callsTo(exchange)).toHaveLength(1));
+    await vi.waitFor(() => {
+      expect(transport.callsTo(exchange)).toHaveLength(1);
+    });
     const second = instance();
     const call = second.session.call(getSelf, {});
     await settleMicrotasks();
@@ -230,7 +230,7 @@ describe('Session over SharedExchangeCoordinator', () => {
       set: (key, value, ttlMs) => reachable(() => working.set(key, value, ttlMs)),
     };
     const transport = new FakeTransport()
-      .handle(getSelf, () => ({ user: undefined }) as never)
+      .handle(getSelf, () => ({ user: undefined }))
       .handle(exchange, () => ({
         token: fakeIssuedToken(clock.now(), { token: 'access-2', refreshToken: 'refresh-2' }),
       }));

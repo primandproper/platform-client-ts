@@ -86,13 +86,7 @@ if git rev-parse --quiet --verify "refs/tags/$TAG" >/dev/null || git ls-remote -
   exit 1
 fi
 
-pnpm install --frozen-lockfile
-pnpm exec tsc --noEmit
-pnpm test
-pnpm run build
-git diff --exit-code -- package.json || { echo "::error::the build rewrote package.json's exports"; exit 1; }
-pnpm run check-build
-pnpm run check-consumer
+make install format-check lint test check-package
 
 # The git checks pnpm would make are the ones above, made before the build rather than after it.
 pnpm publish --no-git-checks --tag "$DIST_TAG"

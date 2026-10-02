@@ -14,12 +14,15 @@ INCLUDE="$ROOT/.protos/include"
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
+PROTOS=()
+while IFS= read -r proto; do PROTOS+=("$proto"); done < <(find "$INCLUDE" -name '*.proto' | sort)
+
 PATH="$ROOT/node_modules/.bin:$PATH" protoc \
   --ts_proto_out="$OUT" \
   --ts_proto_opt=outputServices=grpc-js \
   --ts_proto_opt=esModuleInterop=true \
   --proto_path "$INCLUDE" \
-  $(find "$INCLUDE" -name '*.proto' | sort)
+  "${PROTOS[@]}"
 
 cp "$ROOT/.protos/SOURCES.txt" "$OUT/SOURCES.txt"
 echo "generated $(find "$OUT" -name '*.ts' | wc -l | tr -d ' ') files -> src/generated"

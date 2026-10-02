@@ -202,13 +202,13 @@ Streams are not covered, because the contract parks them: no platform-go proto d
 ## Codegen
 
 ```bash
-pnpm install
-pnpm run codegen        # fetch the protos, then generate
-pnpm exec tsc --noEmit  # typecheck
-pnpm test               # vitest
-pnpm run build          # ESM and .d.ts into dist/
-pnpm run check-build    # import the built package from plain Node
-pnpm run check-consumer # typecheck a consumer on other runtime versions against the packed package
+make install
+make codegen         # fetch the protos, then generate
+make format lint     # prettier, then eslint and shellcheck
+make test            # typecheck, then vitest
+make build           # ESM and .d.ts into dist/
+make check-package   # build, then import it from plain Node and typecheck a consumer on other runtime versions
+make check-generated # regenerate and fail if src/generated differs from what is committed (needs protoc)
 ```
 
 **One pin, one derived version.** `PLATFORM_GO_VERSION` names a `platform-go` tag. The `primitives-go` version is _read
@@ -240,9 +240,9 @@ package uses the product's copy.
 
 ### Upgrading
 
-Edit `PLATFORM_GO_VERSION`, run `pnpm run codegen` and then `pnpm run build`, commit the diff. CI fails if the committed
-output is not exactly what the pinned tag produces, so a bumped pin without a regeneration — or a hand-edited generated
-file — is a red build rather than a runtime surprise.
+Edit `PLATFORM_GO_VERSION`, run `make codegen` and then `make build`, commit the diff. CI fails if the committed output
+is not exactly what the pinned tag produces, so a bumped pin without a regeneration — or a hand-edited generated file —
+is a red build rather than a runtime surprise.
 
 The build writes `package.json`'s `exports` from the generated tree: every `<package>/<version>` under
 `src/generated/primandproper/platform` is published as `./<package>/<version>`. A package the new tag adds is exported
@@ -253,7 +253,7 @@ with nothing to edit by hand, and CI fails if the committed `exports` are not wh
 Bump `version` in `package.json` on a branch and merge it, then from an up-to-date `main`, logged in to npm:
 
 ```bash
-pnpm run release
+make release
 ```
 
 `scripts/publish.sh` refuses a version that is not valid semver, is already published, or is not after the highest

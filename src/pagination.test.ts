@@ -24,11 +24,11 @@ function pagination(cursor: string, overrides: Partial<Pagination> = {}): Pagina
 /** server answers from `rows` two at a time, keyed on the last row's value, as a keyset store does. */
 function server(rows: string[]) {
   const requests: Request[] = [];
-  const fetch = async (request: Request): Promise<ListResponse<string>> => {
+  const fetch = (request: Request): Promise<ListResponse<string>> => {
     requests.push(request);
     const after = request.filter?.cursor ? rows.indexOf(request.filter.cursor) + 1 : 0;
     const results = rows.slice(after, after + 2);
-    return { results, pagination: pagination(results.at(-1) ?? '') };
+    return Promise.resolve({ results, pagination: pagination(results.at(-1) ?? '') });
   };
   return { fetch, requests };
 }
@@ -55,12 +55,12 @@ describe('pages', () => {
   it('does not stop on a short page', async () => {
     const rows = ['a', 'b', 'c'];
     const requests: Request[] = [];
-    const fetch = async (request: Request): Promise<ListResponse<string>> => {
+    const fetch = (request: Request): Promise<ListResponse<string>> => {
       requests.push(request);
       // A server whose pages come back short before the end: one row where two were allowed.
       const after = request.filter?.cursor ? rows.indexOf(request.filter.cursor) + 1 : 0;
       const results = rows.slice(after, after + 1);
-      return { results, pagination: pagination(results.at(-1) ?? '') };
+      return Promise.resolve({ results, pagination: pagination(results.at(-1) ?? '') });
     };
 
     const walked = await collect(items(fetch, { filter: undefined, parentId: 'p' }));
@@ -85,13 +85,13 @@ describe('pages', () => {
   });
 
   it('refuses a page with rows and no cursor rather than restarting the list', async () => {
-    const fetch = async (): Promise<ListResponse<string>> => ({ results: ['a'], pagination: pagination('') });
+    const fetch = (): Promise<ListResponse<string>> => Promise.resolve({ results: ['a'], pagination: pagination('') });
 
     await expect(collect(pages(fetch, { filter: undefined, parentId: 'p' }))).rejects.toThrow('no cursor');
   });
 
   it('refuses a page that hands back the cursor that reached it', async () => {
-    const fetch = async (): Promise<ListResponse<string>> => ({ results: ['a'], pagination: pagination('a') });
+    const fetch = (): Promise<ListResponse<string>> => Promise.resolve({ results: ['a'], pagination: pagination('a') });
     const walker = pages(fetch, { filter: filter({ cursor: 'a' }), parentId: 'p' });
 
     await expect(collect(walker)).rejects.toThrow('repeat it forever');

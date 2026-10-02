@@ -27,12 +27,19 @@ describe('createGrpcJsTransport', () => {
         }
       },
     });
-    const port = await new Promise<number>((resolve, reject) =>
-      server.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (err, p) =>
-        err ? reject(err) : resolve(p),
-      ),
-    );
-    transport = createGrpcJsTransport({ address: `127.0.0.1:${port}`, credentials: grpc.credentials.createInsecure() });
+    const port = await new Promise<number>((resolve, reject) => {
+      server.bindAsync('127.0.0.1:0', grpc.ServerCredentials.createInsecure(), (err, p) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(p);
+        }
+      });
+    });
+    transport = createGrpcJsTransport({
+      address: `127.0.0.1:${String(port)}`,
+      credentials: grpc.credentials.createInsecure(),
+    });
   });
 
   afterAll(() => {

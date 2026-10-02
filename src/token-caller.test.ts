@@ -9,7 +9,7 @@ import { Code, StatusError } from './transport';
 const getSelf = SignInServiceService.getSelf;
 
 function setup() {
-  const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }) as never);
+  const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }));
   const caller = new TokenCaller({ transport, metadata: { 'x-tenant': 'acme' } });
   return { transport, caller };
 }
@@ -35,7 +35,7 @@ describe('TokenCaller', () => {
   });
 
   it('carries the token however its Authorizer says to', async () => {
-    const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }) as never);
+    const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }));
     const caller = new TokenCaller({ transport, authorizer: { credentials: (token) => ({ 'x-api-token': token }) } });
 
     await caller.call(getSelf, 'access-1', {}, { metadata: { 'idempotency-key': 'key-1' } });

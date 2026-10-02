@@ -9,8 +9,8 @@ export interface UnaryMethod<Req, Res> {
   readonly path: string;
   readonly requestStream: false;
   readonly responseStream: false;
-  requestSerialize(value: Req): Buffer;
-  responseDeserialize(value: Buffer): Res;
+  readonly requestSerialize: (value: Req) => Buffer;
+  readonly responseDeserialize: (value: Buffer) => Res;
 }
 
 export interface CallOptions {

@@ -362,11 +362,9 @@ export class Session {
   }
 
   private refresh(): Promise<IssuedToken> {
-    if (!this.refreshing) {
-      this.refreshing = this.exchange().finally(() => {
-        this.refreshing = undefined;
-      });
-    }
+    this.refreshing ??= this.exchange().finally(() => {
+      this.refreshing = undefined;
+    });
     return this.refreshing;
   }
 
@@ -433,7 +431,7 @@ export class Session {
       {
         // A deadline is wall-clock time for the transport, not the Clock seam's, which decides expiry.
         deadline: new Date(Date.now() + this.exchangeDeadlineMs),
-        metadata: key ? { [idempotencyKeyHeader]: key } : undefined,
+        ...(key ? { metadata: { [idempotencyKeyHeader]: key } } : {}),
       },
     );
   }

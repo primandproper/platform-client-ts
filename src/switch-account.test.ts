@@ -11,10 +11,10 @@ const getSelf = SignInServiceService.getSelf;
 const exchange = SignInServiceService.exchangeRefreshToken;
 const switchAccount = SignInServiceService.switchAccount;
 
-function setup(held: boolean = true) {
+function setup(held = true) {
   const clock = new FakeClock();
   const coordinator = new InMemoryExchangeCoordinator({ clock });
-  const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }) as never);
+  const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }));
   const sessionFor = (store: MemoryCredentialStore) => new Session({ transport, store, clock, coordinator });
   const store = new MemoryCredentialStore(held ? fakeIssuedToken(clock.now()) : undefined);
   return { clock, transport, store, session: sessionFor(store), sessionFor };
@@ -22,9 +22,9 @@ function setup(held: boolean = true) {
 
 function successor(now: Date, n: number, account: string): IssuedToken {
   return fakeIssuedToken(now, {
-    token: `access-${n}`,
-    refreshToken: `refresh-${n}`,
-    tokenId: `jti-${n}`,
+    token: `access-${String(n)}`,
+    refreshToken: `refresh-${String(n)}`,
+    tokenId: `jti-${String(n)}`,
     activeAccountId: account,
   });
 }

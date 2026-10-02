@@ -30,12 +30,10 @@ describe('requestPasswordReset', () => {
       return {};
     });
 
-    const forHeld = await requestPasswordReset(session, 'held@example.com');
-    const forNobody = await requestPasswordReset(session, 'nobody@example.com');
+    await expect(requestPasswordReset(session, 'held@example.com')).resolves.toBeUndefined();
+    await expect(requestPasswordReset(session, 'nobody@example.com')).resolves.toBeUndefined();
 
     expect(mailed).toEqual(['held@example.com']);
-    expect(forHeld).toStrictEqual(forNobody);
-    expect(forHeld).toBeUndefined();
   });
 
   it('is anonymous, and carries the tenant', async () => {

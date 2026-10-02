@@ -17,16 +17,18 @@ export class MemoryCredentialStore implements CredentialStore {
     this.token = token;
   }
 
-  async load(): Promise<IssuedToken | undefined> {
-    return this.token;
+  load(): Promise<IssuedToken | undefined> {
+    return Promise.resolve(this.token);
   }
 
-  async save(token: IssuedToken): Promise<void> {
+  save(token: IssuedToken): Promise<void> {
     this.token = token;
+    return Promise.resolve();
   }
 
-  async clear(): Promise<void> {
+  clear(): Promise<void> {
     this.token = undefined;
+    return Promise.resolve();
   }
 }
 
@@ -42,21 +44,22 @@ export class MemoryCoordinationStore implements CoordinationStore {
     this.clock = clock;
   }
 
-  async setIfAbsent(key: string, value: string, ttlMs: number): Promise<boolean> {
-    // No await before the write, so that two callers cannot both find the key absent.
+  setIfAbsent(key: string, value: string, ttlMs: number): Promise<boolean> {
+    // The check and the write are synchronous, so that two callers cannot both find the key absent.
     if (this.live(key) !== undefined) {
-      return false;
+      return Promise.resolve(false);
     }
     this.entries.set(key, { value, expiresAt: this.clock.now().getTime() + ttlMs });
-    return true;
+    return Promise.resolve(true);
   }
 
-  async get(key: string): Promise<string | undefined> {
-    return this.live(key);
+  get(key: string): Promise<string | undefined> {
+    return Promise.resolve(this.live(key));
   }
 
-  async set(key: string, value: string, ttlMs: number): Promise<void> {
+  set(key: string, value: string, ttlMs: number): Promise<void> {
     this.entries.set(key, { value, expiresAt: this.clock.now().getTime() + ttlMs });
+    return Promise.resolve();
   }
 
   private live(key: string): string | undefined {
