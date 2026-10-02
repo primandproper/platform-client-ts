@@ -111,6 +111,28 @@ describe('Session.switchAccount', () => {
     expect(session.state).toBe('authenticated');
   });
 
+  it('serves calls held during a refused switch the successor, when the login was kept (R20)', async () => {
+    const { clock, transport, session } = setup();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    transport.handle(switchAccount, async () => {
+      await held;
+      throw refusal(Code.UNAUTHENTICATED, 'invalid credentials', 'INVALID_CREDENTIALS');
+    });
+    transport.handle(exchange, () => ({ token: successor(clock.now(), 2, 'account-1') }));
+
+    const switching = session.switchAccount('not-mine').catch((e: unknown) => e);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const call = session.call(getSelf, {});
+    release();
+    const [err] = await Promise.all([switching, call]);
+
+    expect(err).toBeInstanceOf(PlatformError);
+    expect((err as PlatformError).is(SignInReason.INVALID_CREDENTIALS)).toBe(true);
+    expect(tokenSent(transport.callsTo(getSelf)[0]!.options)).toBe('Bearer access-2');
+    expect(session.state).toBe('authenticated');
+  });
+
   it('ends the login when the refused token does not exchange either', async () => {
     const { transport, store, session } = setup();
     transport.handle(switchAccount, () => {
