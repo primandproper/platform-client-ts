@@ -14,7 +14,7 @@ const login = SignInServiceService.loginForToken;
 function setup(held?: (now: Date) => IssuedToken | undefined, config: Partial<SessionConfig> = {}) {
   const clock = new FakeClock();
   const store = new MemoryCredentialStore(held ? held(clock.now()) : undefined);
-  const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }) as never);
+  const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }));
   const coordinator = new InMemoryExchangeCoordinator({ clock });
   const session = new Session({ transport, store, clock, coordinator, metadata: { 'x-tenant': 'acme' }, ...config });
   const states: SessionState[] = [];
@@ -23,7 +23,11 @@ function setup(held?: (now: Date) => IssuedToken | undefined, config: Partial<Se
 }
 
 function successor(now: Date, n: number): IssuedToken {
-  return fakeIssuedToken(now, { token: `access-${n}`, refreshToken: `refresh-${n}`, tokenId: `jti-${n}` });
+  return fakeIssuedToken(now, {
+    token: `access-${String(n)}`,
+    refreshToken: `refresh-${String(n)}`,
+    tokenId: `jti-${String(n)}`,
+  });
 }
 
 const tokenSent = (options: { metadata?: Record<string, string> }) => options.metadata?.['authorization'];
@@ -72,7 +76,7 @@ describe('Session', () => {
     let storedWhenUsed: IssuedToken | undefined;
     transport.handle(getSelf, async () => {
       storedWhenUsed = await store.load();
-      return { user: undefined } as never;
+      return { user: undefined };
     });
 
     clock.advance(60 * 60 * 1000 - 30_000);
@@ -177,7 +181,7 @@ describe('Session', () => {
       if (tokenSent(options) === 'Bearer access-1') {
         throw new StatusError(Code.UNAUTHENTICATED, 'invalid credentials');
       }
-      return { user: undefined } as never;
+      return { user: undefined };
     });
 
     await session.call(getSelf, {});
@@ -270,9 +274,7 @@ describe('Session', () => {
   it('still uses a successor it failed to persist, and surfaces the failure', async () => {
     const { clock, store, transport, session } = setup((now) => fakeIssuedToken(now));
     transport.handle(exchange, () => ({ token: successor(clock.now(), 2) }));
-    store.save = async () => {
-      throw new Error('disk full');
-    };
+    store.save = () => Promise.reject(new Error('disk full'));
 
     clock.advance(60 * 60 * 1000);
     await expect(session.call(getSelf, {})).rejects.toThrow('disk full');
@@ -440,7 +442,7 @@ describe('Session across requests (ExchangeCoordinator)', () => {
   function perRequest() {
     const clock = new FakeClock();
     const coordinator = new InMemoryExchangeCoordinator({ clock });
-    const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }) as never);
+    const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }));
     const request = (token: IssuedToken) => {
       const store = new MemoryCredentialStore(token);
       return { store, session: new Session({ transport, store, clock, coordinator }) };

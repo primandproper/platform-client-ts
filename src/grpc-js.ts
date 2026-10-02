@@ -1,6 +1,6 @@
 import * as grpc from '@grpc/grpc-js';
 
-import { type Code, StatusError, type Transport } from './transport';
+import { StatusError, type Transport } from './transport';
 
 export interface GrpcJsTransportConfig {
   /** address is the authority to dial, `host:port`. Where the tenant is a host, this is where it is chosen. */
@@ -48,7 +48,9 @@ export function createGrpcJsTransport(config: GrpcJsTransportConfig): GrpcJsTran
         );
       });
     },
-    close: () => client.close(),
+    close: () => {
+      client.close();
+    },
   };
 }
 
@@ -56,10 +58,6 @@ function toStatusError(err: grpc.ServiceError): Error {
   if (typeof err.code !== 'number') {
     return err;
   }
-  const [details] = err.metadata?.get(statusDetailsKey) ?? [];
-  return new StatusError(
-    err.code as Code,
-    err.details,
-    details instanceof Buffer ? new Uint8Array(details) : undefined,
-  );
+  const [details] = err.metadata.get(statusDetailsKey);
+  return new StatusError(err.code, err.details, details instanceof Buffer ? new Uint8Array(details) : undefined);
 }

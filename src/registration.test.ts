@@ -98,11 +98,10 @@ describe('requestMagicLink', () => {
       return {};
     });
 
-    const forHeld = await requestMagicLink(session, 'held@example.com');
-    const forNobody = await requestMagicLink(session, 'nobody@example.com');
+    await expect(requestMagicLink(session, 'held@example.com')).resolves.toBeUndefined();
+    await expect(requestMagicLink(session, 'nobody@example.com')).resolves.toBeUndefined();
 
     expect(mailed).toEqual(['held@example.com']);
-    expect(forHeld).toStrictEqual(forNobody);
     expect(transport.callsTo(magicLink)[0]?.options.metadata).toEqual({ 'x-tenant': 'acme' });
   });
 });

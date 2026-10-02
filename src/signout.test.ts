@@ -93,7 +93,7 @@ describe('signOut', () => {
     transport.handle(exchange, () => ({
       token: fakeIssuedToken(clock.now(), { token: 'access-2', refreshToken: 'refresh-2' }),
     }));
-    transport.handle(SignInServiceService.getSelf, () => ({ user: undefined }) as never);
+    transport.handle(SignInServiceService.getSelf, () => ({ user: undefined }));
     transport.handle(signOutRpc, () => ({}));
 
     clock.advance(60 * 60 * 1000);

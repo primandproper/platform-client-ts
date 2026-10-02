@@ -7,9 +7,9 @@ import { withConstantMetadata } from './transport';
 function recordingTransport(): { transport: Transport; calls: CallOptions[] } {
   const calls: CallOptions[] = [];
   const transport: Transport = {
-    unary: async (_method, _request, options) => {
+    unary: (_method, _request, options) => {
       calls.push(options ?? {});
-      return undefined as never;
+      return Promise.resolve(undefined as never);
     },
   };
   return { transport, calls };

@@ -89,9 +89,10 @@ export type Reason =
     }
   | { known: false; domain: string; reason: string; metadata: Record<string, string> };
 
-const codeNames: Record<Code, string> = Object.fromEntries(
+// Partial because a server can send a code outside the set this client knows.
+const codeNames: Partial<Record<Code, string>> = Object.fromEntries(
   Object.entries(Code).map(([name, value]) => [value, name]),
-) as Record<Code, string>;
+);
 
 /**
  * PlatformError is a refusal a caller can branch on: the code always, and the reason where there is one (R13). Branch on
@@ -187,7 +188,7 @@ function readReason(bytes: Uint8Array): Reason | undefined {
 }
 
 function describe(code: Code, serverMessage: string, reason: Reason | undefined): string {
-  const name = codeNames[code] ?? `code ${code}`;
+  const name = codeNames[code] ?? `code ${String(code)}`;
   const suffix = reason ? ` [${reason.domain}/${reason.reason}]` : '';
   if (code === Code.UNKNOWN) {
     return (
