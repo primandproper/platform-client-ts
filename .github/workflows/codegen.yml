@@ -1,0 +1,42 @@
+# The generated client is committed, so the job here is proving it is what the pinned platform-go tag actually
+# produces, not regenerating it on the fly. A drifted commit and a stale pin look identical to a consumer until
+# something fails at runtime.
+name: codegen
+
+on:
+  pull_request:
+    # Only what can change codegen's output: the pin, the output itself, the scripts that produce and format it, and
+    # ts-proto's version. Every push to main still runs it.
+    paths:
+      - PLATFORM_GO_VERSION
+      - src/generated/**
+      - scripts/fetch-protos.sh
+      - scripts/generate.sh
+      - scripts/check-generated.sh
+      - package.json
+      - pnpm-lock.yaml
+      - .prettierrc
+      - .github/workflows/codegen.yml
+      - .github/actions/setup/**
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  generated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: arduino/setup-protoc@v3
+        with:
+          version: '33.1'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: make check-generated
