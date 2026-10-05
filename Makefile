@@ -17,6 +17,7 @@ lint:
 .PHONY: typecheck
 typecheck:
 	pnpm exec tsc --noEmit
+	pnpm exec tsc --noEmit -p src/webauthn
 
 .PHONY: test
 test: typecheck

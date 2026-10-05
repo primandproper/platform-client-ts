@@ -39,7 +39,8 @@ export default defineConfig([
     exports: true,
   },
   {
-    entry: { webauthn: 'src/webauthn.ts' },
+    entry: { webauthn: 'src/webauthn/webauthn.ts' },
+    tsconfig: 'src/webauthn/tsconfig.json',
     format: 'esm',
     platform: 'browser',
     // A browser build writes .js by default, and every other entry is .mjs.

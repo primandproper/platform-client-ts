@@ -1,5 +1,3 @@
-/// <reference lib="dom" />
-
 // The passkeys service speaks WebAuthn JSON, and `navigator.credentials` speaks ArrayBuffers. These functions are the
 // bridge: the options a Begin call answers, decoded into what `navigator.credentials.get` and `create` take, and the
 // credential they resolve with, encoded into the JSON a browser's `toJSON()` produces for the Finish call. Every binary
