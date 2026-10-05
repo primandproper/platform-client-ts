@@ -162,6 +162,21 @@ export function isAmbiguous(err: unknown): boolean {
   return !(err instanceof ExchangeNotSentError);
 }
 
+const transientCodes: ReadonlySet<Code> = new Set([Code.UNAVAILABLE, Code.DEADLINE_EXCEEDED, Code.RESOURCE_EXHAUSTED]);
+
+/**
+ * isTransient reports whether a failure is the server being unreachable or overloaded, so the same call may succeed
+ * later: what "try again later" and a circuit breaker consult. A failure with no status at all (connection refused, DNS)
+ * is transient. CANCELLED is not, since the caller cancelled it. INTERNAL and UNKNOWN are not either: they are the
+ * server's fault but not its absence, and a breaker that trips on them hides a bug behind a "try later".
+ */
+export function isTransient(err: unknown): boolean {
+  if (err instanceof PlatformError || err instanceof StatusError) {
+    return transientCodes.has(err.code);
+  }
+  return true;
+}
+
 function readReason(bytes: Uint8Array): Reason | undefined {
   let status: Status;
   try {
