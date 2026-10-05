@@ -210,6 +210,7 @@ Swift client keeps the same table.
 | ---------------------- | --------- | --------- | ---------------------------------------------------------------------------------- |
 | no status at all       | yes       | yes       | connection refused, DNS, a reset socket: the server was never reached              |
 | `ExchangeNotSentError` | no        | yes       | as no status: the coordinator's store could not be reached                         |
+| `NotSignedInError`     | yes       | no        | there is no login to call with: a reason to sign in, not to wait                   |
 | `UNAVAILABLE`          | yes       | yes       | the server is down or unreachable                                                  |
 | `DEADLINE_EXCEEDED`    | yes       | yes       | the server did not answer in time                                                  |
 | `RESOURCE_EXHAUSTED`   | no        | yes       | the server is overloaded or rate limiting                                          |

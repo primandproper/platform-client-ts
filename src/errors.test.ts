@@ -4,6 +4,7 @@ import {
   ExchangeNotSentError,
   isAmbiguous,
   isTransient,
+  NotSignedInError,
   PasskeyReason,
   PasswordResetReason,
   passwordResetReasonDomain,
@@ -205,6 +206,10 @@ describe('isTransient', () => {
       true,
     );
     expect(isTransient(new ExchangeNotSentError('store unreachable', { cause: new Error('ECONNREFUSED') }))).toBe(true);
+  });
+
+  it('does not treat a missing login as transient', () => {
+    expect(isTransient(new NotSignedInError())).toBe(false);
   });
 });
 
