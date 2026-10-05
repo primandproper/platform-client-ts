@@ -19,18 +19,33 @@ const platformEntries = readdirSync(platform).flatMap((name) =>
 
 // A bundler rather than tsc because every relative import in src (ts-proto's output included) is extensionless, which
 // Node's ESM loader rejects. Rewriting them with ts-proto's importSuffix would make src/generated stop matching DDB's.
-export default defineConfig({
-  entry: {
-    index: 'src/index.ts',
-    testing: 'src/testing.ts',
-    ...Object.fromEntries(platformEntries),
+//
+// webauthn is the one browser entry, built on its own so it shares no chunk with the Node entries and no transport,
+// grpc-js above all, is reachable from it.
+export default defineConfig([
+  {
+    entry: {
+      index: 'src/index.ts',
+      testing: 'src/testing.ts',
+      ...Object.fromEntries(platformEntries),
+    },
+    format: 'esm',
+    platform: 'node',
+    target: 'es2022',
+    dts: true,
+    clean: true,
+    // The build writes package.json's exports from the entries above. CI fails if the committed exports differ from
+    // what the build wrote, so they are never edited by hand.
+    exports: true,
   },
-  format: 'esm',
-  platform: 'node',
-  target: 'es2022',
-  dts: true,
-  clean: true,
-  // The build writes package.json's exports from the entries above. CI fails if the committed exports differ from
-  // what the build wrote, so they are never edited by hand.
-  exports: true,
-});
+  {
+    entry: { webauthn: 'src/webauthn.ts' },
+    format: 'esm',
+    platform: 'browser',
+    // A browser build writes .js by default, and every other entry is .mjs.
+    fixedExtension: true,
+    target: 'es2022',
+    dts: true,
+    exports: true,
+  },
+]);
