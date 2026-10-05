@@ -17,6 +17,7 @@ export {
 export {
   ExchangeNotSentError,
   isAmbiguous,
+  isTransient,
   PasskeyReason,
   passkeyReasonDomain,
   PasswordResetReason,

@@ -1,9 +1,11 @@
 import { type ExchangeAttempt, type ExchangeCoordinator, InMemoryExchangeCoordinator } from './coordinator';
-import { isAmbiguous, PlatformError } from './errors';
+import { isAmbiguous, NotSignedInError, PlatformError } from './errors';
 import { type IssuedToken, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
 import { type Authorizer, type Clock, type CredentialStore, type Metadata, systemClock } from './seams';
 import { TokenCaller } from './token-caller';
 import { type CallOptions, Code, type Transport, type UnaryMethod } from './transport';
+
+export { NotSignedInError } from './errors';
 
 /**
  * refreshSkew is how long before an access token's expiry a call refreshes it instead. The contract fixes it at thirty
@@ -56,14 +58,6 @@ export interface SessionConfig {
    * enough for a single process and not for several.
    */
   coordinator?: ExchangeCoordinator;
-}
-
-/** NotSignedInError is what an authenticated call rejects with when there is no session to make it with. */
-export class NotSignedInError extends Error {
-  constructor() {
-    super('not signed in');
-    this.name = 'NotSignedInError';
-  }
 }
 
 /** A response from one of the three doors that mint a session. */
