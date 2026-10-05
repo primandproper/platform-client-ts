@@ -64,8 +64,9 @@ const recipe = await session.call(RecipesServiceService.getRecipe, { id });
 
 **There is no default `CredentialStore`.** It holds the refresh token, which belongs in the platform's most protected
 store and nowhere a log, a crash report or a URL can reach. A default that could not meet that bar would be worse than
-none. The in-memory `MemoryCredentialStore` in `@primandproper/platform-client/testing` is for tests, alongside
-`FakeTransport` and `FakeClock`.
+none. A backend-for-frontend has one to opt into, [`encryptedCredentialStore`](#a-session-per-request). The in-memory
+`MemoryCredentialStore` in `@primandproper/platform-client/testing` is for tests, alongside `FakeTransport` and
+`FakeClock`.
 
 ### A Session per request
 
@@ -75,40 +76,54 @@ cookie arrived, all carry the same refresh token; the coordinator exchanges it o
 successor. Nothing here deletes the cookie on a failed refresh: `Session` clears the store only when the login is really
 over (R2, R7).
 
+`encryptedCredentialStore` is that store. It seals the token with AES-256-GCM under a 32-byte server secret, expires the
+cookie with the refresh token rather than the access token, and writes it only when the token changed. The key must be
+the same on every instance and across deploys: a cookie that will not open reads as no session, so a rotated key signs
+everyone out rather than failing every request. The cookie's name, path, `SameSite` and domain are the app's.
+
+`resolveOrRedirect` is the request hook's sign-in gate: a public path resolves as it is, any other is sent to sign in
+when no login is held, and a page load that ended the login while it ran (a refused refresh) is sent there too.
+`redirectOnNotSignedIn` wraps a call so that a login that is over throws the framework's redirect, and every other
+failure, a server error included, is rethrown as it was.
+
 ```ts
 // SvelteKit's hooks.server.ts; any framework with request-scoped cookies has the same shape.
-import type { Cookies, Handle } from '@sveltejs/kit';
-import { type CredentialStore, IssuedToken, Session } from '@primandproper/platform-client';
+import { type Handle, redirect } from '@sveltejs/kit';
+import {
+  encryptedCredentialStore,
+  redirectOnNotSignedIn,
+  resolveOrRedirect,
+  Session,
+} from '@primandproper/platform-client';
 
-const cookieName = 'session';
+const key = Buffer.from(process.env.SESSION_KEY!, 'base64'); // 32 bytes, the same everywhere and across deploys
+const isPublic = (path: string) => ['/login', '/logout'].some((p) => path === p || path.startsWith(`${p}/`));
 
-function cookieStore(cookies: Cookies): CredentialStore {
-  return {
-    async load() {
-      const raw = cookies.get(cookieName);
-      return raw ? IssuedToken.fromJSON(JSON.parse(raw)) : undefined;
-    },
-    async save(token) {
-      cookies.set(cookieName, JSON.stringify(IssuedToken.toJSON(token)), {
-        path: '/',
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        expires: token.refreshTokenExpiresAt ?? token.expiresAt,
-      });
-    },
-    async clear() {
-      cookies.delete(cookieName, { path: '/' });
-    },
-  };
-}
-
-export const handle: Handle = async ({ event, resolve }) => {
+export const handle: Handle = ({ event, resolve }) => {
+  const store = encryptedCredentialStore(key, {
+    get: () => event.cookies.get('session'),
+    set: (value, expires) =>
+      event.cookies.set('session', value, { path: '/', httpOnly: true, secure: true, sameSite: 'lax', expires }),
+    delete: () => event.cookies.delete('session', { path: '/' }),
+  });
   // transport is built once per process; the Session, like the cookie, is per request.
-  event.locals.session = new Session({ transport, store: cookieStore(event.cookies) });
-  return resolve(event);
+  event.locals.session = new Session({ transport, store });
+  return resolveOrRedirect(event.locals.session, event.request, () => resolve(event), {
+    isPublic,
+    loginPath: '/login',
+  });
 };
+
+// In a load function or form action:
+const recipe = await redirectOnNotSignedIn(
+  locals.session,
+  () => locals.session.call(RecipesServiceService.getRecipe, { id }),
+  () => redirect(302, '/login'),
+);
 ```
+
+**The package takes no framework as a dependency**, SvelteKit included. Everything above speaks the Fetch API's
+`Request` and `Response` and a three-method cookie, so the SvelteKit-shaped part is the dozen lines an app writes.
 
 ### Several instances
 
@@ -144,7 +159,7 @@ const coordinationStore: CoordinationStore = {
 
 // One per process, shared by every Session it builds.
 const coordinator = new SharedExchangeCoordinator({ store: coordinationStore });
-event.locals.session = new Session({ transport, store: cookieStore(event.cookies), coordinator });
+event.locals.session = new Session({ transport, store, coordinator });
 ```
 
 **`idempotentRefresh` is off by default.** A client cannot tell from the wire whether the server supports R10, and

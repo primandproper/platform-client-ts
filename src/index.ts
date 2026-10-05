@@ -73,3 +73,10 @@ export {
   type VerifyEmailResult,
 } from './registration';
 export { type AuthStatusResult, getAuthStatus, type RequiredAction } from './authstatus';
+export {
+  encryptedCredentialStore,
+  redirectOnNotSignedIn,
+  resolveOrRedirect,
+  type ResolveOrRedirectOptions,
+  type SealedCookie,
+} from './bff';
