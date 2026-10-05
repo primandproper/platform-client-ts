@@ -17,6 +17,7 @@ export {
 export {
   ExchangeNotSentError,
   isAmbiguous,
+  isTransient,
   PasskeyReason,
   passkeyReasonDomain,
   PasswordResetReason,
@@ -55,7 +56,15 @@ export {
   type SignInResult,
 } from './signin';
 export { signOut, signOutEverywhere } from './signout';
-export { beginPasskeySignIn, type PasskeySignIn, passkeySignIn, type PasskeySignInResult } from './passkeys';
+export {
+  beginPasskeyRegistration,
+  beginPasskeySignIn,
+  finishPasskeyRegistration,
+  type PasskeyRegistration,
+  type PasskeySignIn,
+  passkeySignIn,
+  type PasskeySignInResult,
+} from './passkeys';
 export {
   completePasswordReset,
   type CompleteResult,
@@ -80,3 +89,4 @@ export {
   type ResolveOrRedirectOptions,
   type SealedCookie,
 } from './bff';
+export { SettingValueError, type SettingValueRefusal, textFromTypedValue, typedValueFromText } from './settings';

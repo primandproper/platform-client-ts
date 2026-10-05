@@ -214,6 +214,35 @@ Connect transport behind the same `Transport` interface.
 
 Streams are not covered, because the contract parks them: no platform-go proto declares one.
 
+### Classifying a failure
+
+Two questions get asked of every failed call. `isAmbiguous` answers R10's: may it have committed before it failed?
+`isTransient` answers the other: is the server unreachable or overloaded, so the same call may succeed later? That is
+what "try again later" and a circuit breaker consult; anything not transient is a reason to show or a bug to fix. The
+Swift client keeps the same table.
+
+| failure                | ambiguous | transient | why transient or not                                                               |
+| ---------------------- | --------- | --------- | ---------------------------------------------------------------------------------- |
+| no status at all       | yes       | yes       | connection refused, DNS, a reset socket: the server was never reached              |
+| `ExchangeNotSentError` | no        | yes       | as no status: the coordinator's store could not be reached                         |
+| `NotSignedInError`     | yes       | no        | there is no login to call with: a reason to sign in, not to wait                   |
+| `UNAVAILABLE`          | yes       | yes       | the server is down or unreachable                                                  |
+| `DEADLINE_EXCEEDED`    | yes       | yes       | the server did not answer in time                                                  |
+| `RESOURCE_EXHAUSTED`   | no        | yes       | the server is overloaded or rate limiting                                          |
+| `CANCELLED`            | yes       | no        | the caller cancelled it (a user navigating away is not an outage)                  |
+| `INTERNAL`             | yes       | no        | the server's fault but not its absence: a breaker that trips on it hides a bug     |
+| `UNKNOWN`              | yes       | no        | as `INTERNAL`; also what an unregistered refusal maps to                           |
+| `UNAUTHENTICATED`      | no        | no        | the credentials; `Session` already refreshes once (R3)                             |
+| `PERMISSION_DENIED`    | no        | no        | the caller may not do this, and will not be allowed later either                   |
+| `INVALID_ARGUMENT`     | no        | no        | the request is wrong                                                               |
+| `NOT_FOUND`            | no        | no        | the thing is not there                                                             |
+| `ALREADY_EXISTS`       | no        | no        | the thing is already there                                                         |
+| `FAILED_PRECONDITION`  | no        | no        | the state is wrong for this call, and waiting does not change it                   |
+| `ABORTED`              | no        | no        | a conflict with another write: retry the whole operation, not this call on a timer |
+| `OUT_OF_RANGE`         | no        | no        | the request is wrong                                                               |
+| `UNIMPLEMENTED`        | no        | no        | the server does not have this method: a version mismatch                           |
+| `DATA_LOSS`            | no        | no        | the server's fault but not its absence                                             |
+
 ## Codegen
 
 ```bash

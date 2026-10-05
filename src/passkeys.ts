@@ -1,13 +1,13 @@
 import { PlatformError, SignInReason } from './errors';
 import type { IssuedToken } from './generated/primandproper/platform/signin/v1/signin';
-import { PasskeysServiceService } from './generated/primandproper/platform/passkeys/v1/passkeys';
+import { type Passkey, PasskeysServiceService } from './generated/primandproper/platform/passkeys/v1/passkeys';
 import type { Session } from './session';
 import type { CallOptions } from './transport';
 
 export interface PasskeySignIn {
   /** username is the one `beginPasskeySignIn` was sent, empty for a discoverable login. */
   username?: string;
-  /** response is the JSON of the credential `navigator.credentials.get` resolved with, its `toJSON()`. */
+  /** response is the JSON of the credential `navigator.credentials.get` resolved with: `serializeAssertion`. */
   response: Uint8Array;
   /** totpCode is sent whenever there is one, as for a password sign-in. */
   totpCode?: string;
@@ -23,8 +23,8 @@ export interface PasskeySignIn {
 export type PasskeySignInResult = { kind: 'signed_in'; token: IssuedToken } | { kind: 'second_factor_required' };
 
 /**
- * beginPasskeySignIn starts a passkey sign-in, answering the options to hand `navigator.credentials.get` (as the JSON a
- * browser's `parseRequestOptionsFromJSON` reads). An empty `username` is the discoverable login. It answers the same
+ * beginPasskeySignIn starts a passkey sign-in, answering the options to hand `navigator.credentials.get` (as the JSON
+ * `parseAssertionOptions` reads). An empty `username` is the discoverable login. It answers the same
  * for a username nobody holds as for one somebody does, so show the same prompt either way.
  */
 export async function beginPasskeySignIn(session: Session, username = '', options?: CallOptions): Promise<Uint8Array> {
@@ -64,4 +64,41 @@ export async function passkeySignIn(
     }
     throw err;
   }
+}
+
+export interface PasskeyRegistration {
+  /** friendlyName is what the person calls this authenticator, as a settings page lists it. */
+  friendlyName: string;
+  /** response is the JSON of the credential `navigator.credentials.create` resolved with: `serializeRegistration`. */
+  response: Uint8Array;
+}
+
+/**
+ * beginPasskeyRegistration starts enrolling a passkey on the signed-in user's account, answering the options to hand
+ * `navigator.credentials.create` (as the JSON `parseRegistrationOptions` reads). They exclude the user's existing
+ * passkeys, so an authenticator already holding one declines to register a second.
+ */
+export async function beginPasskeyRegistration(session: Session, options?: CallOptions): Promise<Uint8Array> {
+  const response = await session.call(PasskeysServiceService.beginRegistration, {}, options);
+  return response.options;
+}
+
+/**
+ * finishPasskeyRegistration enrolls the passkey the browser created, answering it as the account now lists it. It mints
+ * no session: the user is already signed in, and stays signed in as they were.
+ */
+export async function finishPasskeyRegistration(
+  session: Session,
+  attestation: PasskeyRegistration,
+  options?: CallOptions,
+): Promise<Passkey> {
+  const response = await session.call(
+    PasskeysServiceService.finishRegistration,
+    { friendlyName: attestation.friendlyName, response: attestation.response },
+    options,
+  );
+  if (!response.passkey) {
+    throw new Error(`${PasskeysServiceService.finishRegistration.path} answered OK with no passkey`);
+  }
+  return response.passkey;
 }

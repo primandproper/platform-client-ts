@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ExchangeNotSentError,
   isAmbiguous,
+  isTransient,
+  NotSignedInError,
   PasskeyReason,
   PasswordResetReason,
   passwordResetReasonDomain,
@@ -166,6 +169,47 @@ describe('isAmbiguous', () => {
 
   it('treats a failure with no status as ambiguous', () => {
     expect(isAmbiguous(new Error('socket hang up'))).toBe(true);
+  });
+});
+
+describe('isTransient', () => {
+  it.each([
+    [Code.OK, false],
+    [Code.CANCELLED, false],
+    [Code.UNKNOWN, false],
+    [Code.INVALID_ARGUMENT, false],
+    [Code.DEADLINE_EXCEEDED, true],
+    [Code.NOT_FOUND, false],
+    [Code.ALREADY_EXISTS, false],
+    [Code.PERMISSION_DENIED, false],
+    [Code.RESOURCE_EXHAUSTED, true],
+    [Code.FAILED_PRECONDITION, false],
+    [Code.ABORTED, false],
+    [Code.OUT_OF_RANGE, false],
+    [Code.UNIMPLEMENTED, false],
+    [Code.INTERNAL, false],
+    [Code.UNAVAILABLE, true],
+    [Code.DATA_LOSS, false],
+    [Code.UNAUTHENTICATED, false],
+  ])('code %i is transient: %s', (code, transient) => {
+    expect(isTransient(new StatusError(code, 'x'))).toBe(transient);
+    expect(isTransient(new PlatformError(code, 'x'))).toBe(transient);
+  });
+
+  it('pins every code', () => {
+    // Fails when Code grows, so the new code gets a row above and in the README's table.
+    expect(Object.keys(Code)).toHaveLength(17);
+  });
+
+  it('treats a failure with no status as transient', () => {
+    expect(isTransient(Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:443'), { code: 'ECONNREFUSED' }))).toBe(
+      true,
+    );
+    expect(isTransient(new ExchangeNotSentError('store unreachable', { cause: new Error('ECONNREFUSED') }))).toBe(true);
+  });
+
+  it('does not treat a missing login as transient', () => {
+    expect(isTransient(new NotSignedInError())).toBe(false);
   });
 });
 
