@@ -17,5 +17,7 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  // src/webauthn is the browser entry, checked under its own tsconfig so the DOM types stay out of the Node code.
+  "exclude": ["src/webauthn"]
 }

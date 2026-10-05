@@ -33,3 +33,10 @@ for (const entry of stubs) {
 }
 console.log('built package imports from plain Node');
 "
+
+# The browser entry is built on its own so nothing, a transport least of all, comes with it into a browser bundle.
+if grep -nE "^import |^export .* from |import\(" dist/webauthn.mjs; then
+  echo "::error::dist/webauthn.mjs imports something; the browser entry must stand alone"
+  exit 1
+fi
+echo "browser entry imports nothing"

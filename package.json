@@ -26,6 +26,7 @@
     "./signin/v1": "./dist/signin/v1.mjs",
     "./testing": "./dist/testing.mjs",
     "./waitlists/v1": "./dist/waitlists/v1.mjs",
+    "./webauthn": "./dist/webauthn.mjs",
     "./webhooks/v1": "./dist/webhooks/v1.mjs",
     "./package.json": "./package.json"
   },
