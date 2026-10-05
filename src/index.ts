@@ -17,6 +17,7 @@ export {
 export {
   ExchangeNotSentError,
   isAmbiguous,
+  isTransient,
   PasskeyReason,
   passkeyReasonDomain,
   PasswordResetReason,
@@ -81,3 +82,4 @@ export {
   type VerifyEmailResult,
 } from './registration';
 export { type AuthStatusResult, getAuthStatus, type RequiredAction } from './authstatus';
+export { SettingValueError, type SettingValueRefusal, textFromTypedValue, typedValueFromText } from './settings';
