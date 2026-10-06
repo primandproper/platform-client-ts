@@ -23,8 +23,10 @@ if ! npm view "$NAME" versions --json >"$WORK/published.json" 2>"$WORK/view.err"
   echo '[]' >"$WORK/published.json"
 fi
 
-# Prints the dist-tag the version publishes under, or explains why it cannot be published and fails.
-DIST_TAG="$(node --input-type=module - "$VERSION" "$WORK/published.json" <<'EOF'
+# Writes the dist-tag the version publishes under, or explains why it cannot be published and fails. Not inside a
+# $(...): bash 3.2, which is macOS's /bin/bash, pairs the quotes in a heredoc there, and an apostrophe in the
+# script below is then a parse error before anything has run.
+node --input-type=module - "$VERSION" "$WORK/published.json" >"$WORK/dist-tag" <<'EOF'
 import { readFileSync } from 'node:fs';
 
 const [version, publishedPath] = process.argv.slice(2);
@@ -75,7 +77,7 @@ if (highest && compare(next, highest[1]) <= 0) fail(`${version} is not after ${h
 // A prerelease published as latest is what every unpinned install would get.
 console.log(next.pre.length ? 'next' : 'latest');
 EOF
-)"
+DIST_TAG="$(cat "$WORK/dist-tag")"
 
 [ "$(git branch --show-current)" = main ] || { echo "::error::publish from main"; exit 1; }
 [ -z "$(git status --porcelain)" ] || { echo "::error::the working tree is not clean"; exit 1; }
