@@ -1,6 +1,6 @@
 {
   "name": "@primandproper/platform-client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Client for services built on platform-go",
   "license": "AGPL-3.0-or-later",
   "repository": {
