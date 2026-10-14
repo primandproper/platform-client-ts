@@ -1,5 +1,8 @@
-import { SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import type { Session } from './session';
+import { methodsOf } from './transport';
+
+const SignInService = methodsOf(SignInServiceDefinition);
 
 /**
  * signOutDeadline bounds the one SignOut attempt. It is short because nothing waits on the answer: the local session is
@@ -21,7 +24,7 @@ export async function signOut(session: Session): Promise<void> {
   try {
     if (held?.refreshToken) {
       await session.callAnonymous(
-        SignInServiceService.signOut,
+        SignInService.signOut,
         { refreshToken: held.refreshToken },
         { deadline: new Date(Date.now() + signOutDeadlineMs) },
       );
@@ -41,6 +44,6 @@ export async function signOut(session: Session): Promise<void> {
  * keeping the session lets the user press it again.
  */
 export async function signOutEverywhere(session: Session): Promise<void> {
-  await session.call(SignInServiceService.signOutEverywhere, {});
+  await session.call(SignInService.signOutEverywhere, {});
   await session.clear();
 }

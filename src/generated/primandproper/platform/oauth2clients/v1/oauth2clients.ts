@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
 
@@ -1068,132 +1056,45 @@ export const ArchiveOAuth2ClientResponse: MessageFns<ArchiveOAuth2ClientResponse
  * registration belongs to no person. See the file comment for why there are four
  * of them and what a self-service half would have to look like.
  */
-export type OAuth2ClientsServiceService = typeof OAuth2ClientsServiceService;
-export const OAuth2ClientsServiceService = {
-  createOAuth2Client: {
-    path: '/primandproper.platform.oauth2clients.v1.OAuth2ClientsService/CreateOAuth2Client' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: CreateOAuth2ClientRequest): Buffer =>
-      Buffer.from(CreateOAuth2ClientRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): CreateOAuth2ClientRequest => CreateOAuth2ClientRequest.decode(value),
-    responseSerialize: (value: CreateOAuth2ClientResponse): Buffer =>
-      Buffer.from(CreateOAuth2ClientResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): CreateOAuth2ClientResponse => CreateOAuth2ClientResponse.decode(value),
-  },
-  getOAuth2Client: {
-    path: '/primandproper.platform.oauth2clients.v1.OAuth2ClientsService/GetOAuth2Client' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetOAuth2ClientRequest): Buffer =>
-      Buffer.from(GetOAuth2ClientRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetOAuth2ClientRequest => GetOAuth2ClientRequest.decode(value),
-    responseSerialize: (value: GetOAuth2ClientResponse): Buffer =>
-      Buffer.from(GetOAuth2ClientResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetOAuth2ClientResponse => GetOAuth2ClientResponse.decode(value),
-  },
-  listOAuth2Clients: {
-    path: '/primandproper.platform.oauth2clients.v1.OAuth2ClientsService/ListOAuth2Clients' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListOAuth2ClientsRequest): Buffer =>
-      Buffer.from(ListOAuth2ClientsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListOAuth2ClientsRequest => ListOAuth2ClientsRequest.decode(value),
-    responseSerialize: (value: ListOAuth2ClientsResponse): Buffer =>
-      Buffer.from(ListOAuth2ClientsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListOAuth2ClientsResponse => ListOAuth2ClientsResponse.decode(value),
-  },
-  archiveOAuth2Client: {
-    path: '/primandproper.platform.oauth2clients.v1.OAuth2ClientsService/ArchiveOAuth2Client' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveOAuth2ClientRequest): Buffer =>
-      Buffer.from(ArchiveOAuth2ClientRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveOAuth2ClientRequest => ArchiveOAuth2ClientRequest.decode(value),
-    responseSerialize: (value: ArchiveOAuth2ClientResponse): Buffer =>
-      Buffer.from(ArchiveOAuth2ClientResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveOAuth2ClientResponse => ArchiveOAuth2ClientResponse.decode(value),
+export type OAuth2ClientsServiceDefinition = typeof OAuth2ClientsServiceDefinition;
+export const OAuth2ClientsServiceDefinition = {
+  name: 'OAuth2ClientsService',
+  fullName: 'primandproper.platform.oauth2clients.v1.OAuth2ClientsService',
+  methods: {
+    createOAuth2Client: {
+      name: 'CreateOAuth2Client',
+      requestType: CreateOAuth2ClientRequest as typeof CreateOAuth2ClientRequest,
+      requestStream: false,
+      responseType: CreateOAuth2ClientResponse as typeof CreateOAuth2ClientResponse,
+      responseStream: false,
+      options: {},
+    },
+    getOAuth2Client: {
+      name: 'GetOAuth2Client',
+      requestType: GetOAuth2ClientRequest as typeof GetOAuth2ClientRequest,
+      requestStream: false,
+      responseType: GetOAuth2ClientResponse as typeof GetOAuth2ClientResponse,
+      responseStream: false,
+      options: {},
+    },
+    listOAuth2Clients: {
+      name: 'ListOAuth2Clients',
+      requestType: ListOAuth2ClientsRequest as typeof ListOAuth2ClientsRequest,
+      requestStream: false,
+      responseType: ListOAuth2ClientsResponse as typeof ListOAuth2ClientsResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveOAuth2Client: {
+      name: 'ArchiveOAuth2Client',
+      requestType: ArchiveOAuth2ClientRequest as typeof ArchiveOAuth2ClientRequest,
+      requestStream: false,
+      responseType: ArchiveOAuth2ClientResponse as typeof ArchiveOAuth2ClientResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface OAuth2ClientsServiceServer extends UntypedServiceImplementation {
-  createOAuth2Client: handleUnaryCall<CreateOAuth2ClientRequest, CreateOAuth2ClientResponse>;
-  getOAuth2Client: handleUnaryCall<GetOAuth2ClientRequest, GetOAuth2ClientResponse>;
-  listOAuth2Clients: handleUnaryCall<ListOAuth2ClientsRequest, ListOAuth2ClientsResponse>;
-  archiveOAuth2Client: handleUnaryCall<ArchiveOAuth2ClientRequest, ArchiveOAuth2ClientResponse>;
-}
-
-export interface OAuth2ClientsServiceClient extends Client {
-  createOAuth2Client(
-    request: CreateOAuth2ClientRequest,
-    callback: (error: ServiceError | null, response: CreateOAuth2ClientResponse) => void,
-  ): ClientUnaryCall;
-  createOAuth2Client(
-    request: CreateOAuth2ClientRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: CreateOAuth2ClientResponse) => void,
-  ): ClientUnaryCall;
-  createOAuth2Client(
-    request: CreateOAuth2ClientRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: CreateOAuth2ClientResponse) => void,
-  ): ClientUnaryCall;
-  getOAuth2Client(
-    request: GetOAuth2ClientRequest,
-    callback: (error: ServiceError | null, response: GetOAuth2ClientResponse) => void,
-  ): ClientUnaryCall;
-  getOAuth2Client(
-    request: GetOAuth2ClientRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetOAuth2ClientResponse) => void,
-  ): ClientUnaryCall;
-  getOAuth2Client(
-    request: GetOAuth2ClientRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetOAuth2ClientResponse) => void,
-  ): ClientUnaryCall;
-  listOAuth2Clients(
-    request: ListOAuth2ClientsRequest,
-    callback: (error: ServiceError | null, response: ListOAuth2ClientsResponse) => void,
-  ): ClientUnaryCall;
-  listOAuth2Clients(
-    request: ListOAuth2ClientsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListOAuth2ClientsResponse) => void,
-  ): ClientUnaryCall;
-  listOAuth2Clients(
-    request: ListOAuth2ClientsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListOAuth2ClientsResponse) => void,
-  ): ClientUnaryCall;
-  archiveOAuth2Client(
-    request: ArchiveOAuth2ClientRequest,
-    callback: (error: ServiceError | null, response: ArchiveOAuth2ClientResponse) => void,
-  ): ClientUnaryCall;
-  archiveOAuth2Client(
-    request: ArchiveOAuth2ClientRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveOAuth2ClientResponse) => void,
-  ): ClientUnaryCall;
-  archiveOAuth2Client(
-    request: ArchiveOAuth2ClientRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveOAuth2ClientResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const OAuth2ClientsServiceClient = makeGenericClientConstructor(
-  OAuth2ClientsServiceService,
-  'primandproper.platform.oauth2clients.v1.OAuth2ClientsService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): OAuth2ClientsServiceClient;
-  service: typeof OAuth2ClientsServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

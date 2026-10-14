@@ -1,16 +1,65 @@
 import type { Metadata } from './seams';
 
+/** MessageCodec is the half of a ts-proto message's functions that puts it on the wire and takes it off again. */
+export interface MessageCodec<T> {
+  encode(message: T): { finish(): Uint8Array };
+  decode(input: Uint8Array): T;
+}
+
 /**
- * UnaryMethod is the shape ts-proto generates for every unary RPC (`SignInServiceService.loginForToken`, and equally a
- * product's own `RecipesServiceService.createRecipe`), so a Transport can carry any service's calls, not only
- * platform's.
+ * UnaryMethod is one unary RPC a Transport can carry: its path and its messages' codecs, over `Uint8Array` so that
+ * nothing about it needs Node. `methodsOf` builds them from any service ts-proto generates with
+ * `outputServices=generic-definitions`, platform's and a product's own alike.
  */
 export interface UnaryMethod<Req, Res> {
   readonly path: string;
-  readonly requestStream: false;
-  readonly responseStream: false;
-  readonly requestSerialize: (value: Req) => Buffer;
-  readonly responseDeserialize: (value: Buffer) => Res;
+  readonly requestType: MessageCodec<Req>;
+  readonly responseType: MessageCodec<Res>;
+}
+
+/** ServiceDefinition is the part of a ts-proto `generic-definitions` service that `methodsOf` reads. */
+export interface ServiceDefinition {
+  readonly fullName: string;
+  readonly methods: Readonly<
+    Record<
+      string,
+      {
+        readonly name: string;
+        readonly requestType: object;
+        readonly requestStream: boolean;
+        readonly responseType: object;
+        readonly responseStream: boolean;
+      }
+    >
+  >;
+}
+
+/** UnaryMethods is a service's unary methods, by the key ts-proto gives each. Streaming methods have no entry. */
+export type UnaryMethods<Methods> = {
+  readonly [K in keyof Methods as Methods[K] extends { requestStream: false; responseStream: false }
+    ? K
+    : never]: Methods[K] extends { requestType: MessageCodec<infer Req>; responseType: MessageCodec<infer Res> }
+    ? UnaryMethod<Req, Res>
+    : never;
+};
+
+/**
+ * methodsOf is a service's unary methods, ready for a Transport. ts-proto's definitions name a method but leave its path
+ * to the service it belongs to, so this is where the two meet: `methodsOf(RecipesServiceDefinition).getRecipe` dials
+ * `/<package>.RecipesService/GetRecipe`.
+ */
+export function methodsOf<S extends ServiceDefinition>(service: S): UnaryMethods<S['methods']> {
+  const methods: Record<string, UnaryMethod<unknown, unknown>> = {};
+  for (const [key, method] of Object.entries(service.methods)) {
+    if (!method.requestStream && !method.responseStream) {
+      methods[key] = {
+        path: `/${service.fullName}/${method.name}`,
+        requestType: method.requestType as MessageCodec<unknown>,
+        responseType: method.responseType as MessageCodec<unknown>,
+      };
+    }
+  }
+  return methods as UnaryMethods<S['methods']>;
 }
 
 export interface CallOptions {

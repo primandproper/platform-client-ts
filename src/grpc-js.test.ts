@@ -2,9 +2,15 @@ import * as grpc from '@grpc/grpc-js';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { Status } from './generated/google/rpc/status';
-import { SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import {
+  type GetAuthStatusRequest,
+  type GetAuthStatusResponse,
+  SignInServiceDefinition,
+} from './generated/primandproper/platform/signin/v1/signin';
 import { createGrpcJsTransport, type GrpcJsTransport } from './grpc-js';
-import { Code, StatusError } from './transport';
+import { Code, methodsOf, StatusError } from './transport';
+
+const SignInService = methodsOf(SignInServiceDefinition);
 
 describe('createGrpcJsTransport', () => {
   let server: grpc.Server;
@@ -15,7 +21,20 @@ describe('createGrpcJsTransport', () => {
 
   beforeAll(async () => {
     server = new grpc.Server();
-    server.addService(SignInServiceService, {
+    // The generated code no longer carries grpc-js's server shape, so the test server builds it from the same method.
+    const { path, requestType, responseType } = SignInService.getAuthStatus;
+    const definition: grpc.ServiceDefinition = {
+      getAuthStatus: {
+        path,
+        requestStream: false,
+        responseStream: false,
+        requestSerialize: (value: GetAuthStatusRequest) => Buffer.from(requestType.encode(value).finish()),
+        requestDeserialize: (bytes: Buffer) => requestType.decode(bytes),
+        responseSerialize: (value: GetAuthStatusResponse) => Buffer.from(responseType.encode(value).finish()),
+        responseDeserialize: (bytes: Buffer) => responseType.decode(bytes),
+      },
+    };
+    server.addService(definition, {
       getAuthStatus: (call: grpc.ServerUnaryCall<unknown, unknown>, callback: grpc.sendUnaryData<unknown>) => {
         received = call.metadata;
         if (answer === 'refuse') {
@@ -51,7 +70,7 @@ describe('createGrpcJsTransport', () => {
     answer = 'ok';
 
     const response = await transport.unary(
-      SignInServiceService.getAuthStatus,
+      SignInService.getAuthStatus,
       {},
       { metadata: { 'authorization': 'Bearer abc', 'x-tenant': 'acme' } },
     );
@@ -64,7 +83,7 @@ describe('createGrpcJsTransport', () => {
   it('rejects a refusal with its code, message and status details', async () => {
     answer = 'refuse';
 
-    const err = await transport.unary(SignInServiceService.getAuthStatus, {}).catch((e: unknown) => e);
+    const err = await transport.unary(SignInService.getAuthStatus, {}).catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(StatusError);
     expect(err).toMatchObject({ code: Code.UNAUTHENTICATED, message: 'invalid credentials' });
@@ -75,7 +94,7 @@ describe('createGrpcJsTransport', () => {
     answer = 'hang';
 
     const err = await transport
-      .unary(SignInServiceService.getAuthStatus, {}, { deadline: new Date(Date.now() + 50) })
+      .unary(SignInService.getAuthStatus, {}, { deadline: new Date(Date.now() + 50) })
       .catch((e: unknown) => e);
 
     expect(err).toBeInstanceOf(StatusError);
@@ -85,7 +104,7 @@ describe('createGrpcJsTransport', () => {
   it('rejects an unreachable server as UNAVAILABLE', async () => {
     const nowhere = createGrpcJsTransport({ address: '127.0.0.1:1', credentials: grpc.credentials.createInsecure() });
 
-    const err = await nowhere.unary(SignInServiceService.getAuthStatus, {}).catch((e: unknown) => e);
+    const err = await nowhere.unary(SignInService.getAuthStatus, {}).catch((e: unknown) => e);
     nowhere.close();
 
     expect(err).toBeInstanceOf(StatusError);

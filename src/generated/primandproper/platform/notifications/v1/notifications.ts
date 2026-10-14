@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
 
@@ -1812,267 +1800,85 @@ export const RevokeDeviceResponse: MessageFns<RevokeDeviceResponse> = {
  * in -- so an RPC would be both a call no client should be able to make and a
  * commit at a moment the erasure does not choose.
  */
-export type NotificationsServiceService = typeof NotificationsServiceService;
-export const NotificationsServiceService = {
-  listNotifications: {
-    path: '/primandproper.platform.notifications.v1.NotificationsService/ListNotifications' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListNotificationsRequest): Buffer =>
-      Buffer.from(ListNotificationsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListNotificationsRequest => ListNotificationsRequest.decode(value),
-    responseSerialize: (value: ListNotificationsResponse): Buffer =>
-      Buffer.from(ListNotificationsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListNotificationsResponse => ListNotificationsResponse.decode(value),
-  },
-  listUnreadNotifications: {
-    path: '/primandproper.platform.notifications.v1.NotificationsService/ListUnreadNotifications' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListUnreadNotificationsRequest): Buffer =>
-      Buffer.from(ListUnreadNotificationsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListUnreadNotificationsRequest => ListUnreadNotificationsRequest.decode(value),
-    responseSerialize: (value: ListUnreadNotificationsResponse): Buffer =>
-      Buffer.from(ListUnreadNotificationsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListUnreadNotificationsResponse =>
-      ListUnreadNotificationsResponse.decode(value),
-  },
-  getNotification: {
-    path: '/primandproper.platform.notifications.v1.NotificationsService/GetNotification' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetNotificationRequest): Buffer =>
-      Buffer.from(GetNotificationRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetNotificationRequest => GetNotificationRequest.decode(value),
-    responseSerialize: (value: GetNotificationResponse): Buffer =>
-      Buffer.from(GetNotificationResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetNotificationResponse => GetNotificationResponse.decode(value),
-  },
-  markNotificationRead: {
-    path: '/primandproper.platform.notifications.v1.NotificationsService/MarkNotificationRead' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: MarkNotificationReadRequest): Buffer =>
-      Buffer.from(MarkNotificationReadRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): MarkNotificationReadRequest => MarkNotificationReadRequest.decode(value),
-    responseSerialize: (value: MarkNotificationReadResponse): Buffer =>
-      Buffer.from(MarkNotificationReadResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): MarkNotificationReadResponse => MarkNotificationReadResponse.decode(value),
-  },
-  markAllNotificationsRead: {
-    path: '/primandproper.platform.notifications.v1.NotificationsService/MarkAllNotificationsRead' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: MarkAllNotificationsReadRequest): Buffer =>
-      Buffer.from(MarkAllNotificationsReadRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): MarkAllNotificationsReadRequest =>
-      MarkAllNotificationsReadRequest.decode(value),
-    responseSerialize: (value: MarkAllNotificationsReadResponse): Buffer =>
-      Buffer.from(MarkAllNotificationsReadResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): MarkAllNotificationsReadResponse =>
-      MarkAllNotificationsReadResponse.decode(value),
-  },
-  archiveNotification: {
-    path: '/primandproper.platform.notifications.v1.NotificationsService/ArchiveNotification' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveNotificationRequest): Buffer =>
-      Buffer.from(ArchiveNotificationRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveNotificationRequest => ArchiveNotificationRequest.decode(value),
-    responseSerialize: (value: ArchiveNotificationResponse): Buffer =>
-      Buffer.from(ArchiveNotificationResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveNotificationResponse => ArchiveNotificationResponse.decode(value),
-  },
-  registerDevice: {
-    path: '/primandproper.platform.notifications.v1.NotificationsService/RegisterDevice' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RegisterDeviceRequest): Buffer =>
-      Buffer.from(RegisterDeviceRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RegisterDeviceRequest => RegisterDeviceRequest.decode(value),
-    responseSerialize: (value: RegisterDeviceResponse): Buffer =>
-      Buffer.from(RegisterDeviceResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RegisterDeviceResponse => RegisterDeviceResponse.decode(value),
-  },
-  listDevices: {
-    path: '/primandproper.platform.notifications.v1.NotificationsService/ListDevices' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListDevicesRequest): Buffer => Buffer.from(ListDevicesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListDevicesRequest => ListDevicesRequest.decode(value),
-    responseSerialize: (value: ListDevicesResponse): Buffer => Buffer.from(ListDevicesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListDevicesResponse => ListDevicesResponse.decode(value),
-  },
-  revokeDevice: {
-    path: '/primandproper.platform.notifications.v1.NotificationsService/RevokeDevice' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RevokeDeviceRequest): Buffer => Buffer.from(RevokeDeviceRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RevokeDeviceRequest => RevokeDeviceRequest.decode(value),
-    responseSerialize: (value: RevokeDeviceResponse): Buffer =>
-      Buffer.from(RevokeDeviceResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RevokeDeviceResponse => RevokeDeviceResponse.decode(value),
+export type NotificationsServiceDefinition = typeof NotificationsServiceDefinition;
+export const NotificationsServiceDefinition = {
+  name: 'NotificationsService',
+  fullName: 'primandproper.platform.notifications.v1.NotificationsService',
+  methods: {
+    listNotifications: {
+      name: 'ListNotifications',
+      requestType: ListNotificationsRequest as typeof ListNotificationsRequest,
+      requestStream: false,
+      responseType: ListNotificationsResponse as typeof ListNotificationsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listUnreadNotifications: {
+      name: 'ListUnreadNotifications',
+      requestType: ListUnreadNotificationsRequest as typeof ListUnreadNotificationsRequest,
+      requestStream: false,
+      responseType: ListUnreadNotificationsResponse as typeof ListUnreadNotificationsResponse,
+      responseStream: false,
+      options: {},
+    },
+    getNotification: {
+      name: 'GetNotification',
+      requestType: GetNotificationRequest as typeof GetNotificationRequest,
+      requestStream: false,
+      responseType: GetNotificationResponse as typeof GetNotificationResponse,
+      responseStream: false,
+      options: {},
+    },
+    markNotificationRead: {
+      name: 'MarkNotificationRead',
+      requestType: MarkNotificationReadRequest as typeof MarkNotificationReadRequest,
+      requestStream: false,
+      responseType: MarkNotificationReadResponse as typeof MarkNotificationReadResponse,
+      responseStream: false,
+      options: {},
+    },
+    markAllNotificationsRead: {
+      name: 'MarkAllNotificationsRead',
+      requestType: MarkAllNotificationsReadRequest as typeof MarkAllNotificationsReadRequest,
+      requestStream: false,
+      responseType: MarkAllNotificationsReadResponse as typeof MarkAllNotificationsReadResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveNotification: {
+      name: 'ArchiveNotification',
+      requestType: ArchiveNotificationRequest as typeof ArchiveNotificationRequest,
+      requestStream: false,
+      responseType: ArchiveNotificationResponse as typeof ArchiveNotificationResponse,
+      responseStream: false,
+      options: {},
+    },
+    registerDevice: {
+      name: 'RegisterDevice',
+      requestType: RegisterDeviceRequest as typeof RegisterDeviceRequest,
+      requestStream: false,
+      responseType: RegisterDeviceResponse as typeof RegisterDeviceResponse,
+      responseStream: false,
+      options: {},
+    },
+    listDevices: {
+      name: 'ListDevices',
+      requestType: ListDevicesRequest as typeof ListDevicesRequest,
+      requestStream: false,
+      responseType: ListDevicesResponse as typeof ListDevicesResponse,
+      responseStream: false,
+      options: {},
+    },
+    revokeDevice: {
+      name: 'RevokeDevice',
+      requestType: RevokeDeviceRequest as typeof RevokeDeviceRequest,
+      requestStream: false,
+      responseType: RevokeDeviceResponse as typeof RevokeDeviceResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface NotificationsServiceServer extends UntypedServiceImplementation {
-  listNotifications: handleUnaryCall<ListNotificationsRequest, ListNotificationsResponse>;
-  listUnreadNotifications: handleUnaryCall<ListUnreadNotificationsRequest, ListUnreadNotificationsResponse>;
-  getNotification: handleUnaryCall<GetNotificationRequest, GetNotificationResponse>;
-  markNotificationRead: handleUnaryCall<MarkNotificationReadRequest, MarkNotificationReadResponse>;
-  markAllNotificationsRead: handleUnaryCall<MarkAllNotificationsReadRequest, MarkAllNotificationsReadResponse>;
-  archiveNotification: handleUnaryCall<ArchiveNotificationRequest, ArchiveNotificationResponse>;
-  registerDevice: handleUnaryCall<RegisterDeviceRequest, RegisterDeviceResponse>;
-  listDevices: handleUnaryCall<ListDevicesRequest, ListDevicesResponse>;
-  revokeDevice: handleUnaryCall<RevokeDeviceRequest, RevokeDeviceResponse>;
-}
-
-export interface NotificationsServiceClient extends Client {
-  listNotifications(
-    request: ListNotificationsRequest,
-    callback: (error: ServiceError | null, response: ListNotificationsResponse) => void,
-  ): ClientUnaryCall;
-  listNotifications(
-    request: ListNotificationsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListNotificationsResponse) => void,
-  ): ClientUnaryCall;
-  listNotifications(
-    request: ListNotificationsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListNotificationsResponse) => void,
-  ): ClientUnaryCall;
-  listUnreadNotifications(
-    request: ListUnreadNotificationsRequest,
-    callback: (error: ServiceError | null, response: ListUnreadNotificationsResponse) => void,
-  ): ClientUnaryCall;
-  listUnreadNotifications(
-    request: ListUnreadNotificationsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListUnreadNotificationsResponse) => void,
-  ): ClientUnaryCall;
-  listUnreadNotifications(
-    request: ListUnreadNotificationsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListUnreadNotificationsResponse) => void,
-  ): ClientUnaryCall;
-  getNotification(
-    request: GetNotificationRequest,
-    callback: (error: ServiceError | null, response: GetNotificationResponse) => void,
-  ): ClientUnaryCall;
-  getNotification(
-    request: GetNotificationRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetNotificationResponse) => void,
-  ): ClientUnaryCall;
-  getNotification(
-    request: GetNotificationRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetNotificationResponse) => void,
-  ): ClientUnaryCall;
-  markNotificationRead(
-    request: MarkNotificationReadRequest,
-    callback: (error: ServiceError | null, response: MarkNotificationReadResponse) => void,
-  ): ClientUnaryCall;
-  markNotificationRead(
-    request: MarkNotificationReadRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: MarkNotificationReadResponse) => void,
-  ): ClientUnaryCall;
-  markNotificationRead(
-    request: MarkNotificationReadRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: MarkNotificationReadResponse) => void,
-  ): ClientUnaryCall;
-  markAllNotificationsRead(
-    request: MarkAllNotificationsReadRequest,
-    callback: (error: ServiceError | null, response: MarkAllNotificationsReadResponse) => void,
-  ): ClientUnaryCall;
-  markAllNotificationsRead(
-    request: MarkAllNotificationsReadRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: MarkAllNotificationsReadResponse) => void,
-  ): ClientUnaryCall;
-  markAllNotificationsRead(
-    request: MarkAllNotificationsReadRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: MarkAllNotificationsReadResponse) => void,
-  ): ClientUnaryCall;
-  archiveNotification(
-    request: ArchiveNotificationRequest,
-    callback: (error: ServiceError | null, response: ArchiveNotificationResponse) => void,
-  ): ClientUnaryCall;
-  archiveNotification(
-    request: ArchiveNotificationRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveNotificationResponse) => void,
-  ): ClientUnaryCall;
-  archiveNotification(
-    request: ArchiveNotificationRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveNotificationResponse) => void,
-  ): ClientUnaryCall;
-  registerDevice(
-    request: RegisterDeviceRequest,
-    callback: (error: ServiceError | null, response: RegisterDeviceResponse) => void,
-  ): ClientUnaryCall;
-  registerDevice(
-    request: RegisterDeviceRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RegisterDeviceResponse) => void,
-  ): ClientUnaryCall;
-  registerDevice(
-    request: RegisterDeviceRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RegisterDeviceResponse) => void,
-  ): ClientUnaryCall;
-  listDevices(
-    request: ListDevicesRequest,
-    callback: (error: ServiceError | null, response: ListDevicesResponse) => void,
-  ): ClientUnaryCall;
-  listDevices(
-    request: ListDevicesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListDevicesResponse) => void,
-  ): ClientUnaryCall;
-  listDevices(
-    request: ListDevicesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListDevicesResponse) => void,
-  ): ClientUnaryCall;
-  revokeDevice(
-    request: RevokeDeviceRequest,
-    callback: (error: ServiceError | null, response: RevokeDeviceResponse) => void,
-  ): ClientUnaryCall;
-  revokeDevice(
-    request: RevokeDeviceRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RevokeDeviceResponse) => void,
-  ): ClientUnaryCall;
-  revokeDevice(
-    request: RevokeDeviceRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RevokeDeviceResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const NotificationsServiceClient = makeGenericClientConstructor(
-  NotificationsServiceService,
-  'primandproper.platform.notifications.v1.NotificationsService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): NotificationsServiceClient;
-  service: typeof NotificationsServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

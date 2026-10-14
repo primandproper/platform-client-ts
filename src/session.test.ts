@@ -2,14 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { type ExchangeAttempt, type ExchangeCoordinator, InMemoryExchangeCoordinator } from './coordinator';
 import { PlatformError } from './errors';
-import { type IssuedToken, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { type IssuedToken, SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import { NotSignedInError, Session, type SessionConfig, type SessionState } from './session';
 import { FakeClock, fakeIssuedToken, FakeTransport, MemoryCredentialStore } from './testing';
-import { Code, StatusError } from './transport';
+import { Code, methodsOf, StatusError } from './transport';
 
-const getSelf = SignInServiceService.getSelf;
-const exchange = SignInServiceService.exchangeRefreshToken;
-const login = SignInServiceService.loginForToken;
+const SignInService = methodsOf(SignInServiceDefinition);
+
+const getSelf = SignInService.getSelf;
+const exchange = SignInService.exchangeRefreshToken;
+const login = SignInService.loginForToken;
 
 function setup(held?: (now: Date) => IssuedToken | undefined, config: Partial<SessionConfig> = {}) {
   const clock = new FakeClock();

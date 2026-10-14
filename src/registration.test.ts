@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import { attachPassword, requestMagicLink, verifyEmailAddress } from './registration';
 import { Session } from './session';
 import { FakeTransport, MemoryCredentialStore, refusal } from './testing';
-import { Code, StatusError } from './transport';
+import { Code, methodsOf, StatusError } from './transport';
 
-const verify = SignInServiceService.verifyEmailAddress;
-const attach = SignInServiceService.attachPassword;
-const magicLink = SignInServiceService.requestMagicLink;
+const SignInService = methodsOf(SignInServiceDefinition);
+
+const verify = SignInService.verifyEmailAddress;
+const attach = SignInService.attachPassword;
+const magicLink = SignInService.requestMagicLink;
 
 function setup() {
   const transport = new FakeTransport();

@@ -31,8 +31,8 @@ export function createGrpcJsTransport(config: GrpcJsTransportConfig): GrpcJsTran
       return new Promise((resolve, reject) => {
         client.makeUnaryRequest(
           method.path,
-          method.requestSerialize,
-          method.responseDeserialize,
+          (value) => Buffer.from(method.requestType.encode(value).finish()),
+          (bytes) => method.responseType.decode(bytes),
           request,
           metadata,
           callOptions,

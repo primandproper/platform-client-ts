@@ -40,3 +40,14 @@ if grep -nE "^import |^export .* from |import\(" dist/webauthn.mjs; then
   exit 1
 fi
 echo "browser entry imports nothing"
+
+# The root is what a browser or React Native app imports, and neither has Buffer. grpc-js reaches for it as it loads,
+# so this is what fails when the root starts loading grpc-js again.
+node --input-type=module -e "
+delete globalThis.Buffer;
+await import('@primandproper/platform-client');
+console.log('root imports with no Buffer');
+" || {
+  echo "::error::the package root needs Buffer to load; keep Node-only code such as grpc-js behind its own entry"
+  exit 1
+}

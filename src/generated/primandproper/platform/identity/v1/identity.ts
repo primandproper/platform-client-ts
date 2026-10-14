@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
 
@@ -7740,838 +7728,255 @@ export const ListInvitationsForEmailAddressResponse: MessageFns<ListInvitationsF
  * into its own policy, and who is calling is resolved from the context by the
  * consumer's authentication interceptor.
  */
-export type IdentityServiceService = typeof IdentityServiceService;
-export const IdentityServiceService = {
-  /** The writes. There is no Register: see the file documentation. */
-  updateProfile: {
-    path: '/primandproper.platform.identity.v1.IdentityService/UpdateProfile' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateProfileRequest): Buffer => Buffer.from(UpdateProfileRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateProfileRequest => UpdateProfileRequest.decode(value),
-    responseSerialize: (value: UpdateProfileResponse): Buffer =>
-      Buffer.from(UpdateProfileResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateProfileResponse => UpdateProfileResponse.decode(value),
-  },
-  updateAccount: {
-    path: '/primandproper.platform.identity.v1.IdentityService/UpdateAccount' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateAccountRequest): Buffer => Buffer.from(UpdateAccountRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateAccountRequest => UpdateAccountRequest.decode(value),
-    responseSerialize: (value: UpdateAccountResponse): Buffer =>
-      Buffer.from(UpdateAccountResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateAccountResponse => UpdateAccountResponse.decode(value),
-  },
-  recordAgreement: {
-    path: '/primandproper.platform.identity.v1.IdentityService/RecordAgreement' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RecordAgreementRequest): Buffer =>
-      Buffer.from(RecordAgreementRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RecordAgreementRequest => RecordAgreementRequest.decode(value),
-    responseSerialize: (value: RecordAgreementResponse): Buffer =>
-      Buffer.from(RecordAgreementResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RecordAgreementResponse => RecordAgreementResponse.decode(value),
-  },
-  invite: {
-    path: '/primandproper.platform.identity.v1.IdentityService/Invite' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: InviteRequest): Buffer => Buffer.from(InviteRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): InviteRequest => InviteRequest.decode(value),
-    responseSerialize: (value: InviteResponse): Buffer => Buffer.from(InviteResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): InviteResponse => InviteResponse.decode(value),
-  },
-  acceptInvitation: {
-    path: '/primandproper.platform.identity.v1.IdentityService/AcceptInvitation' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: AcceptInvitationRequest): Buffer =>
-      Buffer.from(AcceptInvitationRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): AcceptInvitationRequest => AcceptInvitationRequest.decode(value),
-    responseSerialize: (value: AcceptInvitationResponse): Buffer =>
-      Buffer.from(AcceptInvitationResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): AcceptInvitationResponse => AcceptInvitationResponse.decode(value),
-  },
-  rejectInvitation: {
-    path: '/primandproper.platform.identity.v1.IdentityService/RejectInvitation' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RejectInvitationRequest): Buffer =>
-      Buffer.from(RejectInvitationRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RejectInvitationRequest => RejectInvitationRequest.decode(value),
-    responseSerialize: (value: RejectInvitationResponse): Buffer =>
-      Buffer.from(RejectInvitationResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RejectInvitationResponse => RejectInvitationResponse.decode(value),
-  },
-  cancelInvitation: {
-    path: '/primandproper.platform.identity.v1.IdentityService/CancelInvitation' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: CancelInvitationRequest): Buffer =>
-      Buffer.from(CancelInvitationRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): CancelInvitationRequest => CancelInvitationRequest.decode(value),
-    responseSerialize: (value: CancelInvitationResponse): Buffer =>
-      Buffer.from(CancelInvitationResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): CancelInvitationResponse => CancelInvitationResponse.decode(value),
-  },
-  createAccount: {
-    path: '/primandproper.platform.identity.v1.IdentityService/CreateAccount' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: CreateAccountRequest): Buffer => Buffer.from(CreateAccountRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): CreateAccountRequest => CreateAccountRequest.decode(value),
-    responseSerialize: (value: CreateAccountResponse): Buffer =>
-      Buffer.from(CreateAccountResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): CreateAccountResponse => CreateAccountResponse.decode(value),
-  },
-  transferAccountOwnership: {
-    path: '/primandproper.platform.identity.v1.IdentityService/TransferAccountOwnership' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: TransferAccountOwnershipRequest): Buffer =>
-      Buffer.from(TransferAccountOwnershipRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): TransferAccountOwnershipRequest =>
-      TransferAccountOwnershipRequest.decode(value),
-    responseSerialize: (value: TransferAccountOwnershipResponse): Buffer =>
-      Buffer.from(TransferAccountOwnershipResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): TransferAccountOwnershipResponse =>
-      TransferAccountOwnershipResponse.decode(value),
-  },
-  setDefaultAccount: {
-    path: '/primandproper.platform.identity.v1.IdentityService/SetDefaultAccount' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SetDefaultAccountRequest): Buffer =>
-      Buffer.from(SetDefaultAccountRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SetDefaultAccountRequest => SetDefaultAccountRequest.decode(value),
-    responseSerialize: (value: SetDefaultAccountResponse): Buffer =>
-      Buffer.from(SetDefaultAccountResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SetDefaultAccountResponse => SetDefaultAccountResponse.decode(value),
-  },
-  setMembershipRoles: {
-    path: '/primandproper.platform.identity.v1.IdentityService/SetMembershipRoles' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SetMembershipRolesRequest): Buffer =>
-      Buffer.from(SetMembershipRolesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SetMembershipRolesRequest => SetMembershipRolesRequest.decode(value),
-    responseSerialize: (value: SetMembershipRolesResponse): Buffer =>
-      Buffer.from(SetMembershipRolesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SetMembershipRolesResponse => SetMembershipRolesResponse.decode(value),
-  },
-  removeMembership: {
-    path: '/primandproper.platform.identity.v1.IdentityService/RemoveMembership' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RemoveMembershipRequest): Buffer =>
-      Buffer.from(RemoveMembershipRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RemoveMembershipRequest => RemoveMembershipRequest.decode(value),
-    responseSerialize: (value: RemoveMembershipResponse): Buffer =>
-      Buffer.from(RemoveMembershipResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RemoveMembershipResponse => RemoveMembershipResponse.decode(value),
-  },
-  archiveUser: {
-    path: '/primandproper.platform.identity.v1.IdentityService/ArchiveUser' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveUserRequest): Buffer => Buffer.from(ArchiveUserRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveUserRequest => ArchiveUserRequest.decode(value),
-    responseSerialize: (value: ArchiveUserResponse): Buffer => Buffer.from(ArchiveUserResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveUserResponse => ArchiveUserResponse.decode(value),
-  },
-  archiveAccount: {
-    path: '/primandproper.platform.identity.v1.IdentityService/ArchiveAccount' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveAccountRequest): Buffer =>
-      Buffer.from(ArchiveAccountRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveAccountRequest => ArchiveAccountRequest.decode(value),
-    responseSerialize: (value: ArchiveAccountResponse): Buffer =>
-      Buffer.from(ArchiveAccountResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveAccountResponse => ArchiveAccountResponse.decode(value),
-  },
-  updateUserAccountStatus: {
-    path: '/primandproper.platform.identity.v1.IdentityService/UpdateUserAccountStatus' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateUserAccountStatusRequest): Buffer =>
-      Buffer.from(UpdateUserAccountStatusRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateUserAccountStatusRequest => UpdateUserAccountStatusRequest.decode(value),
-    responseSerialize: (value: UpdateUserAccountStatusResponse): Buffer =>
-      Buffer.from(UpdateUserAccountStatusResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateUserAccountStatusResponse =>
-      UpdateUserAccountStatusResponse.decode(value),
-  },
-  setUserServiceRoles: {
-    path: '/primandproper.platform.identity.v1.IdentityService/SetUserServiceRoles' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SetUserServiceRolesRequest): Buffer =>
-      Buffer.from(SetUserServiceRolesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SetUserServiceRolesRequest => SetUserServiceRolesRequest.decode(value),
-    responseSerialize: (value: SetUserServiceRolesResponse): Buffer =>
-      Buffer.from(SetUserServiceRolesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SetUserServiceRolesResponse => SetUserServiceRolesResponse.decode(value),
-  },
-  setUserRequiresPasswordChange: {
-    path: '/primandproper.platform.identity.v1.IdentityService/SetUserRequiresPasswordChange' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SetUserRequiresPasswordChangeRequest): Buffer =>
-      Buffer.from(SetUserRequiresPasswordChangeRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SetUserRequiresPasswordChangeRequest =>
-      SetUserRequiresPasswordChangeRequest.decode(value),
-    responseSerialize: (value: SetUserRequiresPasswordChangeResponse): Buffer =>
-      Buffer.from(SetUserRequiresPasswordChangeResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SetUserRequiresPasswordChangeResponse =>
-      SetUserRequiresPasswordChangeResponse.decode(value),
-  },
-  /** The reads. */
-  getPrincipal: {
-    path: '/primandproper.platform.identity.v1.IdentityService/GetPrincipal' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetPrincipalRequest): Buffer => Buffer.from(GetPrincipalRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetPrincipalRequest => GetPrincipalRequest.decode(value),
-    responseSerialize: (value: GetPrincipalResponse): Buffer =>
-      Buffer.from(GetPrincipalResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetPrincipalResponse => GetPrincipalResponse.decode(value),
-  },
-  getUser: {
-    path: '/primandproper.platform.identity.v1.IdentityService/GetUser' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetUserRequest): Buffer => Buffer.from(GetUserRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetUserRequest => GetUserRequest.decode(value),
-    responseSerialize: (value: GetUserResponse): Buffer => Buffer.from(GetUserResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetUserResponse => GetUserResponse.decode(value),
-  },
-  listUsers: {
-    path: '/primandproper.platform.identity.v1.IdentityService/ListUsers' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListUsersRequest): Buffer => Buffer.from(ListUsersRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListUsersRequest => ListUsersRequest.decode(value),
-    responseSerialize: (value: ListUsersResponse): Buffer => Buffer.from(ListUsersResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListUsersResponse => ListUsersResponse.decode(value),
-  },
-  searchUsersByUsername: {
-    path: '/primandproper.platform.identity.v1.IdentityService/SearchUsersByUsername' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SearchUsersByUsernameRequest): Buffer =>
-      Buffer.from(SearchUsersByUsernameRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SearchUsersByUsernameRequest => SearchUsersByUsernameRequest.decode(value),
-    responseSerialize: (value: SearchUsersByUsernameResponse): Buffer =>
-      Buffer.from(SearchUsersByUsernameResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SearchUsersByUsernameResponse => SearchUsersByUsernameResponse.decode(value),
-  },
-  getAccount: {
-    path: '/primandproper.platform.identity.v1.IdentityService/GetAccount' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetAccountRequest): Buffer => Buffer.from(GetAccountRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetAccountRequest => GetAccountRequest.decode(value),
-    responseSerialize: (value: GetAccountResponse): Buffer => Buffer.from(GetAccountResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetAccountResponse => GetAccountResponse.decode(value),
-  },
-  listAccounts: {
-    path: '/primandproper.platform.identity.v1.IdentityService/ListAccounts' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListAccountsRequest): Buffer => Buffer.from(ListAccountsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListAccountsRequest => ListAccountsRequest.decode(value),
-    responseSerialize: (value: ListAccountsResponse): Buffer =>
-      Buffer.from(ListAccountsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListAccountsResponse => ListAccountsResponse.decode(value),
-  },
-  listAccountsForUser: {
-    path: '/primandproper.platform.identity.v1.IdentityService/ListAccountsForUser' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListAccountsForUserRequest): Buffer =>
-      Buffer.from(ListAccountsForUserRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListAccountsForUserRequest => ListAccountsForUserRequest.decode(value),
-    responseSerialize: (value: ListAccountsForUserResponse): Buffer =>
-      Buffer.from(ListAccountsForUserResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListAccountsForUserResponse => ListAccountsForUserResponse.decode(value),
-  },
-  getMembership: {
-    path: '/primandproper.platform.identity.v1.IdentityService/GetMembership' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetMembershipRequest): Buffer => Buffer.from(GetMembershipRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetMembershipRequest => GetMembershipRequest.decode(value),
-    responseSerialize: (value: GetMembershipResponse): Buffer =>
-      Buffer.from(GetMembershipResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetMembershipResponse => GetMembershipResponse.decode(value),
-  },
-  listMembershipsForUser: {
-    path: '/primandproper.platform.identity.v1.IdentityService/ListMembershipsForUser' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListMembershipsForUserRequest): Buffer =>
-      Buffer.from(ListMembershipsForUserRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListMembershipsForUserRequest => ListMembershipsForUserRequest.decode(value),
-    responseSerialize: (value: ListMembershipsForUserResponse): Buffer =>
-      Buffer.from(ListMembershipsForUserResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListMembershipsForUserResponse =>
-      ListMembershipsForUserResponse.decode(value),
-  },
-  listAccountMembers: {
-    path: '/primandproper.platform.identity.v1.IdentityService/ListAccountMembers' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListAccountMembersRequest): Buffer =>
-      Buffer.from(ListAccountMembersRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListAccountMembersRequest => ListAccountMembersRequest.decode(value),
-    responseSerialize: (value: ListAccountMembersResponse): Buffer =>
-      Buffer.from(ListAccountMembersResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListAccountMembersResponse => ListAccountMembersResponse.decode(value),
-  },
-  getInvitation: {
-    path: '/primandproper.platform.identity.v1.IdentityService/GetInvitation' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetInvitationRequest): Buffer => Buffer.from(GetInvitationRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetInvitationRequest => GetInvitationRequest.decode(value),
-    responseSerialize: (value: GetInvitationResponse): Buffer =>
-      Buffer.from(GetInvitationResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetInvitationResponse => GetInvitationResponse.decode(value),
-  },
-  listInvitationsFromUser: {
-    path: '/primandproper.platform.identity.v1.IdentityService/ListInvitationsFromUser' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListInvitationsFromUserRequest): Buffer =>
-      Buffer.from(ListInvitationsFromUserRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListInvitationsFromUserRequest => ListInvitationsFromUserRequest.decode(value),
-    responseSerialize: (value: ListInvitationsFromUserResponse): Buffer =>
-      Buffer.from(ListInvitationsFromUserResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListInvitationsFromUserResponse =>
-      ListInvitationsFromUserResponse.decode(value),
-  },
-  listInvitationsForEmailAddress: {
-    path: '/primandproper.platform.identity.v1.IdentityService/ListInvitationsForEmailAddress' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListInvitationsForEmailAddressRequest): Buffer =>
-      Buffer.from(ListInvitationsForEmailAddressRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListInvitationsForEmailAddressRequest =>
-      ListInvitationsForEmailAddressRequest.decode(value),
-    responseSerialize: (value: ListInvitationsForEmailAddressResponse): Buffer =>
-      Buffer.from(ListInvitationsForEmailAddressResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListInvitationsForEmailAddressResponse =>
-      ListInvitationsForEmailAddressResponse.decode(value),
+export type IdentityServiceDefinition = typeof IdentityServiceDefinition;
+export const IdentityServiceDefinition = {
+  name: 'IdentityService',
+  fullName: 'primandproper.platform.identity.v1.IdentityService',
+  methods: {
+    /** The writes. There is no Register: see the file documentation. */
+    updateProfile: {
+      name: 'UpdateProfile',
+      requestType: UpdateProfileRequest as typeof UpdateProfileRequest,
+      requestStream: false,
+      responseType: UpdateProfileResponse as typeof UpdateProfileResponse,
+      responseStream: false,
+      options: {},
+    },
+    updateAccount: {
+      name: 'UpdateAccount',
+      requestType: UpdateAccountRequest as typeof UpdateAccountRequest,
+      requestStream: false,
+      responseType: UpdateAccountResponse as typeof UpdateAccountResponse,
+      responseStream: false,
+      options: {},
+    },
+    recordAgreement: {
+      name: 'RecordAgreement',
+      requestType: RecordAgreementRequest as typeof RecordAgreementRequest,
+      requestStream: false,
+      responseType: RecordAgreementResponse as typeof RecordAgreementResponse,
+      responseStream: false,
+      options: {},
+    },
+    invite: {
+      name: 'Invite',
+      requestType: InviteRequest as typeof InviteRequest,
+      requestStream: false,
+      responseType: InviteResponse as typeof InviteResponse,
+      responseStream: false,
+      options: {},
+    },
+    acceptInvitation: {
+      name: 'AcceptInvitation',
+      requestType: AcceptInvitationRequest as typeof AcceptInvitationRequest,
+      requestStream: false,
+      responseType: AcceptInvitationResponse as typeof AcceptInvitationResponse,
+      responseStream: false,
+      options: {},
+    },
+    rejectInvitation: {
+      name: 'RejectInvitation',
+      requestType: RejectInvitationRequest as typeof RejectInvitationRequest,
+      requestStream: false,
+      responseType: RejectInvitationResponse as typeof RejectInvitationResponse,
+      responseStream: false,
+      options: {},
+    },
+    cancelInvitation: {
+      name: 'CancelInvitation',
+      requestType: CancelInvitationRequest as typeof CancelInvitationRequest,
+      requestStream: false,
+      responseType: CancelInvitationResponse as typeof CancelInvitationResponse,
+      responseStream: false,
+      options: {},
+    },
+    createAccount: {
+      name: 'CreateAccount',
+      requestType: CreateAccountRequest as typeof CreateAccountRequest,
+      requestStream: false,
+      responseType: CreateAccountResponse as typeof CreateAccountResponse,
+      responseStream: false,
+      options: {},
+    },
+    transferAccountOwnership: {
+      name: 'TransferAccountOwnership',
+      requestType: TransferAccountOwnershipRequest as typeof TransferAccountOwnershipRequest,
+      requestStream: false,
+      responseType: TransferAccountOwnershipResponse as typeof TransferAccountOwnershipResponse,
+      responseStream: false,
+      options: {},
+    },
+    setDefaultAccount: {
+      name: 'SetDefaultAccount',
+      requestType: SetDefaultAccountRequest as typeof SetDefaultAccountRequest,
+      requestStream: false,
+      responseType: SetDefaultAccountResponse as typeof SetDefaultAccountResponse,
+      responseStream: false,
+      options: {},
+    },
+    setMembershipRoles: {
+      name: 'SetMembershipRoles',
+      requestType: SetMembershipRolesRequest as typeof SetMembershipRolesRequest,
+      requestStream: false,
+      responseType: SetMembershipRolesResponse as typeof SetMembershipRolesResponse,
+      responseStream: false,
+      options: {},
+    },
+    removeMembership: {
+      name: 'RemoveMembership',
+      requestType: RemoveMembershipRequest as typeof RemoveMembershipRequest,
+      requestStream: false,
+      responseType: RemoveMembershipResponse as typeof RemoveMembershipResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveUser: {
+      name: 'ArchiveUser',
+      requestType: ArchiveUserRequest as typeof ArchiveUserRequest,
+      requestStream: false,
+      responseType: ArchiveUserResponse as typeof ArchiveUserResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveAccount: {
+      name: 'ArchiveAccount',
+      requestType: ArchiveAccountRequest as typeof ArchiveAccountRequest,
+      requestStream: false,
+      responseType: ArchiveAccountResponse as typeof ArchiveAccountResponse,
+      responseStream: false,
+      options: {},
+    },
+    updateUserAccountStatus: {
+      name: 'UpdateUserAccountStatus',
+      requestType: UpdateUserAccountStatusRequest as typeof UpdateUserAccountStatusRequest,
+      requestStream: false,
+      responseType: UpdateUserAccountStatusResponse as typeof UpdateUserAccountStatusResponse,
+      responseStream: false,
+      options: {},
+    },
+    setUserServiceRoles: {
+      name: 'SetUserServiceRoles',
+      requestType: SetUserServiceRolesRequest as typeof SetUserServiceRolesRequest,
+      requestStream: false,
+      responseType: SetUserServiceRolesResponse as typeof SetUserServiceRolesResponse,
+      responseStream: false,
+      options: {},
+    },
+    setUserRequiresPasswordChange: {
+      name: 'SetUserRequiresPasswordChange',
+      requestType: SetUserRequiresPasswordChangeRequest as typeof SetUserRequiresPasswordChangeRequest,
+      requestStream: false,
+      responseType: SetUserRequiresPasswordChangeResponse as typeof SetUserRequiresPasswordChangeResponse,
+      responseStream: false,
+      options: {},
+    },
+    /** The reads. */
+    getPrincipal: {
+      name: 'GetPrincipal',
+      requestType: GetPrincipalRequest as typeof GetPrincipalRequest,
+      requestStream: false,
+      responseType: GetPrincipalResponse as typeof GetPrincipalResponse,
+      responseStream: false,
+      options: {},
+    },
+    getUser: {
+      name: 'GetUser',
+      requestType: GetUserRequest as typeof GetUserRequest,
+      requestStream: false,
+      responseType: GetUserResponse as typeof GetUserResponse,
+      responseStream: false,
+      options: {},
+    },
+    listUsers: {
+      name: 'ListUsers',
+      requestType: ListUsersRequest as typeof ListUsersRequest,
+      requestStream: false,
+      responseType: ListUsersResponse as typeof ListUsersResponse,
+      responseStream: false,
+      options: {},
+    },
+    searchUsersByUsername: {
+      name: 'SearchUsersByUsername',
+      requestType: SearchUsersByUsernameRequest as typeof SearchUsersByUsernameRequest,
+      requestStream: false,
+      responseType: SearchUsersByUsernameResponse as typeof SearchUsersByUsernameResponse,
+      responseStream: false,
+      options: {},
+    },
+    getAccount: {
+      name: 'GetAccount',
+      requestType: GetAccountRequest as typeof GetAccountRequest,
+      requestStream: false,
+      responseType: GetAccountResponse as typeof GetAccountResponse,
+      responseStream: false,
+      options: {},
+    },
+    listAccounts: {
+      name: 'ListAccounts',
+      requestType: ListAccountsRequest as typeof ListAccountsRequest,
+      requestStream: false,
+      responseType: ListAccountsResponse as typeof ListAccountsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listAccountsForUser: {
+      name: 'ListAccountsForUser',
+      requestType: ListAccountsForUserRequest as typeof ListAccountsForUserRequest,
+      requestStream: false,
+      responseType: ListAccountsForUserResponse as typeof ListAccountsForUserResponse,
+      responseStream: false,
+      options: {},
+    },
+    getMembership: {
+      name: 'GetMembership',
+      requestType: GetMembershipRequest as typeof GetMembershipRequest,
+      requestStream: false,
+      responseType: GetMembershipResponse as typeof GetMembershipResponse,
+      responseStream: false,
+      options: {},
+    },
+    listMembershipsForUser: {
+      name: 'ListMembershipsForUser',
+      requestType: ListMembershipsForUserRequest as typeof ListMembershipsForUserRequest,
+      requestStream: false,
+      responseType: ListMembershipsForUserResponse as typeof ListMembershipsForUserResponse,
+      responseStream: false,
+      options: {},
+    },
+    listAccountMembers: {
+      name: 'ListAccountMembers',
+      requestType: ListAccountMembersRequest as typeof ListAccountMembersRequest,
+      requestStream: false,
+      responseType: ListAccountMembersResponse as typeof ListAccountMembersResponse,
+      responseStream: false,
+      options: {},
+    },
+    getInvitation: {
+      name: 'GetInvitation',
+      requestType: GetInvitationRequest as typeof GetInvitationRequest,
+      requestStream: false,
+      responseType: GetInvitationResponse as typeof GetInvitationResponse,
+      responseStream: false,
+      options: {},
+    },
+    listInvitationsFromUser: {
+      name: 'ListInvitationsFromUser',
+      requestType: ListInvitationsFromUserRequest as typeof ListInvitationsFromUserRequest,
+      requestStream: false,
+      responseType: ListInvitationsFromUserResponse as typeof ListInvitationsFromUserResponse,
+      responseStream: false,
+      options: {},
+    },
+    listInvitationsForEmailAddress: {
+      name: 'ListInvitationsForEmailAddress',
+      requestType: ListInvitationsForEmailAddressRequest as typeof ListInvitationsForEmailAddressRequest,
+      requestStream: false,
+      responseType: ListInvitationsForEmailAddressResponse as typeof ListInvitationsForEmailAddressResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface IdentityServiceServer extends UntypedServiceImplementation {
-  /** The writes. There is no Register: see the file documentation. */
-  updateProfile: handleUnaryCall<UpdateProfileRequest, UpdateProfileResponse>;
-  updateAccount: handleUnaryCall<UpdateAccountRequest, UpdateAccountResponse>;
-  recordAgreement: handleUnaryCall<RecordAgreementRequest, RecordAgreementResponse>;
-  invite: handleUnaryCall<InviteRequest, InviteResponse>;
-  acceptInvitation: handleUnaryCall<AcceptInvitationRequest, AcceptInvitationResponse>;
-  rejectInvitation: handleUnaryCall<RejectInvitationRequest, RejectInvitationResponse>;
-  cancelInvitation: handleUnaryCall<CancelInvitationRequest, CancelInvitationResponse>;
-  createAccount: handleUnaryCall<CreateAccountRequest, CreateAccountResponse>;
-  transferAccountOwnership: handleUnaryCall<TransferAccountOwnershipRequest, TransferAccountOwnershipResponse>;
-  setDefaultAccount: handleUnaryCall<SetDefaultAccountRequest, SetDefaultAccountResponse>;
-  setMembershipRoles: handleUnaryCall<SetMembershipRolesRequest, SetMembershipRolesResponse>;
-  removeMembership: handleUnaryCall<RemoveMembershipRequest, RemoveMembershipResponse>;
-  archiveUser: handleUnaryCall<ArchiveUserRequest, ArchiveUserResponse>;
-  archiveAccount: handleUnaryCall<ArchiveAccountRequest, ArchiveAccountResponse>;
-  updateUserAccountStatus: handleUnaryCall<UpdateUserAccountStatusRequest, UpdateUserAccountStatusResponse>;
-  setUserServiceRoles: handleUnaryCall<SetUserServiceRolesRequest, SetUserServiceRolesResponse>;
-  setUserRequiresPasswordChange: handleUnaryCall<
-    SetUserRequiresPasswordChangeRequest,
-    SetUserRequiresPasswordChangeResponse
-  >;
-  /** The reads. */
-  getPrincipal: handleUnaryCall<GetPrincipalRequest, GetPrincipalResponse>;
-  getUser: handleUnaryCall<GetUserRequest, GetUserResponse>;
-  listUsers: handleUnaryCall<ListUsersRequest, ListUsersResponse>;
-  searchUsersByUsername: handleUnaryCall<SearchUsersByUsernameRequest, SearchUsersByUsernameResponse>;
-  getAccount: handleUnaryCall<GetAccountRequest, GetAccountResponse>;
-  listAccounts: handleUnaryCall<ListAccountsRequest, ListAccountsResponse>;
-  listAccountsForUser: handleUnaryCall<ListAccountsForUserRequest, ListAccountsForUserResponse>;
-  getMembership: handleUnaryCall<GetMembershipRequest, GetMembershipResponse>;
-  listMembershipsForUser: handleUnaryCall<ListMembershipsForUserRequest, ListMembershipsForUserResponse>;
-  listAccountMembers: handleUnaryCall<ListAccountMembersRequest, ListAccountMembersResponse>;
-  getInvitation: handleUnaryCall<GetInvitationRequest, GetInvitationResponse>;
-  listInvitationsFromUser: handleUnaryCall<ListInvitationsFromUserRequest, ListInvitationsFromUserResponse>;
-  listInvitationsForEmailAddress: handleUnaryCall<
-    ListInvitationsForEmailAddressRequest,
-    ListInvitationsForEmailAddressResponse
-  >;
-}
-
-export interface IdentityServiceClient extends Client {
-  /** The writes. There is no Register: see the file documentation. */
-  updateProfile(
-    request: UpdateProfileRequest,
-    callback: (error: ServiceError | null, response: UpdateProfileResponse) => void,
-  ): ClientUnaryCall;
-  updateProfile(
-    request: UpdateProfileRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateProfileResponse) => void,
-  ): ClientUnaryCall;
-  updateProfile(
-    request: UpdateProfileRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateProfileResponse) => void,
-  ): ClientUnaryCall;
-  updateAccount(
-    request: UpdateAccountRequest,
-    callback: (error: ServiceError | null, response: UpdateAccountResponse) => void,
-  ): ClientUnaryCall;
-  updateAccount(
-    request: UpdateAccountRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateAccountResponse) => void,
-  ): ClientUnaryCall;
-  updateAccount(
-    request: UpdateAccountRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateAccountResponse) => void,
-  ): ClientUnaryCall;
-  recordAgreement(
-    request: RecordAgreementRequest,
-    callback: (error: ServiceError | null, response: RecordAgreementResponse) => void,
-  ): ClientUnaryCall;
-  recordAgreement(
-    request: RecordAgreementRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RecordAgreementResponse) => void,
-  ): ClientUnaryCall;
-  recordAgreement(
-    request: RecordAgreementRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RecordAgreementResponse) => void,
-  ): ClientUnaryCall;
-  invite(
-    request: InviteRequest,
-    callback: (error: ServiceError | null, response: InviteResponse) => void,
-  ): ClientUnaryCall;
-  invite(
-    request: InviteRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: InviteResponse) => void,
-  ): ClientUnaryCall;
-  invite(
-    request: InviteRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: InviteResponse) => void,
-  ): ClientUnaryCall;
-  acceptInvitation(
-    request: AcceptInvitationRequest,
-    callback: (error: ServiceError | null, response: AcceptInvitationResponse) => void,
-  ): ClientUnaryCall;
-  acceptInvitation(
-    request: AcceptInvitationRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: AcceptInvitationResponse) => void,
-  ): ClientUnaryCall;
-  acceptInvitation(
-    request: AcceptInvitationRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: AcceptInvitationResponse) => void,
-  ): ClientUnaryCall;
-  rejectInvitation(
-    request: RejectInvitationRequest,
-    callback: (error: ServiceError | null, response: RejectInvitationResponse) => void,
-  ): ClientUnaryCall;
-  rejectInvitation(
-    request: RejectInvitationRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RejectInvitationResponse) => void,
-  ): ClientUnaryCall;
-  rejectInvitation(
-    request: RejectInvitationRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RejectInvitationResponse) => void,
-  ): ClientUnaryCall;
-  cancelInvitation(
-    request: CancelInvitationRequest,
-    callback: (error: ServiceError | null, response: CancelInvitationResponse) => void,
-  ): ClientUnaryCall;
-  cancelInvitation(
-    request: CancelInvitationRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: CancelInvitationResponse) => void,
-  ): ClientUnaryCall;
-  cancelInvitation(
-    request: CancelInvitationRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: CancelInvitationResponse) => void,
-  ): ClientUnaryCall;
-  createAccount(
-    request: CreateAccountRequest,
-    callback: (error: ServiceError | null, response: CreateAccountResponse) => void,
-  ): ClientUnaryCall;
-  createAccount(
-    request: CreateAccountRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: CreateAccountResponse) => void,
-  ): ClientUnaryCall;
-  createAccount(
-    request: CreateAccountRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: CreateAccountResponse) => void,
-  ): ClientUnaryCall;
-  transferAccountOwnership(
-    request: TransferAccountOwnershipRequest,
-    callback: (error: ServiceError | null, response: TransferAccountOwnershipResponse) => void,
-  ): ClientUnaryCall;
-  transferAccountOwnership(
-    request: TransferAccountOwnershipRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: TransferAccountOwnershipResponse) => void,
-  ): ClientUnaryCall;
-  transferAccountOwnership(
-    request: TransferAccountOwnershipRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: TransferAccountOwnershipResponse) => void,
-  ): ClientUnaryCall;
-  setDefaultAccount(
-    request: SetDefaultAccountRequest,
-    callback: (error: ServiceError | null, response: SetDefaultAccountResponse) => void,
-  ): ClientUnaryCall;
-  setDefaultAccount(
-    request: SetDefaultAccountRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SetDefaultAccountResponse) => void,
-  ): ClientUnaryCall;
-  setDefaultAccount(
-    request: SetDefaultAccountRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SetDefaultAccountResponse) => void,
-  ): ClientUnaryCall;
-  setMembershipRoles(
-    request: SetMembershipRolesRequest,
-    callback: (error: ServiceError | null, response: SetMembershipRolesResponse) => void,
-  ): ClientUnaryCall;
-  setMembershipRoles(
-    request: SetMembershipRolesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SetMembershipRolesResponse) => void,
-  ): ClientUnaryCall;
-  setMembershipRoles(
-    request: SetMembershipRolesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SetMembershipRolesResponse) => void,
-  ): ClientUnaryCall;
-  removeMembership(
-    request: RemoveMembershipRequest,
-    callback: (error: ServiceError | null, response: RemoveMembershipResponse) => void,
-  ): ClientUnaryCall;
-  removeMembership(
-    request: RemoveMembershipRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RemoveMembershipResponse) => void,
-  ): ClientUnaryCall;
-  removeMembership(
-    request: RemoveMembershipRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RemoveMembershipResponse) => void,
-  ): ClientUnaryCall;
-  archiveUser(
-    request: ArchiveUserRequest,
-    callback: (error: ServiceError | null, response: ArchiveUserResponse) => void,
-  ): ClientUnaryCall;
-  archiveUser(
-    request: ArchiveUserRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveUserResponse) => void,
-  ): ClientUnaryCall;
-  archiveUser(
-    request: ArchiveUserRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveUserResponse) => void,
-  ): ClientUnaryCall;
-  archiveAccount(
-    request: ArchiveAccountRequest,
-    callback: (error: ServiceError | null, response: ArchiveAccountResponse) => void,
-  ): ClientUnaryCall;
-  archiveAccount(
-    request: ArchiveAccountRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveAccountResponse) => void,
-  ): ClientUnaryCall;
-  archiveAccount(
-    request: ArchiveAccountRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveAccountResponse) => void,
-  ): ClientUnaryCall;
-  updateUserAccountStatus(
-    request: UpdateUserAccountStatusRequest,
-    callback: (error: ServiceError | null, response: UpdateUserAccountStatusResponse) => void,
-  ): ClientUnaryCall;
-  updateUserAccountStatus(
-    request: UpdateUserAccountStatusRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateUserAccountStatusResponse) => void,
-  ): ClientUnaryCall;
-  updateUserAccountStatus(
-    request: UpdateUserAccountStatusRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateUserAccountStatusResponse) => void,
-  ): ClientUnaryCall;
-  setUserServiceRoles(
-    request: SetUserServiceRolesRequest,
-    callback: (error: ServiceError | null, response: SetUserServiceRolesResponse) => void,
-  ): ClientUnaryCall;
-  setUserServiceRoles(
-    request: SetUserServiceRolesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SetUserServiceRolesResponse) => void,
-  ): ClientUnaryCall;
-  setUserServiceRoles(
-    request: SetUserServiceRolesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SetUserServiceRolesResponse) => void,
-  ): ClientUnaryCall;
-  setUserRequiresPasswordChange(
-    request: SetUserRequiresPasswordChangeRequest,
-    callback: (error: ServiceError | null, response: SetUserRequiresPasswordChangeResponse) => void,
-  ): ClientUnaryCall;
-  setUserRequiresPasswordChange(
-    request: SetUserRequiresPasswordChangeRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SetUserRequiresPasswordChangeResponse) => void,
-  ): ClientUnaryCall;
-  setUserRequiresPasswordChange(
-    request: SetUserRequiresPasswordChangeRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SetUserRequiresPasswordChangeResponse) => void,
-  ): ClientUnaryCall;
-  /** The reads. */
-  getPrincipal(
-    request: GetPrincipalRequest,
-    callback: (error: ServiceError | null, response: GetPrincipalResponse) => void,
-  ): ClientUnaryCall;
-  getPrincipal(
-    request: GetPrincipalRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetPrincipalResponse) => void,
-  ): ClientUnaryCall;
-  getPrincipal(
-    request: GetPrincipalRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetPrincipalResponse) => void,
-  ): ClientUnaryCall;
-  getUser(
-    request: GetUserRequest,
-    callback: (error: ServiceError | null, response: GetUserResponse) => void,
-  ): ClientUnaryCall;
-  getUser(
-    request: GetUserRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetUserResponse) => void,
-  ): ClientUnaryCall;
-  getUser(
-    request: GetUserRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetUserResponse) => void,
-  ): ClientUnaryCall;
-  listUsers(
-    request: ListUsersRequest,
-    callback: (error: ServiceError | null, response: ListUsersResponse) => void,
-  ): ClientUnaryCall;
-  listUsers(
-    request: ListUsersRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListUsersResponse) => void,
-  ): ClientUnaryCall;
-  listUsers(
-    request: ListUsersRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListUsersResponse) => void,
-  ): ClientUnaryCall;
-  searchUsersByUsername(
-    request: SearchUsersByUsernameRequest,
-    callback: (error: ServiceError | null, response: SearchUsersByUsernameResponse) => void,
-  ): ClientUnaryCall;
-  searchUsersByUsername(
-    request: SearchUsersByUsernameRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SearchUsersByUsernameResponse) => void,
-  ): ClientUnaryCall;
-  searchUsersByUsername(
-    request: SearchUsersByUsernameRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SearchUsersByUsernameResponse) => void,
-  ): ClientUnaryCall;
-  getAccount(
-    request: GetAccountRequest,
-    callback: (error: ServiceError | null, response: GetAccountResponse) => void,
-  ): ClientUnaryCall;
-  getAccount(
-    request: GetAccountRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetAccountResponse) => void,
-  ): ClientUnaryCall;
-  getAccount(
-    request: GetAccountRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetAccountResponse) => void,
-  ): ClientUnaryCall;
-  listAccounts(
-    request: ListAccountsRequest,
-    callback: (error: ServiceError | null, response: ListAccountsResponse) => void,
-  ): ClientUnaryCall;
-  listAccounts(
-    request: ListAccountsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListAccountsResponse) => void,
-  ): ClientUnaryCall;
-  listAccounts(
-    request: ListAccountsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListAccountsResponse) => void,
-  ): ClientUnaryCall;
-  listAccountsForUser(
-    request: ListAccountsForUserRequest,
-    callback: (error: ServiceError | null, response: ListAccountsForUserResponse) => void,
-  ): ClientUnaryCall;
-  listAccountsForUser(
-    request: ListAccountsForUserRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListAccountsForUserResponse) => void,
-  ): ClientUnaryCall;
-  listAccountsForUser(
-    request: ListAccountsForUserRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListAccountsForUserResponse) => void,
-  ): ClientUnaryCall;
-  getMembership(
-    request: GetMembershipRequest,
-    callback: (error: ServiceError | null, response: GetMembershipResponse) => void,
-  ): ClientUnaryCall;
-  getMembership(
-    request: GetMembershipRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetMembershipResponse) => void,
-  ): ClientUnaryCall;
-  getMembership(
-    request: GetMembershipRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetMembershipResponse) => void,
-  ): ClientUnaryCall;
-  listMembershipsForUser(
-    request: ListMembershipsForUserRequest,
-    callback: (error: ServiceError | null, response: ListMembershipsForUserResponse) => void,
-  ): ClientUnaryCall;
-  listMembershipsForUser(
-    request: ListMembershipsForUserRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListMembershipsForUserResponse) => void,
-  ): ClientUnaryCall;
-  listMembershipsForUser(
-    request: ListMembershipsForUserRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListMembershipsForUserResponse) => void,
-  ): ClientUnaryCall;
-  listAccountMembers(
-    request: ListAccountMembersRequest,
-    callback: (error: ServiceError | null, response: ListAccountMembersResponse) => void,
-  ): ClientUnaryCall;
-  listAccountMembers(
-    request: ListAccountMembersRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListAccountMembersResponse) => void,
-  ): ClientUnaryCall;
-  listAccountMembers(
-    request: ListAccountMembersRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListAccountMembersResponse) => void,
-  ): ClientUnaryCall;
-  getInvitation(
-    request: GetInvitationRequest,
-    callback: (error: ServiceError | null, response: GetInvitationResponse) => void,
-  ): ClientUnaryCall;
-  getInvitation(
-    request: GetInvitationRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetInvitationResponse) => void,
-  ): ClientUnaryCall;
-  getInvitation(
-    request: GetInvitationRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetInvitationResponse) => void,
-  ): ClientUnaryCall;
-  listInvitationsFromUser(
-    request: ListInvitationsFromUserRequest,
-    callback: (error: ServiceError | null, response: ListInvitationsFromUserResponse) => void,
-  ): ClientUnaryCall;
-  listInvitationsFromUser(
-    request: ListInvitationsFromUserRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListInvitationsFromUserResponse) => void,
-  ): ClientUnaryCall;
-  listInvitationsFromUser(
-    request: ListInvitationsFromUserRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListInvitationsFromUserResponse) => void,
-  ): ClientUnaryCall;
-  listInvitationsForEmailAddress(
-    request: ListInvitationsForEmailAddressRequest,
-    callback: (error: ServiceError | null, response: ListInvitationsForEmailAddressResponse) => void,
-  ): ClientUnaryCall;
-  listInvitationsForEmailAddress(
-    request: ListInvitationsForEmailAddressRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListInvitationsForEmailAddressResponse) => void,
-  ): ClientUnaryCall;
-  listInvitationsForEmailAddress(
-    request: ListInvitationsForEmailAddressRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListInvitationsForEmailAddressResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const IdentityServiceClient = makeGenericClientConstructor(
-  IdentityServiceService,
-  'primandproper.platform.identity.v1.IdentityService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): IdentityServiceClient;
-  service: typeof IdentityServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

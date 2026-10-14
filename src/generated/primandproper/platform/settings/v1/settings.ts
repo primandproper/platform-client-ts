@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
 
@@ -3185,365 +3173,117 @@ export const ResolveAllResponse: MessageFns<ResolveAllResponse> = {
  * check, so settings/grpc asks a SubjectAuthorizer before any of them reads or
  * writes a row.
  */
-export type SettingsServiceService = typeof SettingsServiceService;
-export const SettingsServiceService = {
-  createDefinition: {
-    path: '/primandproper.platform.settings.v1.SettingsService/CreateDefinition' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: CreateDefinitionRequest): Buffer =>
-      Buffer.from(CreateDefinitionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): CreateDefinitionRequest => CreateDefinitionRequest.decode(value),
-    responseSerialize: (value: CreateDefinitionResponse): Buffer =>
-      Buffer.from(CreateDefinitionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): CreateDefinitionResponse => CreateDefinitionResponse.decode(value),
-  },
-  getDefinition: {
-    path: '/primandproper.platform.settings.v1.SettingsService/GetDefinition' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetDefinitionRequest): Buffer => Buffer.from(GetDefinitionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetDefinitionRequest => GetDefinitionRequest.decode(value),
-    responseSerialize: (value: GetDefinitionResponse): Buffer =>
-      Buffer.from(GetDefinitionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetDefinitionResponse => GetDefinitionResponse.decode(value),
-  },
-  getDefinitionByName: {
-    path: '/primandproper.platform.settings.v1.SettingsService/GetDefinitionByName' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetDefinitionByNameRequest): Buffer =>
-      Buffer.from(GetDefinitionByNameRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetDefinitionByNameRequest => GetDefinitionByNameRequest.decode(value),
-    responseSerialize: (value: GetDefinitionByNameResponse): Buffer =>
-      Buffer.from(GetDefinitionByNameResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetDefinitionByNameResponse => GetDefinitionByNameResponse.decode(value),
-  },
-  listDefinitions: {
-    path: '/primandproper.platform.settings.v1.SettingsService/ListDefinitions' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListDefinitionsRequest): Buffer =>
-      Buffer.from(ListDefinitionsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListDefinitionsRequest => ListDefinitionsRequest.decode(value),
-    responseSerialize: (value: ListDefinitionsResponse): Buffer =>
-      Buffer.from(ListDefinitionsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListDefinitionsResponse => ListDefinitionsResponse.decode(value),
-  },
-  updateDefinition: {
-    path: '/primandproper.platform.settings.v1.SettingsService/UpdateDefinition' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateDefinitionRequest): Buffer =>
-      Buffer.from(UpdateDefinitionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateDefinitionRequest => UpdateDefinitionRequest.decode(value),
-    responseSerialize: (value: UpdateDefinitionResponse): Buffer =>
-      Buffer.from(UpdateDefinitionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateDefinitionResponse => UpdateDefinitionResponse.decode(value),
-  },
-  archiveDefinition: {
-    path: '/primandproper.platform.settings.v1.SettingsService/ArchiveDefinition' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveDefinitionRequest): Buffer =>
-      Buffer.from(ArchiveDefinitionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveDefinitionRequest => ArchiveDefinitionRequest.decode(value),
-    responseSerialize: (value: ArchiveDefinitionResponse): Buffer =>
-      Buffer.from(ArchiveDefinitionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveDefinitionResponse => ArchiveDefinitionResponse.decode(value),
-  },
-  listValuesForDefinition: {
-    path: '/primandproper.platform.settings.v1.SettingsService/ListValuesForDefinition' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListValuesForDefinitionRequest): Buffer =>
-      Buffer.from(ListValuesForDefinitionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListValuesForDefinitionRequest => ListValuesForDefinitionRequest.decode(value),
-    responseSerialize: (value: ListValuesForDefinitionResponse): Buffer =>
-      Buffer.from(ListValuesForDefinitionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListValuesForDefinitionResponse =>
-      ListValuesForDefinitionResponse.decode(value),
-  },
-  setValue: {
-    path: '/primandproper.platform.settings.v1.SettingsService/SetValue' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SetValueRequest): Buffer => Buffer.from(SetValueRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SetValueRequest => SetValueRequest.decode(value),
-    responseSerialize: (value: SetValueResponse): Buffer => Buffer.from(SetValueResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SetValueResponse => SetValueResponse.decode(value),
-  },
-  getValue: {
-    path: '/primandproper.platform.settings.v1.SettingsService/GetValue' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetValueRequest): Buffer => Buffer.from(GetValueRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetValueRequest => GetValueRequest.decode(value),
-    responseSerialize: (value: GetValueResponse): Buffer => Buffer.from(GetValueResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetValueResponse => GetValueResponse.decode(value),
-  },
-  clearValue: {
-    path: '/primandproper.platform.settings.v1.SettingsService/ClearValue' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ClearValueRequest): Buffer => Buffer.from(ClearValueRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ClearValueRequest => ClearValueRequest.decode(value),
-    responseSerialize: (value: ClearValueResponse): Buffer => Buffer.from(ClearValueResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ClearValueResponse => ClearValueResponse.decode(value),
-  },
-  listValuesForSubject: {
-    path: '/primandproper.platform.settings.v1.SettingsService/ListValuesForSubject' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListValuesForSubjectRequest): Buffer =>
-      Buffer.from(ListValuesForSubjectRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListValuesForSubjectRequest => ListValuesForSubjectRequest.decode(value),
-    responseSerialize: (value: ListValuesForSubjectResponse): Buffer =>
-      Buffer.from(ListValuesForSubjectResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListValuesForSubjectResponse => ListValuesForSubjectResponse.decode(value),
-  },
-  resolve: {
-    path: '/primandproper.platform.settings.v1.SettingsService/Resolve' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ResolveRequest): Buffer => Buffer.from(ResolveRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ResolveRequest => ResolveRequest.decode(value),
-    responseSerialize: (value: ResolveResponse): Buffer => Buffer.from(ResolveResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ResolveResponse => ResolveResponse.decode(value),
-  },
-  resolveAll: {
-    path: '/primandproper.platform.settings.v1.SettingsService/ResolveAll' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ResolveAllRequest): Buffer => Buffer.from(ResolveAllRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ResolveAllRequest => ResolveAllRequest.decode(value),
-    responseSerialize: (value: ResolveAllResponse): Buffer => Buffer.from(ResolveAllResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ResolveAllResponse => ResolveAllResponse.decode(value),
+export type SettingsServiceDefinition = typeof SettingsServiceDefinition;
+export const SettingsServiceDefinition = {
+  name: 'SettingsService',
+  fullName: 'primandproper.platform.settings.v1.SettingsService',
+  methods: {
+    createDefinition: {
+      name: 'CreateDefinition',
+      requestType: CreateDefinitionRequest as typeof CreateDefinitionRequest,
+      requestStream: false,
+      responseType: CreateDefinitionResponse as typeof CreateDefinitionResponse,
+      responseStream: false,
+      options: {},
+    },
+    getDefinition: {
+      name: 'GetDefinition',
+      requestType: GetDefinitionRequest as typeof GetDefinitionRequest,
+      requestStream: false,
+      responseType: GetDefinitionResponse as typeof GetDefinitionResponse,
+      responseStream: false,
+      options: {},
+    },
+    getDefinitionByName: {
+      name: 'GetDefinitionByName',
+      requestType: GetDefinitionByNameRequest as typeof GetDefinitionByNameRequest,
+      requestStream: false,
+      responseType: GetDefinitionByNameResponse as typeof GetDefinitionByNameResponse,
+      responseStream: false,
+      options: {},
+    },
+    listDefinitions: {
+      name: 'ListDefinitions',
+      requestType: ListDefinitionsRequest as typeof ListDefinitionsRequest,
+      requestStream: false,
+      responseType: ListDefinitionsResponse as typeof ListDefinitionsResponse,
+      responseStream: false,
+      options: {},
+    },
+    updateDefinition: {
+      name: 'UpdateDefinition',
+      requestType: UpdateDefinitionRequest as typeof UpdateDefinitionRequest,
+      requestStream: false,
+      responseType: UpdateDefinitionResponse as typeof UpdateDefinitionResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveDefinition: {
+      name: 'ArchiveDefinition',
+      requestType: ArchiveDefinitionRequest as typeof ArchiveDefinitionRequest,
+      requestStream: false,
+      responseType: ArchiveDefinitionResponse as typeof ArchiveDefinitionResponse,
+      responseStream: false,
+      options: {},
+    },
+    listValuesForDefinition: {
+      name: 'ListValuesForDefinition',
+      requestType: ListValuesForDefinitionRequest as typeof ListValuesForDefinitionRequest,
+      requestStream: false,
+      responseType: ListValuesForDefinitionResponse as typeof ListValuesForDefinitionResponse,
+      responseStream: false,
+      options: {},
+    },
+    setValue: {
+      name: 'SetValue',
+      requestType: SetValueRequest as typeof SetValueRequest,
+      requestStream: false,
+      responseType: SetValueResponse as typeof SetValueResponse,
+      responseStream: false,
+      options: {},
+    },
+    getValue: {
+      name: 'GetValue',
+      requestType: GetValueRequest as typeof GetValueRequest,
+      requestStream: false,
+      responseType: GetValueResponse as typeof GetValueResponse,
+      responseStream: false,
+      options: {},
+    },
+    clearValue: {
+      name: 'ClearValue',
+      requestType: ClearValueRequest as typeof ClearValueRequest,
+      requestStream: false,
+      responseType: ClearValueResponse as typeof ClearValueResponse,
+      responseStream: false,
+      options: {},
+    },
+    listValuesForSubject: {
+      name: 'ListValuesForSubject',
+      requestType: ListValuesForSubjectRequest as typeof ListValuesForSubjectRequest,
+      requestStream: false,
+      responseType: ListValuesForSubjectResponse as typeof ListValuesForSubjectResponse,
+      responseStream: false,
+      options: {},
+    },
+    resolve: {
+      name: 'Resolve',
+      requestType: ResolveRequest as typeof ResolveRequest,
+      requestStream: false,
+      responseType: ResolveResponse as typeof ResolveResponse,
+      responseStream: false,
+      options: {},
+    },
+    resolveAll: {
+      name: 'ResolveAll',
+      requestType: ResolveAllRequest as typeof ResolveAllRequest,
+      requestStream: false,
+      responseType: ResolveAllResponse as typeof ResolveAllResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface SettingsServiceServer extends UntypedServiceImplementation {
-  createDefinition: handleUnaryCall<CreateDefinitionRequest, CreateDefinitionResponse>;
-  getDefinition: handleUnaryCall<GetDefinitionRequest, GetDefinitionResponse>;
-  getDefinitionByName: handleUnaryCall<GetDefinitionByNameRequest, GetDefinitionByNameResponse>;
-  listDefinitions: handleUnaryCall<ListDefinitionsRequest, ListDefinitionsResponse>;
-  updateDefinition: handleUnaryCall<UpdateDefinitionRequest, UpdateDefinitionResponse>;
-  archiveDefinition: handleUnaryCall<ArchiveDefinitionRequest, ArchiveDefinitionResponse>;
-  listValuesForDefinition: handleUnaryCall<ListValuesForDefinitionRequest, ListValuesForDefinitionResponse>;
-  setValue: handleUnaryCall<SetValueRequest, SetValueResponse>;
-  getValue: handleUnaryCall<GetValueRequest, GetValueResponse>;
-  clearValue: handleUnaryCall<ClearValueRequest, ClearValueResponse>;
-  listValuesForSubject: handleUnaryCall<ListValuesForSubjectRequest, ListValuesForSubjectResponse>;
-  resolve: handleUnaryCall<ResolveRequest, ResolveResponse>;
-  resolveAll: handleUnaryCall<ResolveAllRequest, ResolveAllResponse>;
-}
-
-export interface SettingsServiceClient extends Client {
-  createDefinition(
-    request: CreateDefinitionRequest,
-    callback: (error: ServiceError | null, response: CreateDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  createDefinition(
-    request: CreateDefinitionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: CreateDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  createDefinition(
-    request: CreateDefinitionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: CreateDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  getDefinition(
-    request: GetDefinitionRequest,
-    callback: (error: ServiceError | null, response: GetDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  getDefinition(
-    request: GetDefinitionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  getDefinition(
-    request: GetDefinitionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  getDefinitionByName(
-    request: GetDefinitionByNameRequest,
-    callback: (error: ServiceError | null, response: GetDefinitionByNameResponse) => void,
-  ): ClientUnaryCall;
-  getDefinitionByName(
-    request: GetDefinitionByNameRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetDefinitionByNameResponse) => void,
-  ): ClientUnaryCall;
-  getDefinitionByName(
-    request: GetDefinitionByNameRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetDefinitionByNameResponse) => void,
-  ): ClientUnaryCall;
-  listDefinitions(
-    request: ListDefinitionsRequest,
-    callback: (error: ServiceError | null, response: ListDefinitionsResponse) => void,
-  ): ClientUnaryCall;
-  listDefinitions(
-    request: ListDefinitionsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListDefinitionsResponse) => void,
-  ): ClientUnaryCall;
-  listDefinitions(
-    request: ListDefinitionsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListDefinitionsResponse) => void,
-  ): ClientUnaryCall;
-  updateDefinition(
-    request: UpdateDefinitionRequest,
-    callback: (error: ServiceError | null, response: UpdateDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  updateDefinition(
-    request: UpdateDefinitionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  updateDefinition(
-    request: UpdateDefinitionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  archiveDefinition(
-    request: ArchiveDefinitionRequest,
-    callback: (error: ServiceError | null, response: ArchiveDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  archiveDefinition(
-    request: ArchiveDefinitionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  archiveDefinition(
-    request: ArchiveDefinitionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  listValuesForDefinition(
-    request: ListValuesForDefinitionRequest,
-    callback: (error: ServiceError | null, response: ListValuesForDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  listValuesForDefinition(
-    request: ListValuesForDefinitionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListValuesForDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  listValuesForDefinition(
-    request: ListValuesForDefinitionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListValuesForDefinitionResponse) => void,
-  ): ClientUnaryCall;
-  setValue(
-    request: SetValueRequest,
-    callback: (error: ServiceError | null, response: SetValueResponse) => void,
-  ): ClientUnaryCall;
-  setValue(
-    request: SetValueRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SetValueResponse) => void,
-  ): ClientUnaryCall;
-  setValue(
-    request: SetValueRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SetValueResponse) => void,
-  ): ClientUnaryCall;
-  getValue(
-    request: GetValueRequest,
-    callback: (error: ServiceError | null, response: GetValueResponse) => void,
-  ): ClientUnaryCall;
-  getValue(
-    request: GetValueRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetValueResponse) => void,
-  ): ClientUnaryCall;
-  getValue(
-    request: GetValueRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetValueResponse) => void,
-  ): ClientUnaryCall;
-  clearValue(
-    request: ClearValueRequest,
-    callback: (error: ServiceError | null, response: ClearValueResponse) => void,
-  ): ClientUnaryCall;
-  clearValue(
-    request: ClearValueRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ClearValueResponse) => void,
-  ): ClientUnaryCall;
-  clearValue(
-    request: ClearValueRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ClearValueResponse) => void,
-  ): ClientUnaryCall;
-  listValuesForSubject(
-    request: ListValuesForSubjectRequest,
-    callback: (error: ServiceError | null, response: ListValuesForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  listValuesForSubject(
-    request: ListValuesForSubjectRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListValuesForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  listValuesForSubject(
-    request: ListValuesForSubjectRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListValuesForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  resolve(
-    request: ResolveRequest,
-    callback: (error: ServiceError | null, response: ResolveResponse) => void,
-  ): ClientUnaryCall;
-  resolve(
-    request: ResolveRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ResolveResponse) => void,
-  ): ClientUnaryCall;
-  resolve(
-    request: ResolveRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ResolveResponse) => void,
-  ): ClientUnaryCall;
-  resolveAll(
-    request: ResolveAllRequest,
-    callback: (error: ServiceError | null, response: ResolveAllResponse) => void,
-  ): ClientUnaryCall;
-  resolveAll(
-    request: ResolveAllRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ResolveAllResponse) => void,
-  ): ClientUnaryCall;
-  resolveAll(
-    request: ResolveAllRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ResolveAllResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const SettingsServiceClient = makeGenericClientConstructor(
-  SettingsServiceService,
-  'primandproper.platform.settings.v1.SettingsService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): SettingsServiceClient;
-  service: typeof SettingsServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

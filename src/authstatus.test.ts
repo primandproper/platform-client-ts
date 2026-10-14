@@ -4,13 +4,16 @@ import { getAuthStatus } from './authstatus';
 import {
   type AuthStatus,
   type IssuedToken,
-  SignInServiceService,
+  SignInServiceDefinition,
 } from './generated/primandproper/platform/signin/v1/signin';
 import { Session } from './session';
 import { FakeClock, fakeIssuedToken, FakeTransport, MemoryCredentialStore } from './testing';
+import { methodsOf } from './transport';
 
-const rpc = SignInServiceService.getAuthStatus;
-const exchange = SignInServiceService.exchangeRefreshToken;
+const SignInService = methodsOf(SignInServiceDefinition);
+
+const rpc = SignInService.getAuthStatus;
+const exchange = SignInService.exchangeRefreshToken;
 
 function status(overrides: Partial<AuthStatus> = {}): AuthStatus {
   return {

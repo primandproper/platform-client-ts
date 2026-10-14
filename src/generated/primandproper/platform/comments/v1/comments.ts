@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
 
@@ -1793,236 +1781,77 @@ export const ArchiveCommentResponse: MessageFns<ArchiveCommentResponse> = {
  *
  * A moderator removing one comment is not that case and has ArchiveComment.
  */
-export type CommentsServiceService = typeof CommentsServiceService;
-export const CommentsServiceService = {
-  createComment: {
-    path: '/primandproper.platform.comments.v1.CommentsService/CreateComment' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: CreateCommentRequest): Buffer => Buffer.from(CreateCommentRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): CreateCommentRequest => CreateCommentRequest.decode(value),
-    responseSerialize: (value: CreateCommentResponse): Buffer =>
-      Buffer.from(CreateCommentResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): CreateCommentResponse => CreateCommentResponse.decode(value),
-  },
-  getComment: {
-    path: '/primandproper.platform.comments.v1.CommentsService/GetComment' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetCommentRequest): Buffer => Buffer.from(GetCommentRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetCommentRequest => GetCommentRequest.decode(value),
-    responseSerialize: (value: GetCommentResponse): Buffer => Buffer.from(GetCommentResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetCommentResponse => GetCommentResponse.decode(value),
-  },
-  listRootComments: {
-    path: '/primandproper.platform.comments.v1.CommentsService/ListRootComments' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListRootCommentsRequest): Buffer =>
-      Buffer.from(ListRootCommentsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListRootCommentsRequest => ListRootCommentsRequest.decode(value),
-    responseSerialize: (value: ListRootCommentsResponse): Buffer =>
-      Buffer.from(ListRootCommentsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListRootCommentsResponse => ListRootCommentsResponse.decode(value),
-  },
-  listReplies: {
-    path: '/primandproper.platform.comments.v1.CommentsService/ListReplies' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListRepliesRequest): Buffer => Buffer.from(ListRepliesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListRepliesRequest => ListRepliesRequest.decode(value),
-    responseSerialize: (value: ListRepliesResponse): Buffer => Buffer.from(ListRepliesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListRepliesResponse => ListRepliesResponse.decode(value),
-  },
-  listCommentsByTargetType: {
-    path: '/primandproper.platform.comments.v1.CommentsService/ListCommentsByTargetType' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListCommentsByTargetTypeRequest): Buffer =>
-      Buffer.from(ListCommentsByTargetTypeRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListCommentsByTargetTypeRequest =>
-      ListCommentsByTargetTypeRequest.decode(value),
-    responseSerialize: (value: ListCommentsByTargetTypeResponse): Buffer =>
-      Buffer.from(ListCommentsByTargetTypeResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListCommentsByTargetTypeResponse =>
-      ListCommentsByTargetTypeResponse.decode(value),
-  },
-  listCommentsByAuthor: {
-    path: '/primandproper.platform.comments.v1.CommentsService/ListCommentsByAuthor' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListCommentsByAuthorRequest): Buffer =>
-      Buffer.from(ListCommentsByAuthorRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListCommentsByAuthorRequest => ListCommentsByAuthorRequest.decode(value),
-    responseSerialize: (value: ListCommentsByAuthorResponse): Buffer =>
-      Buffer.from(ListCommentsByAuthorResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListCommentsByAuthorResponse => ListCommentsByAuthorResponse.decode(value),
-  },
-  updateComment: {
-    path: '/primandproper.platform.comments.v1.CommentsService/UpdateComment' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateCommentRequest): Buffer => Buffer.from(UpdateCommentRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateCommentRequest => UpdateCommentRequest.decode(value),
-    responseSerialize: (value: UpdateCommentResponse): Buffer =>
-      Buffer.from(UpdateCommentResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateCommentResponse => UpdateCommentResponse.decode(value),
-  },
-  archiveComment: {
-    path: '/primandproper.platform.comments.v1.CommentsService/ArchiveComment' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveCommentRequest): Buffer =>
-      Buffer.from(ArchiveCommentRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveCommentRequest => ArchiveCommentRequest.decode(value),
-    responseSerialize: (value: ArchiveCommentResponse): Buffer =>
-      Buffer.from(ArchiveCommentResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveCommentResponse => ArchiveCommentResponse.decode(value),
+export type CommentsServiceDefinition = typeof CommentsServiceDefinition;
+export const CommentsServiceDefinition = {
+  name: 'CommentsService',
+  fullName: 'primandproper.platform.comments.v1.CommentsService',
+  methods: {
+    createComment: {
+      name: 'CreateComment',
+      requestType: CreateCommentRequest as typeof CreateCommentRequest,
+      requestStream: false,
+      responseType: CreateCommentResponse as typeof CreateCommentResponse,
+      responseStream: false,
+      options: {},
+    },
+    getComment: {
+      name: 'GetComment',
+      requestType: GetCommentRequest as typeof GetCommentRequest,
+      requestStream: false,
+      responseType: GetCommentResponse as typeof GetCommentResponse,
+      responseStream: false,
+      options: {},
+    },
+    listRootComments: {
+      name: 'ListRootComments',
+      requestType: ListRootCommentsRequest as typeof ListRootCommentsRequest,
+      requestStream: false,
+      responseType: ListRootCommentsResponse as typeof ListRootCommentsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listReplies: {
+      name: 'ListReplies',
+      requestType: ListRepliesRequest as typeof ListRepliesRequest,
+      requestStream: false,
+      responseType: ListRepliesResponse as typeof ListRepliesResponse,
+      responseStream: false,
+      options: {},
+    },
+    listCommentsByTargetType: {
+      name: 'ListCommentsByTargetType',
+      requestType: ListCommentsByTargetTypeRequest as typeof ListCommentsByTargetTypeRequest,
+      requestStream: false,
+      responseType: ListCommentsByTargetTypeResponse as typeof ListCommentsByTargetTypeResponse,
+      responseStream: false,
+      options: {},
+    },
+    listCommentsByAuthor: {
+      name: 'ListCommentsByAuthor',
+      requestType: ListCommentsByAuthorRequest as typeof ListCommentsByAuthorRequest,
+      requestStream: false,
+      responseType: ListCommentsByAuthorResponse as typeof ListCommentsByAuthorResponse,
+      responseStream: false,
+      options: {},
+    },
+    updateComment: {
+      name: 'UpdateComment',
+      requestType: UpdateCommentRequest as typeof UpdateCommentRequest,
+      requestStream: false,
+      responseType: UpdateCommentResponse as typeof UpdateCommentResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveComment: {
+      name: 'ArchiveComment',
+      requestType: ArchiveCommentRequest as typeof ArchiveCommentRequest,
+      requestStream: false,
+      responseType: ArchiveCommentResponse as typeof ArchiveCommentResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface CommentsServiceServer extends UntypedServiceImplementation {
-  createComment: handleUnaryCall<CreateCommentRequest, CreateCommentResponse>;
-  getComment: handleUnaryCall<GetCommentRequest, GetCommentResponse>;
-  listRootComments: handleUnaryCall<ListRootCommentsRequest, ListRootCommentsResponse>;
-  listReplies: handleUnaryCall<ListRepliesRequest, ListRepliesResponse>;
-  listCommentsByTargetType: handleUnaryCall<ListCommentsByTargetTypeRequest, ListCommentsByTargetTypeResponse>;
-  listCommentsByAuthor: handleUnaryCall<ListCommentsByAuthorRequest, ListCommentsByAuthorResponse>;
-  updateComment: handleUnaryCall<UpdateCommentRequest, UpdateCommentResponse>;
-  archiveComment: handleUnaryCall<ArchiveCommentRequest, ArchiveCommentResponse>;
-}
-
-export interface CommentsServiceClient extends Client {
-  createComment(
-    request: CreateCommentRequest,
-    callback: (error: ServiceError | null, response: CreateCommentResponse) => void,
-  ): ClientUnaryCall;
-  createComment(
-    request: CreateCommentRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: CreateCommentResponse) => void,
-  ): ClientUnaryCall;
-  createComment(
-    request: CreateCommentRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: CreateCommentResponse) => void,
-  ): ClientUnaryCall;
-  getComment(
-    request: GetCommentRequest,
-    callback: (error: ServiceError | null, response: GetCommentResponse) => void,
-  ): ClientUnaryCall;
-  getComment(
-    request: GetCommentRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetCommentResponse) => void,
-  ): ClientUnaryCall;
-  getComment(
-    request: GetCommentRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetCommentResponse) => void,
-  ): ClientUnaryCall;
-  listRootComments(
-    request: ListRootCommentsRequest,
-    callback: (error: ServiceError | null, response: ListRootCommentsResponse) => void,
-  ): ClientUnaryCall;
-  listRootComments(
-    request: ListRootCommentsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListRootCommentsResponse) => void,
-  ): ClientUnaryCall;
-  listRootComments(
-    request: ListRootCommentsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListRootCommentsResponse) => void,
-  ): ClientUnaryCall;
-  listReplies(
-    request: ListRepliesRequest,
-    callback: (error: ServiceError | null, response: ListRepliesResponse) => void,
-  ): ClientUnaryCall;
-  listReplies(
-    request: ListRepliesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListRepliesResponse) => void,
-  ): ClientUnaryCall;
-  listReplies(
-    request: ListRepliesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListRepliesResponse) => void,
-  ): ClientUnaryCall;
-  listCommentsByTargetType(
-    request: ListCommentsByTargetTypeRequest,
-    callback: (error: ServiceError | null, response: ListCommentsByTargetTypeResponse) => void,
-  ): ClientUnaryCall;
-  listCommentsByTargetType(
-    request: ListCommentsByTargetTypeRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListCommentsByTargetTypeResponse) => void,
-  ): ClientUnaryCall;
-  listCommentsByTargetType(
-    request: ListCommentsByTargetTypeRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListCommentsByTargetTypeResponse) => void,
-  ): ClientUnaryCall;
-  listCommentsByAuthor(
-    request: ListCommentsByAuthorRequest,
-    callback: (error: ServiceError | null, response: ListCommentsByAuthorResponse) => void,
-  ): ClientUnaryCall;
-  listCommentsByAuthor(
-    request: ListCommentsByAuthorRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListCommentsByAuthorResponse) => void,
-  ): ClientUnaryCall;
-  listCommentsByAuthor(
-    request: ListCommentsByAuthorRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListCommentsByAuthorResponse) => void,
-  ): ClientUnaryCall;
-  updateComment(
-    request: UpdateCommentRequest,
-    callback: (error: ServiceError | null, response: UpdateCommentResponse) => void,
-  ): ClientUnaryCall;
-  updateComment(
-    request: UpdateCommentRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateCommentResponse) => void,
-  ): ClientUnaryCall;
-  updateComment(
-    request: UpdateCommentRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateCommentResponse) => void,
-  ): ClientUnaryCall;
-  archiveComment(
-    request: ArchiveCommentRequest,
-    callback: (error: ServiceError | null, response: ArchiveCommentResponse) => void,
-  ): ClientUnaryCall;
-  archiveComment(
-    request: ArchiveCommentRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveCommentResponse) => void,
-  ): ClientUnaryCall;
-  archiveComment(
-    request: ArchiveCommentRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveCommentResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const CommentsServiceClient = makeGenericClientConstructor(
-  CommentsServiceService,
-  'primandproper.platform.comments.v1.CommentsService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): CommentsServiceClient;
-  service: typeof CommentsServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

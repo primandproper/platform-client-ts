@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import {
   Account,
@@ -5637,852 +5625,267 @@ export const EndAllSignInsForUserResponse: MessageFns<EndAllSignInsForUserRespon
  * SignInAdministrationService, which is permissioned, and which is a service of
  * its own so that this statement stays true of this one.
  */
-export type SignInServiceService = typeof SignInServiceService;
-export const SignInServiceService = {
-  /**
-   * Arriving, and the two ways a registration is finished. All three are
-   * anonymous. Register is the sign-up door, and it is open by default: the
-   * policy an open sign-up has in it -- who may register, which agreements
-   * they must accept, what standing and roles they start with -- is the
-   * deployment's registration policy, which the service runs on every
-   * registration before anything is hashed, minted or written, and the roles
-   * a registrant owns their account with are the deployment's, never the
-   * request's. A caller who is signed in still reaches it, and an operator
-   * provisioning users calls it that way. A deployment that does not want
-   * sign-up closes the door by name, and is then answered with
-   * UNIMPLEMENTED carrying REGISTRATION_CLOSED, so a client can tell a closed
-   * door from a broken one. Rate limiting it is the consumer's, in front of
-   * it, as it is for the sign-in doors. The other two carry their own
-   * authority, which is the token that was mailed to the person they are
-   * about.
-   */
-  register: {
-    path: '/primandproper.platform.signin.v1.SignInService/Register' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RegisterRequest): Buffer => Buffer.from(RegisterRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RegisterRequest => RegisterRequest.decode(value),
-    responseSerialize: (value: RegisterResponse): Buffer => Buffer.from(RegisterResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RegisterResponse => RegisterResponse.decode(value),
-  },
-  attachPassword: {
-    path: '/primandproper.platform.signin.v1.SignInService/AttachPassword' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: AttachPasswordRequest): Buffer =>
-      Buffer.from(AttachPasswordRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): AttachPasswordRequest => AttachPasswordRequest.decode(value),
-    responseSerialize: (value: AttachPasswordResponse): Buffer =>
-      Buffer.from(AttachPasswordResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): AttachPasswordResponse => AttachPasswordResponse.decode(value),
-  },
-  verifyEmailAddress: {
-    path: '/primandproper.platform.signin.v1.SignInService/VerifyEmailAddress' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: VerifyEmailAddressRequest): Buffer =>
-      Buffer.from(VerifyEmailAddressRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): VerifyEmailAddressRequest => VerifyEmailAddressRequest.decode(value),
-    responseSerialize: (value: VerifyEmailAddressResponse): Buffer =>
-      Buffer.from(VerifyEmailAddressResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): VerifyEmailAddressResponse => VerifyEmailAddressResponse.decode(value),
-  },
-  /**
-   * Asking for another verification link. The first requires a caller and
-   * names nobody, for somebody signed in whose address changed; the second is
-   * anonymous and names an address, for a registrant who cannot sign in until
-   * they answer one, and is answered the same way whoever holds it.
-   */
-  requestVerificationEmail: {
-    path: '/primandproper.platform.signin.v1.SignInService/RequestVerificationEmail' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RequestVerificationEmailRequest): Buffer =>
-      Buffer.from(RequestVerificationEmailRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RequestVerificationEmailRequest =>
-      RequestVerificationEmailRequest.decode(value),
-    responseSerialize: (value: RequestVerificationEmailResponse): Buffer =>
-      Buffer.from(RequestVerificationEmailResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RequestVerificationEmailResponse =>
-      RequestVerificationEmailResponse.decode(value),
-  },
-  requestVerificationEmailByAddress: {
-    path: '/primandproper.platform.signin.v1.SignInService/RequestVerificationEmailByAddress' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RequestVerificationEmailByAddressRequest): Buffer =>
-      Buffer.from(RequestVerificationEmailByAddressRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RequestVerificationEmailByAddressRequest =>
-      RequestVerificationEmailByAddressRequest.decode(value),
-    responseSerialize: (value: RequestVerificationEmailByAddressResponse): Buffer =>
-      Buffer.from(RequestVerificationEmailByAddressResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RequestVerificationEmailByAddressResponse =>
-      RequestVerificationEmailByAddressResponse.decode(value),
-  },
-  /**
-   * The passwordless door, both halves anonymous. Requesting a link names an
-   * address and is answered the same way whoever holds it; redeeming one carries
-   * the token that was mailed, which is the whole of its authority. Neither can
-   * name a user, so neither is a way to ask about one.
-   *
-   * Rate limiting is the consumer's, in front of RequestMagicLink, and it is not
-   * optional: it sends mail on request.
-   */
-  requestMagicLink: {
-    path: '/primandproper.platform.signin.v1.SignInService/RequestMagicLink' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RequestMagicLinkRequest): Buffer =>
-      Buffer.from(RequestMagicLinkRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RequestMagicLinkRequest => RequestMagicLinkRequest.decode(value),
-    responseSerialize: (value: RequestMagicLinkResponse): Buffer =>
-      Buffer.from(RequestMagicLinkResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RequestMagicLinkResponse => RequestMagicLinkResponse.decode(value),
-  },
-  redeemMagicLink: {
-    path: '/primandproper.platform.signin.v1.SignInService/RedeemMagicLink' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RedeemMagicLinkRequest): Buffer =>
-      Buffer.from(RedeemMagicLinkRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RedeemMagicLinkRequest => RedeemMagicLinkRequest.decode(value),
-    responseSerialize: (value: RedeemMagicLinkResponse): Buffer =>
-      Buffer.from(RedeemMagicLinkResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RedeemMagicLinkResponse => RedeemMagicLinkResponse.decode(value),
-  },
-  /**
-   * The door for somebody who has forgotten what they sign in as. It is
-   * anonymous and answered the same way whoever holds the address, as
-   * RequestMagicLink is, and its rate limit is the consumer's for the same
-   * reason: it sends mail on request.
-   */
-  requestHandleReminder: {
-    path: '/primandproper.platform.signin.v1.SignInService/RequestHandleReminder' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RequestHandleReminderRequest): Buffer =>
-      Buffer.from(RequestHandleReminderRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RequestHandleReminderRequest => RequestHandleReminderRequest.decode(value),
-    responseSerialize: (value: RequestHandleReminderResponse): Buffer =>
-      Buffer.from(RequestHandleReminderResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RequestHandleReminderResponse => RequestHandleReminderResponse.decode(value),
-  },
-  /**
-   * The two doors, the one that keeps a sign-in alive without reopening
-   * either of them, and the one that moves it to another of the person's
-   * accounts without reopening them either.
-   */
-  loginForToken: {
-    path: '/primandproper.platform.signin.v1.SignInService/LoginForToken' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: LoginForTokenRequest): Buffer => Buffer.from(LoginForTokenRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): LoginForTokenRequest => LoginForTokenRequest.decode(value),
-    responseSerialize: (value: LoginForTokenResponse): Buffer =>
-      Buffer.from(LoginForTokenResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): LoginForTokenResponse => LoginForTokenResponse.decode(value),
-  },
-  adminLoginForToken: {
-    path: '/primandproper.platform.signin.v1.SignInService/AdminLoginForToken' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: AdminLoginForTokenRequest): Buffer =>
-      Buffer.from(AdminLoginForTokenRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): AdminLoginForTokenRequest => AdminLoginForTokenRequest.decode(value),
-    responseSerialize: (value: AdminLoginForTokenResponse): Buffer =>
-      Buffer.from(AdminLoginForTokenResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): AdminLoginForTokenResponse => AdminLoginForTokenResponse.decode(value),
-  },
-  exchangeRefreshToken: {
-    path: '/primandproper.platform.signin.v1.SignInService/ExchangeRefreshToken' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ExchangeRefreshTokenRequest): Buffer =>
-      Buffer.from(ExchangeRefreshTokenRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ExchangeRefreshTokenRequest => ExchangeRefreshTokenRequest.decode(value),
-    responseSerialize: (value: ExchangeRefreshTokenResponse): Buffer =>
-      Buffer.from(ExchangeRefreshTokenResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ExchangeRefreshTokenResponse => ExchangeRefreshTokenResponse.decode(value),
-  },
-  switchAccount: {
-    path: '/primandproper.platform.signin.v1.SignInService/SwitchAccount' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SwitchAccountRequest): Buffer => Buffer.from(SwitchAccountRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SwitchAccountRequest => SwitchAccountRequest.decode(value),
-    responseSerialize: (value: SwitchAccountResponse): Buffer =>
-      Buffer.from(SwitchAccountResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SwitchAccountResponse => SwitchAccountResponse.decode(value),
-  },
-  /**
-   * The way out, in its two sizes. Ending this login carries the credential and
-   * needs no caller, so an application whose access token expired while it was
-   * closed can still sign out; ending every login needs a caller and names
-   * nobody. Both are a client's to call and neither is an operator's tool --
-   * revoking somebody else's sessions is SignInAdministrationService's.
-   */
-  signOut: {
-    path: '/primandproper.platform.signin.v1.SignInService/SignOut' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SignOutRequest): Buffer => Buffer.from(SignOutRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SignOutRequest => SignOutRequest.decode(value),
-    responseSerialize: (value: SignOutResponse): Buffer => Buffer.from(SignOutResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SignOutResponse => SignOutResponse.decode(value),
-  },
-  signOutEverywhere: {
-    path: '/primandproper.platform.signin.v1.SignInService/SignOutEverywhere' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SignOutEverywhereRequest): Buffer =>
-      Buffer.from(SignOutEverywhereRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SignOutEverywhereRequest => SignOutEverywhereRequest.decode(value),
-    responseSerialize: (value: SignOutEverywhereResponse): Buffer =>
-      Buffer.from(SignOutEverywhereResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SignOutEverywhereResponse => SignOutEverywhereResponse.decode(value),
-  },
-  /**
-   * The screen between those two sizes: the calling user's live logins, ending
-   * one of them by name, and ending all of them but the one asking. All three
-   * need a caller and name nobody else; an operator doing any of them for
-   * somebody else calls SignInAdministrationService.
-   */
-  listSignIns: {
-    path: '/primandproper.platform.signin.v1.SignInService/ListSignIns' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListSignInsRequest): Buffer => Buffer.from(ListSignInsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListSignInsRequest => ListSignInsRequest.decode(value),
-    responseSerialize: (value: ListSignInsResponse): Buffer => Buffer.from(ListSignInsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListSignInsResponse => ListSignInsResponse.decode(value),
-  },
-  endSignIn: {
-    path: '/primandproper.platform.signin.v1.SignInService/EndSignIn' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: EndSignInRequest): Buffer => Buffer.from(EndSignInRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): EndSignInRequest => EndSignInRequest.decode(value),
-    responseSerialize: (value: EndSignInResponse): Buffer => Buffer.from(EndSignInResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): EndSignInResponse => EndSignInResponse.decode(value),
-  },
-  endOtherSignIns: {
-    path: '/primandproper.platform.signin.v1.SignInService/EndOtherSignIns' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: EndOtherSignInsRequest): Buffer =>
-      Buffer.from(EndOtherSignInsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): EndOtherSignInsRequest => EndOtherSignInsRequest.decode(value),
-    responseSerialize: (value: EndOtherSignInsResponse): Buffer =>
-      Buffer.from(EndOtherSignInsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): EndOtherSignInsResponse => EndOtherSignInsResponse.decode(value),
-  },
-  /** The two reads a client makes on load. */
-  getAuthStatus: {
-    path: '/primandproper.platform.signin.v1.SignInService/GetAuthStatus' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetAuthStatusRequest): Buffer => Buffer.from(GetAuthStatusRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetAuthStatusRequest => GetAuthStatusRequest.decode(value),
-    responseSerialize: (value: GetAuthStatusResponse): Buffer =>
-      Buffer.from(GetAuthStatusResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetAuthStatusResponse => GetAuthStatusResponse.decode(value),
-  },
-  getSelf: {
-    path: '/primandproper.platform.signin.v1.SignInService/GetSelf' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetSelfRequest): Buffer => Buffer.from(GetSelfRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetSelfRequest => GetSelfRequest.decode(value),
-    responseSerialize: (value: GetSelfResponse): Buffer => Buffer.from(GetSelfResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetSelfResponse => GetSelfResponse.decode(value),
-  },
-  /**
-   * The writes a signed-in person makes about their own credentials, and the
-   * two handles that are credentials in all but name. identity's UpdateProfile
-   * refuses both handles; these are where they change.
-   */
-  updatePassword: {
-    path: '/primandproper.platform.signin.v1.SignInService/UpdatePassword' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdatePasswordRequest): Buffer =>
-      Buffer.from(UpdatePasswordRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdatePasswordRequest => UpdatePasswordRequest.decode(value),
-    responseSerialize: (value: UpdatePasswordResponse): Buffer =>
-      Buffer.from(UpdatePasswordResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdatePasswordResponse => UpdatePasswordResponse.decode(value),
-  },
-  refreshTotpSecret: {
-    path: '/primandproper.platform.signin.v1.SignInService/RefreshTOTPSecret' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RefreshTOTPSecretRequest): Buffer =>
-      Buffer.from(RefreshTOTPSecretRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RefreshTOTPSecretRequest => RefreshTOTPSecretRequest.decode(value),
-    responseSerialize: (value: RefreshTOTPSecretResponse): Buffer =>
-      Buffer.from(RefreshTOTPSecretResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RefreshTOTPSecretResponse => RefreshTOTPSecretResponse.decode(value),
-  },
-  verifyTotpSecret: {
-    path: '/primandproper.platform.signin.v1.SignInService/VerifyTOTPSecret' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: VerifyTOTPSecretRequest): Buffer =>
-      Buffer.from(VerifyTOTPSecretRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): VerifyTOTPSecretRequest => VerifyTOTPSecretRequest.decode(value),
-    responseSerialize: (value: VerifyTOTPSecretResponse): Buffer =>
-      Buffer.from(VerifyTOTPSecretResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): VerifyTOTPSecretResponse => VerifyTOTPSecretResponse.decode(value),
-  },
-  updateEmailAddress: {
-    path: '/primandproper.platform.signin.v1.SignInService/UpdateEmailAddress' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateEmailAddressRequest): Buffer =>
-      Buffer.from(UpdateEmailAddressRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateEmailAddressRequest => UpdateEmailAddressRequest.decode(value),
-    responseSerialize: (value: UpdateEmailAddressResponse): Buffer =>
-      Buffer.from(UpdateEmailAddressResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateEmailAddressResponse => UpdateEmailAddressResponse.decode(value),
-  },
-  updateUsername: {
-    path: '/primandproper.platform.signin.v1.SignInService/UpdateUsername' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateUsernameRequest): Buffer =>
-      Buffer.from(UpdateUsernameRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateUsernameRequest => UpdateUsernameRequest.decode(value),
-    responseSerialize: (value: UpdateUsernameResponse): Buffer =>
-      Buffer.from(UpdateUsernameResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateUsernameResponse => UpdateUsernameResponse.decode(value),
+export type SignInServiceDefinition = typeof SignInServiceDefinition;
+export const SignInServiceDefinition = {
+  name: 'SignInService',
+  fullName: 'primandproper.platform.signin.v1.SignInService',
+  methods: {
+    /**
+     * Arriving, and the two ways a registration is finished. All three are
+     * anonymous. Register is the sign-up door, and it is open by default: the
+     * policy an open sign-up has in it -- who may register, which agreements
+     * they must accept, what standing and roles they start with -- is the
+     * deployment's registration policy, which the service runs on every
+     * registration before anything is hashed, minted or written, and the roles
+     * a registrant owns their account with are the deployment's, never the
+     * request's. A caller who is signed in still reaches it, and an operator
+     * provisioning users calls it that way. A deployment that does not want
+     * sign-up closes the door by name, and is then answered with
+     * UNIMPLEMENTED carrying REGISTRATION_CLOSED, so a client can tell a closed
+     * door from a broken one. Rate limiting it is the consumer's, in front of
+     * it, as it is for the sign-in doors. The other two carry their own
+     * authority, which is the token that was mailed to the person they are
+     * about.
+     */
+    register: {
+      name: 'Register',
+      requestType: RegisterRequest as typeof RegisterRequest,
+      requestStream: false,
+      responseType: RegisterResponse as typeof RegisterResponse,
+      responseStream: false,
+      options: {},
+    },
+    attachPassword: {
+      name: 'AttachPassword',
+      requestType: AttachPasswordRequest as typeof AttachPasswordRequest,
+      requestStream: false,
+      responseType: AttachPasswordResponse as typeof AttachPasswordResponse,
+      responseStream: false,
+      options: {},
+    },
+    verifyEmailAddress: {
+      name: 'VerifyEmailAddress',
+      requestType: VerifyEmailAddressRequest as typeof VerifyEmailAddressRequest,
+      requestStream: false,
+      responseType: VerifyEmailAddressResponse as typeof VerifyEmailAddressResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * Asking for another verification link. The first requires a caller and
+     * names nobody, for somebody signed in whose address changed; the second is
+     * anonymous and names an address, for a registrant who cannot sign in until
+     * they answer one, and is answered the same way whoever holds it.
+     */
+    requestVerificationEmail: {
+      name: 'RequestVerificationEmail',
+      requestType: RequestVerificationEmailRequest as typeof RequestVerificationEmailRequest,
+      requestStream: false,
+      responseType: RequestVerificationEmailResponse as typeof RequestVerificationEmailResponse,
+      responseStream: false,
+      options: {},
+    },
+    requestVerificationEmailByAddress: {
+      name: 'RequestVerificationEmailByAddress',
+      requestType: RequestVerificationEmailByAddressRequest as typeof RequestVerificationEmailByAddressRequest,
+      requestStream: false,
+      responseType: RequestVerificationEmailByAddressResponse as typeof RequestVerificationEmailByAddressResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * The passwordless door, both halves anonymous. Requesting a link names an
+     * address and is answered the same way whoever holds it; redeeming one carries
+     * the token that was mailed, which is the whole of its authority. Neither can
+     * name a user, so neither is a way to ask about one.
+     *
+     * Rate limiting is the consumer's, in front of RequestMagicLink, and it is not
+     * optional: it sends mail on request.
+     */
+    requestMagicLink: {
+      name: 'RequestMagicLink',
+      requestType: RequestMagicLinkRequest as typeof RequestMagicLinkRequest,
+      requestStream: false,
+      responseType: RequestMagicLinkResponse as typeof RequestMagicLinkResponse,
+      responseStream: false,
+      options: {},
+    },
+    redeemMagicLink: {
+      name: 'RedeemMagicLink',
+      requestType: RedeemMagicLinkRequest as typeof RedeemMagicLinkRequest,
+      requestStream: false,
+      responseType: RedeemMagicLinkResponse as typeof RedeemMagicLinkResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * The door for somebody who has forgotten what they sign in as. It is
+     * anonymous and answered the same way whoever holds the address, as
+     * RequestMagicLink is, and its rate limit is the consumer's for the same
+     * reason: it sends mail on request.
+     */
+    requestHandleReminder: {
+      name: 'RequestHandleReminder',
+      requestType: RequestHandleReminderRequest as typeof RequestHandleReminderRequest,
+      requestStream: false,
+      responseType: RequestHandleReminderResponse as typeof RequestHandleReminderResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * The two doors, the one that keeps a sign-in alive without reopening
+     * either of them, and the one that moves it to another of the person's
+     * accounts without reopening them either.
+     */
+    loginForToken: {
+      name: 'LoginForToken',
+      requestType: LoginForTokenRequest as typeof LoginForTokenRequest,
+      requestStream: false,
+      responseType: LoginForTokenResponse as typeof LoginForTokenResponse,
+      responseStream: false,
+      options: {},
+    },
+    adminLoginForToken: {
+      name: 'AdminLoginForToken',
+      requestType: AdminLoginForTokenRequest as typeof AdminLoginForTokenRequest,
+      requestStream: false,
+      responseType: AdminLoginForTokenResponse as typeof AdminLoginForTokenResponse,
+      responseStream: false,
+      options: {},
+    },
+    exchangeRefreshToken: {
+      name: 'ExchangeRefreshToken',
+      requestType: ExchangeRefreshTokenRequest as typeof ExchangeRefreshTokenRequest,
+      requestStream: false,
+      responseType: ExchangeRefreshTokenResponse as typeof ExchangeRefreshTokenResponse,
+      responseStream: false,
+      options: {},
+    },
+    switchAccount: {
+      name: 'SwitchAccount',
+      requestType: SwitchAccountRequest as typeof SwitchAccountRequest,
+      requestStream: false,
+      responseType: SwitchAccountResponse as typeof SwitchAccountResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * The way out, in its two sizes. Ending this login carries the credential and
+     * needs no caller, so an application whose access token expired while it was
+     * closed can still sign out; ending every login needs a caller and names
+     * nobody. Both are a client's to call and neither is an operator's tool --
+     * revoking somebody else's sessions is SignInAdministrationService's.
+     */
+    signOut: {
+      name: 'SignOut',
+      requestType: SignOutRequest as typeof SignOutRequest,
+      requestStream: false,
+      responseType: SignOutResponse as typeof SignOutResponse,
+      responseStream: false,
+      options: {},
+    },
+    signOutEverywhere: {
+      name: 'SignOutEverywhere',
+      requestType: SignOutEverywhereRequest as typeof SignOutEverywhereRequest,
+      requestStream: false,
+      responseType: SignOutEverywhereResponse as typeof SignOutEverywhereResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * The screen between those two sizes: the calling user's live logins, ending
+     * one of them by name, and ending all of them but the one asking. All three
+     * need a caller and name nobody else; an operator doing any of them for
+     * somebody else calls SignInAdministrationService.
+     */
+    listSignIns: {
+      name: 'ListSignIns',
+      requestType: ListSignInsRequest as typeof ListSignInsRequest,
+      requestStream: false,
+      responseType: ListSignInsResponse as typeof ListSignInsResponse,
+      responseStream: false,
+      options: {},
+    },
+    endSignIn: {
+      name: 'EndSignIn',
+      requestType: EndSignInRequest as typeof EndSignInRequest,
+      requestStream: false,
+      responseType: EndSignInResponse as typeof EndSignInResponse,
+      responseStream: false,
+      options: {},
+    },
+    endOtherSignIns: {
+      name: 'EndOtherSignIns',
+      requestType: EndOtherSignInsRequest as typeof EndOtherSignInsRequest,
+      requestStream: false,
+      responseType: EndOtherSignInsResponse as typeof EndOtherSignInsResponse,
+      responseStream: false,
+      options: {},
+    },
+    /** The two reads a client makes on load. */
+    getAuthStatus: {
+      name: 'GetAuthStatus',
+      requestType: GetAuthStatusRequest as typeof GetAuthStatusRequest,
+      requestStream: false,
+      responseType: GetAuthStatusResponse as typeof GetAuthStatusResponse,
+      responseStream: false,
+      options: {},
+    },
+    getSelf: {
+      name: 'GetSelf',
+      requestType: GetSelfRequest as typeof GetSelfRequest,
+      requestStream: false,
+      responseType: GetSelfResponse as typeof GetSelfResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * The writes a signed-in person makes about their own credentials, and the
+     * two handles that are credentials in all but name. identity's UpdateProfile
+     * refuses both handles; these are where they change.
+     */
+    updatePassword: {
+      name: 'UpdatePassword',
+      requestType: UpdatePasswordRequest as typeof UpdatePasswordRequest,
+      requestStream: false,
+      responseType: UpdatePasswordResponse as typeof UpdatePasswordResponse,
+      responseStream: false,
+      options: {},
+    },
+    refreshTOTPSecret: {
+      name: 'RefreshTOTPSecret',
+      requestType: RefreshTOTPSecretRequest as typeof RefreshTOTPSecretRequest,
+      requestStream: false,
+      responseType: RefreshTOTPSecretResponse as typeof RefreshTOTPSecretResponse,
+      responseStream: false,
+      options: {},
+    },
+    verifyTOTPSecret: {
+      name: 'VerifyTOTPSecret',
+      requestType: VerifyTOTPSecretRequest as typeof VerifyTOTPSecretRequest,
+      requestStream: false,
+      responseType: VerifyTOTPSecretResponse as typeof VerifyTOTPSecretResponse,
+      responseStream: false,
+      options: {},
+    },
+    updateEmailAddress: {
+      name: 'UpdateEmailAddress',
+      requestType: UpdateEmailAddressRequest as typeof UpdateEmailAddressRequest,
+      requestStream: false,
+      responseType: UpdateEmailAddressResponse as typeof UpdateEmailAddressResponse,
+      responseStream: false,
+      options: {},
+    },
+    updateUsername: {
+      name: 'UpdateUsername',
+      requestType: UpdateUsernameRequest as typeof UpdateUsernameRequest,
+      requestStream: false,
+      responseType: UpdateUsernameResponse as typeof UpdateUsernameResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface SignInServiceServer extends UntypedServiceImplementation {
-  /**
-   * Arriving, and the two ways a registration is finished. All three are
-   * anonymous. Register is the sign-up door, and it is open by default: the
-   * policy an open sign-up has in it -- who may register, which agreements
-   * they must accept, what standing and roles they start with -- is the
-   * deployment's registration policy, which the service runs on every
-   * registration before anything is hashed, minted or written, and the roles
-   * a registrant owns their account with are the deployment's, never the
-   * request's. A caller who is signed in still reaches it, and an operator
-   * provisioning users calls it that way. A deployment that does not want
-   * sign-up closes the door by name, and is then answered with
-   * UNIMPLEMENTED carrying REGISTRATION_CLOSED, so a client can tell a closed
-   * door from a broken one. Rate limiting it is the consumer's, in front of
-   * it, as it is for the sign-in doors. The other two carry their own
-   * authority, which is the token that was mailed to the person they are
-   * about.
-   */
-  register: handleUnaryCall<RegisterRequest, RegisterResponse>;
-  attachPassword: handleUnaryCall<AttachPasswordRequest, AttachPasswordResponse>;
-  verifyEmailAddress: handleUnaryCall<VerifyEmailAddressRequest, VerifyEmailAddressResponse>;
-  /**
-   * Asking for another verification link. The first requires a caller and
-   * names nobody, for somebody signed in whose address changed; the second is
-   * anonymous and names an address, for a registrant who cannot sign in until
-   * they answer one, and is answered the same way whoever holds it.
-   */
-  requestVerificationEmail: handleUnaryCall<RequestVerificationEmailRequest, RequestVerificationEmailResponse>;
-  requestVerificationEmailByAddress: handleUnaryCall<
-    RequestVerificationEmailByAddressRequest,
-    RequestVerificationEmailByAddressResponse
-  >;
-  /**
-   * The passwordless door, both halves anonymous. Requesting a link names an
-   * address and is answered the same way whoever holds it; redeeming one carries
-   * the token that was mailed, which is the whole of its authority. Neither can
-   * name a user, so neither is a way to ask about one.
-   *
-   * Rate limiting is the consumer's, in front of RequestMagicLink, and it is not
-   * optional: it sends mail on request.
-   */
-  requestMagicLink: handleUnaryCall<RequestMagicLinkRequest, RequestMagicLinkResponse>;
-  redeemMagicLink: handleUnaryCall<RedeemMagicLinkRequest, RedeemMagicLinkResponse>;
-  /**
-   * The door for somebody who has forgotten what they sign in as. It is
-   * anonymous and answered the same way whoever holds the address, as
-   * RequestMagicLink is, and its rate limit is the consumer's for the same
-   * reason: it sends mail on request.
-   */
-  requestHandleReminder: handleUnaryCall<RequestHandleReminderRequest, RequestHandleReminderResponse>;
-  /**
-   * The two doors, the one that keeps a sign-in alive without reopening
-   * either of them, and the one that moves it to another of the person's
-   * accounts without reopening them either.
-   */
-  loginForToken: handleUnaryCall<LoginForTokenRequest, LoginForTokenResponse>;
-  adminLoginForToken: handleUnaryCall<AdminLoginForTokenRequest, AdminLoginForTokenResponse>;
-  exchangeRefreshToken: handleUnaryCall<ExchangeRefreshTokenRequest, ExchangeRefreshTokenResponse>;
-  switchAccount: handleUnaryCall<SwitchAccountRequest, SwitchAccountResponse>;
-  /**
-   * The way out, in its two sizes. Ending this login carries the credential and
-   * needs no caller, so an application whose access token expired while it was
-   * closed can still sign out; ending every login needs a caller and names
-   * nobody. Both are a client's to call and neither is an operator's tool --
-   * revoking somebody else's sessions is SignInAdministrationService's.
-   */
-  signOut: handleUnaryCall<SignOutRequest, SignOutResponse>;
-  signOutEverywhere: handleUnaryCall<SignOutEverywhereRequest, SignOutEverywhereResponse>;
-  /**
-   * The screen between those two sizes: the calling user's live logins, ending
-   * one of them by name, and ending all of them but the one asking. All three
-   * need a caller and name nobody else; an operator doing any of them for
-   * somebody else calls SignInAdministrationService.
-   */
-  listSignIns: handleUnaryCall<ListSignInsRequest, ListSignInsResponse>;
-  endSignIn: handleUnaryCall<EndSignInRequest, EndSignInResponse>;
-  endOtherSignIns: handleUnaryCall<EndOtherSignInsRequest, EndOtherSignInsResponse>;
-  /** The two reads a client makes on load. */
-  getAuthStatus: handleUnaryCall<GetAuthStatusRequest, GetAuthStatusResponse>;
-  getSelf: handleUnaryCall<GetSelfRequest, GetSelfResponse>;
-  /**
-   * The writes a signed-in person makes about their own credentials, and the
-   * two handles that are credentials in all but name. identity's UpdateProfile
-   * refuses both handles; these are where they change.
-   */
-  updatePassword: handleUnaryCall<UpdatePasswordRequest, UpdatePasswordResponse>;
-  refreshTotpSecret: handleUnaryCall<RefreshTOTPSecretRequest, RefreshTOTPSecretResponse>;
-  verifyTotpSecret: handleUnaryCall<VerifyTOTPSecretRequest, VerifyTOTPSecretResponse>;
-  updateEmailAddress: handleUnaryCall<UpdateEmailAddressRequest, UpdateEmailAddressResponse>;
-  updateUsername: handleUnaryCall<UpdateUsernameRequest, UpdateUsernameResponse>;
-}
-
-export interface SignInServiceClient extends Client {
-  /**
-   * Arriving, and the two ways a registration is finished. All three are
-   * anonymous. Register is the sign-up door, and it is open by default: the
-   * policy an open sign-up has in it -- who may register, which agreements
-   * they must accept, what standing and roles they start with -- is the
-   * deployment's registration policy, which the service runs on every
-   * registration before anything is hashed, minted or written, and the roles
-   * a registrant owns their account with are the deployment's, never the
-   * request's. A caller who is signed in still reaches it, and an operator
-   * provisioning users calls it that way. A deployment that does not want
-   * sign-up closes the door by name, and is then answered with
-   * UNIMPLEMENTED carrying REGISTRATION_CLOSED, so a client can tell a closed
-   * door from a broken one. Rate limiting it is the consumer's, in front of
-   * it, as it is for the sign-in doors. The other two carry their own
-   * authority, which is the token that was mailed to the person they are
-   * about.
-   */
-  register(
-    request: RegisterRequest,
-    callback: (error: ServiceError | null, response: RegisterResponse) => void,
-  ): ClientUnaryCall;
-  register(
-    request: RegisterRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RegisterResponse) => void,
-  ): ClientUnaryCall;
-  register(
-    request: RegisterRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RegisterResponse) => void,
-  ): ClientUnaryCall;
-  attachPassword(
-    request: AttachPasswordRequest,
-    callback: (error: ServiceError | null, response: AttachPasswordResponse) => void,
-  ): ClientUnaryCall;
-  attachPassword(
-    request: AttachPasswordRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: AttachPasswordResponse) => void,
-  ): ClientUnaryCall;
-  attachPassword(
-    request: AttachPasswordRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: AttachPasswordResponse) => void,
-  ): ClientUnaryCall;
-  verifyEmailAddress(
-    request: VerifyEmailAddressRequest,
-    callback: (error: ServiceError | null, response: VerifyEmailAddressResponse) => void,
-  ): ClientUnaryCall;
-  verifyEmailAddress(
-    request: VerifyEmailAddressRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: VerifyEmailAddressResponse) => void,
-  ): ClientUnaryCall;
-  verifyEmailAddress(
-    request: VerifyEmailAddressRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: VerifyEmailAddressResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * Asking for another verification link. The first requires a caller and
-   * names nobody, for somebody signed in whose address changed; the second is
-   * anonymous and names an address, for a registrant who cannot sign in until
-   * they answer one, and is answered the same way whoever holds it.
-   */
-  requestVerificationEmail(
-    request: RequestVerificationEmailRequest,
-    callback: (error: ServiceError | null, response: RequestVerificationEmailResponse) => void,
-  ): ClientUnaryCall;
-  requestVerificationEmail(
-    request: RequestVerificationEmailRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RequestVerificationEmailResponse) => void,
-  ): ClientUnaryCall;
-  requestVerificationEmail(
-    request: RequestVerificationEmailRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RequestVerificationEmailResponse) => void,
-  ): ClientUnaryCall;
-  requestVerificationEmailByAddress(
-    request: RequestVerificationEmailByAddressRequest,
-    callback: (error: ServiceError | null, response: RequestVerificationEmailByAddressResponse) => void,
-  ): ClientUnaryCall;
-  requestVerificationEmailByAddress(
-    request: RequestVerificationEmailByAddressRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RequestVerificationEmailByAddressResponse) => void,
-  ): ClientUnaryCall;
-  requestVerificationEmailByAddress(
-    request: RequestVerificationEmailByAddressRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RequestVerificationEmailByAddressResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * The passwordless door, both halves anonymous. Requesting a link names an
-   * address and is answered the same way whoever holds it; redeeming one carries
-   * the token that was mailed, which is the whole of its authority. Neither can
-   * name a user, so neither is a way to ask about one.
-   *
-   * Rate limiting is the consumer's, in front of RequestMagicLink, and it is not
-   * optional: it sends mail on request.
-   */
-  requestMagicLink(
-    request: RequestMagicLinkRequest,
-    callback: (error: ServiceError | null, response: RequestMagicLinkResponse) => void,
-  ): ClientUnaryCall;
-  requestMagicLink(
-    request: RequestMagicLinkRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RequestMagicLinkResponse) => void,
-  ): ClientUnaryCall;
-  requestMagicLink(
-    request: RequestMagicLinkRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RequestMagicLinkResponse) => void,
-  ): ClientUnaryCall;
-  redeemMagicLink(
-    request: RedeemMagicLinkRequest,
-    callback: (error: ServiceError | null, response: RedeemMagicLinkResponse) => void,
-  ): ClientUnaryCall;
-  redeemMagicLink(
-    request: RedeemMagicLinkRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RedeemMagicLinkResponse) => void,
-  ): ClientUnaryCall;
-  redeemMagicLink(
-    request: RedeemMagicLinkRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RedeemMagicLinkResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * The door for somebody who has forgotten what they sign in as. It is
-   * anonymous and answered the same way whoever holds the address, as
-   * RequestMagicLink is, and its rate limit is the consumer's for the same
-   * reason: it sends mail on request.
-   */
-  requestHandleReminder(
-    request: RequestHandleReminderRequest,
-    callback: (error: ServiceError | null, response: RequestHandleReminderResponse) => void,
-  ): ClientUnaryCall;
-  requestHandleReminder(
-    request: RequestHandleReminderRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RequestHandleReminderResponse) => void,
-  ): ClientUnaryCall;
-  requestHandleReminder(
-    request: RequestHandleReminderRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RequestHandleReminderResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * The two doors, the one that keeps a sign-in alive without reopening
-   * either of them, and the one that moves it to another of the person's
-   * accounts without reopening them either.
-   */
-  loginForToken(
-    request: LoginForTokenRequest,
-    callback: (error: ServiceError | null, response: LoginForTokenResponse) => void,
-  ): ClientUnaryCall;
-  loginForToken(
-    request: LoginForTokenRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: LoginForTokenResponse) => void,
-  ): ClientUnaryCall;
-  loginForToken(
-    request: LoginForTokenRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: LoginForTokenResponse) => void,
-  ): ClientUnaryCall;
-  adminLoginForToken(
-    request: AdminLoginForTokenRequest,
-    callback: (error: ServiceError | null, response: AdminLoginForTokenResponse) => void,
-  ): ClientUnaryCall;
-  adminLoginForToken(
-    request: AdminLoginForTokenRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: AdminLoginForTokenResponse) => void,
-  ): ClientUnaryCall;
-  adminLoginForToken(
-    request: AdminLoginForTokenRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: AdminLoginForTokenResponse) => void,
-  ): ClientUnaryCall;
-  exchangeRefreshToken(
-    request: ExchangeRefreshTokenRequest,
-    callback: (error: ServiceError | null, response: ExchangeRefreshTokenResponse) => void,
-  ): ClientUnaryCall;
-  exchangeRefreshToken(
-    request: ExchangeRefreshTokenRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ExchangeRefreshTokenResponse) => void,
-  ): ClientUnaryCall;
-  exchangeRefreshToken(
-    request: ExchangeRefreshTokenRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ExchangeRefreshTokenResponse) => void,
-  ): ClientUnaryCall;
-  switchAccount(
-    request: SwitchAccountRequest,
-    callback: (error: ServiceError | null, response: SwitchAccountResponse) => void,
-  ): ClientUnaryCall;
-  switchAccount(
-    request: SwitchAccountRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SwitchAccountResponse) => void,
-  ): ClientUnaryCall;
-  switchAccount(
-    request: SwitchAccountRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SwitchAccountResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * The way out, in its two sizes. Ending this login carries the credential and
-   * needs no caller, so an application whose access token expired while it was
-   * closed can still sign out; ending every login needs a caller and names
-   * nobody. Both are a client's to call and neither is an operator's tool --
-   * revoking somebody else's sessions is SignInAdministrationService's.
-   */
-  signOut(
-    request: SignOutRequest,
-    callback: (error: ServiceError | null, response: SignOutResponse) => void,
-  ): ClientUnaryCall;
-  signOut(
-    request: SignOutRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SignOutResponse) => void,
-  ): ClientUnaryCall;
-  signOut(
-    request: SignOutRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SignOutResponse) => void,
-  ): ClientUnaryCall;
-  signOutEverywhere(
-    request: SignOutEverywhereRequest,
-    callback: (error: ServiceError | null, response: SignOutEverywhereResponse) => void,
-  ): ClientUnaryCall;
-  signOutEverywhere(
-    request: SignOutEverywhereRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SignOutEverywhereResponse) => void,
-  ): ClientUnaryCall;
-  signOutEverywhere(
-    request: SignOutEverywhereRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SignOutEverywhereResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * The screen between those two sizes: the calling user's live logins, ending
-   * one of them by name, and ending all of them but the one asking. All three
-   * need a caller and name nobody else; an operator doing any of them for
-   * somebody else calls SignInAdministrationService.
-   */
-  listSignIns(
-    request: ListSignInsRequest,
-    callback: (error: ServiceError | null, response: ListSignInsResponse) => void,
-  ): ClientUnaryCall;
-  listSignIns(
-    request: ListSignInsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListSignInsResponse) => void,
-  ): ClientUnaryCall;
-  listSignIns(
-    request: ListSignInsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListSignInsResponse) => void,
-  ): ClientUnaryCall;
-  endSignIn(
-    request: EndSignInRequest,
-    callback: (error: ServiceError | null, response: EndSignInResponse) => void,
-  ): ClientUnaryCall;
-  endSignIn(
-    request: EndSignInRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: EndSignInResponse) => void,
-  ): ClientUnaryCall;
-  endSignIn(
-    request: EndSignInRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: EndSignInResponse) => void,
-  ): ClientUnaryCall;
-  endOtherSignIns(
-    request: EndOtherSignInsRequest,
-    callback: (error: ServiceError | null, response: EndOtherSignInsResponse) => void,
-  ): ClientUnaryCall;
-  endOtherSignIns(
-    request: EndOtherSignInsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: EndOtherSignInsResponse) => void,
-  ): ClientUnaryCall;
-  endOtherSignIns(
-    request: EndOtherSignInsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: EndOtherSignInsResponse) => void,
-  ): ClientUnaryCall;
-  /** The two reads a client makes on load. */
-  getAuthStatus(
-    request: GetAuthStatusRequest,
-    callback: (error: ServiceError | null, response: GetAuthStatusResponse) => void,
-  ): ClientUnaryCall;
-  getAuthStatus(
-    request: GetAuthStatusRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetAuthStatusResponse) => void,
-  ): ClientUnaryCall;
-  getAuthStatus(
-    request: GetAuthStatusRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetAuthStatusResponse) => void,
-  ): ClientUnaryCall;
-  getSelf(
-    request: GetSelfRequest,
-    callback: (error: ServiceError | null, response: GetSelfResponse) => void,
-  ): ClientUnaryCall;
-  getSelf(
-    request: GetSelfRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetSelfResponse) => void,
-  ): ClientUnaryCall;
-  getSelf(
-    request: GetSelfRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetSelfResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * The writes a signed-in person makes about their own credentials, and the
-   * two handles that are credentials in all but name. identity's UpdateProfile
-   * refuses both handles; these are where they change.
-   */
-  updatePassword(
-    request: UpdatePasswordRequest,
-    callback: (error: ServiceError | null, response: UpdatePasswordResponse) => void,
-  ): ClientUnaryCall;
-  updatePassword(
-    request: UpdatePasswordRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdatePasswordResponse) => void,
-  ): ClientUnaryCall;
-  updatePassword(
-    request: UpdatePasswordRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdatePasswordResponse) => void,
-  ): ClientUnaryCall;
-  refreshTotpSecret(
-    request: RefreshTOTPSecretRequest,
-    callback: (error: ServiceError | null, response: RefreshTOTPSecretResponse) => void,
-  ): ClientUnaryCall;
-  refreshTotpSecret(
-    request: RefreshTOTPSecretRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RefreshTOTPSecretResponse) => void,
-  ): ClientUnaryCall;
-  refreshTotpSecret(
-    request: RefreshTOTPSecretRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RefreshTOTPSecretResponse) => void,
-  ): ClientUnaryCall;
-  verifyTotpSecret(
-    request: VerifyTOTPSecretRequest,
-    callback: (error: ServiceError | null, response: VerifyTOTPSecretResponse) => void,
-  ): ClientUnaryCall;
-  verifyTotpSecret(
-    request: VerifyTOTPSecretRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: VerifyTOTPSecretResponse) => void,
-  ): ClientUnaryCall;
-  verifyTotpSecret(
-    request: VerifyTOTPSecretRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: VerifyTOTPSecretResponse) => void,
-  ): ClientUnaryCall;
-  updateEmailAddress(
-    request: UpdateEmailAddressRequest,
-    callback: (error: ServiceError | null, response: UpdateEmailAddressResponse) => void,
-  ): ClientUnaryCall;
-  updateEmailAddress(
-    request: UpdateEmailAddressRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateEmailAddressResponse) => void,
-  ): ClientUnaryCall;
-  updateEmailAddress(
-    request: UpdateEmailAddressRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateEmailAddressResponse) => void,
-  ): ClientUnaryCall;
-  updateUsername(
-    request: UpdateUsernameRequest,
-    callback: (error: ServiceError | null, response: UpdateUsernameResponse) => void,
-  ): ClientUnaryCall;
-  updateUsername(
-    request: UpdateUsernameRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateUsernameResponse) => void,
-  ): ClientUnaryCall;
-  updateUsername(
-    request: UpdateUsernameRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateUsernameResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const SignInServiceClient = makeGenericClientConstructor(
-  SignInServiceService,
-  'primandproper.platform.signin.v1.SignInService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): SignInServiceClient;
-  service: typeof SignInServiceService;
-  serviceName: string;
-};
 
 /**
  * SignInAdministrationService is what an operator does to somebody else's
@@ -6500,109 +5903,37 @@ export const SignInServiceClient = makeGenericClientConstructor(
  * login's access tokens being replaced rather than stopping the one already
  * issued, unless the deployment checks each token's login on every request.
  */
-export type SignInAdministrationServiceService = typeof SignInAdministrationServiceService;
-export const SignInAdministrationServiceService = {
-  listSignInsForUser: {
-    path: '/primandproper.platform.signin.v1.SignInAdministrationService/ListSignInsForUser' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListSignInsForUserRequest): Buffer =>
-      Buffer.from(ListSignInsForUserRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListSignInsForUserRequest => ListSignInsForUserRequest.decode(value),
-    responseSerialize: (value: ListSignInsForUserResponse): Buffer =>
-      Buffer.from(ListSignInsForUserResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListSignInsForUserResponse => ListSignInsForUserResponse.decode(value),
-  },
-  endSignInForUser: {
-    path: '/primandproper.platform.signin.v1.SignInAdministrationService/EndSignInForUser' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: EndSignInForUserRequest): Buffer =>
-      Buffer.from(EndSignInForUserRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): EndSignInForUserRequest => EndSignInForUserRequest.decode(value),
-    responseSerialize: (value: EndSignInForUserResponse): Buffer =>
-      Buffer.from(EndSignInForUserResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): EndSignInForUserResponse => EndSignInForUserResponse.decode(value),
-  },
-  endAllSignInsForUser: {
-    path: '/primandproper.platform.signin.v1.SignInAdministrationService/EndAllSignInsForUser' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: EndAllSignInsForUserRequest): Buffer =>
-      Buffer.from(EndAllSignInsForUserRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): EndAllSignInsForUserRequest => EndAllSignInsForUserRequest.decode(value),
-    responseSerialize: (value: EndAllSignInsForUserResponse): Buffer =>
-      Buffer.from(EndAllSignInsForUserResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): EndAllSignInsForUserResponse => EndAllSignInsForUserResponse.decode(value),
+export type SignInAdministrationServiceDefinition = typeof SignInAdministrationServiceDefinition;
+export const SignInAdministrationServiceDefinition = {
+  name: 'SignInAdministrationService',
+  fullName: 'primandproper.platform.signin.v1.SignInAdministrationService',
+  methods: {
+    listSignInsForUser: {
+      name: 'ListSignInsForUser',
+      requestType: ListSignInsForUserRequest as typeof ListSignInsForUserRequest,
+      requestStream: false,
+      responseType: ListSignInsForUserResponse as typeof ListSignInsForUserResponse,
+      responseStream: false,
+      options: {},
+    },
+    endSignInForUser: {
+      name: 'EndSignInForUser',
+      requestType: EndSignInForUserRequest as typeof EndSignInForUserRequest,
+      requestStream: false,
+      responseType: EndSignInForUserResponse as typeof EndSignInForUserResponse,
+      responseStream: false,
+      options: {},
+    },
+    endAllSignInsForUser: {
+      name: 'EndAllSignInsForUser',
+      requestType: EndAllSignInsForUserRequest as typeof EndAllSignInsForUserRequest,
+      requestStream: false,
+      responseType: EndAllSignInsForUserResponse as typeof EndAllSignInsForUserResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface SignInAdministrationServiceServer extends UntypedServiceImplementation {
-  listSignInsForUser: handleUnaryCall<ListSignInsForUserRequest, ListSignInsForUserResponse>;
-  endSignInForUser: handleUnaryCall<EndSignInForUserRequest, EndSignInForUserResponse>;
-  endAllSignInsForUser: handleUnaryCall<EndAllSignInsForUserRequest, EndAllSignInsForUserResponse>;
-}
-
-export interface SignInAdministrationServiceClient extends Client {
-  listSignInsForUser(
-    request: ListSignInsForUserRequest,
-    callback: (error: ServiceError | null, response: ListSignInsForUserResponse) => void,
-  ): ClientUnaryCall;
-  listSignInsForUser(
-    request: ListSignInsForUserRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListSignInsForUserResponse) => void,
-  ): ClientUnaryCall;
-  listSignInsForUser(
-    request: ListSignInsForUserRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListSignInsForUserResponse) => void,
-  ): ClientUnaryCall;
-  endSignInForUser(
-    request: EndSignInForUserRequest,
-    callback: (error: ServiceError | null, response: EndSignInForUserResponse) => void,
-  ): ClientUnaryCall;
-  endSignInForUser(
-    request: EndSignInForUserRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: EndSignInForUserResponse) => void,
-  ): ClientUnaryCall;
-  endSignInForUser(
-    request: EndSignInForUserRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: EndSignInForUserResponse) => void,
-  ): ClientUnaryCall;
-  endAllSignInsForUser(
-    request: EndAllSignInsForUserRequest,
-    callback: (error: ServiceError | null, response: EndAllSignInsForUserResponse) => void,
-  ): ClientUnaryCall;
-  endAllSignInsForUser(
-    request: EndAllSignInsForUserRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: EndAllSignInsForUserResponse) => void,
-  ): ClientUnaryCall;
-  endAllSignInsForUser(
-    request: EndAllSignInsForUserRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: EndAllSignInsForUserResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const SignInAdministrationServiceClient = makeGenericClientConstructor(
-  SignInAdministrationServiceService,
-  'primandproper.platform.signin.v1.SignInAdministrationService',
-) as unknown as {
-  new (
-    address: string,
-    credentials: ChannelCredentials,
-    options?: Partial<ClientOptions>,
-  ): SignInAdministrationServiceClient;
-  service: typeof SignInAdministrationServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

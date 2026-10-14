@@ -6,20 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type ClientWritableStream,
-  type handleClientStreamingCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
 
@@ -1582,220 +1568,73 @@ export const ArchiveObjectResponse: MessageFns<ArchiveObjectResponse> = {
  * platform grants none of them to anybody. The tenant is not among any method's
  * arguments.
  */
-export type MediaRegistryServiceService = typeof MediaRegistryServiceService;
-export const MediaRegistryServiceService = {
-  /**
-   * UploadObject streams an object into the bucket and registers it. The first
-   * message is the header; every one after it is a chunk.
-   */
-  uploadObject: {
-    path: '/primandproper.platform.mediaregistry.v1.MediaRegistryService/UploadObject' as const,
-    requestStream: true as const,
-    responseStream: false as const,
-    requestSerialize: (value: UploadObjectRequest): Buffer => Buffer.from(UploadObjectRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UploadObjectRequest => UploadObjectRequest.decode(value),
-    responseSerialize: (value: UploadObjectResponse): Buffer =>
-      Buffer.from(UploadObjectResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UploadObjectResponse => UploadObjectResponse.decode(value),
-  },
-  recordObject: {
-    path: '/primandproper.platform.mediaregistry.v1.MediaRegistryService/RecordObject' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RecordObjectRequest): Buffer => Buffer.from(RecordObjectRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RecordObjectRequest => RecordObjectRequest.decode(value),
-    responseSerialize: (value: RecordObjectResponse): Buffer =>
-      Buffer.from(RecordObjectResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RecordObjectResponse => RecordObjectResponse.decode(value),
-  },
-  getObject: {
-    path: '/primandproper.platform.mediaregistry.v1.MediaRegistryService/GetObject' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetObjectRequest): Buffer => Buffer.from(GetObjectRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetObjectRequest => GetObjectRequest.decode(value),
-    responseSerialize: (value: GetObjectResponse): Buffer => Buffer.from(GetObjectResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetObjectResponse => GetObjectResponse.decode(value),
-  },
-  listObjectsByIDs: {
-    path: '/primandproper.platform.mediaregistry.v1.MediaRegistryService/ListObjectsByIDs' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListObjectsByIDsRequest): Buffer =>
-      Buffer.from(ListObjectsByIDsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListObjectsByIDsRequest => ListObjectsByIDsRequest.decode(value),
-    responseSerialize: (value: ListObjectsByIDsResponse): Buffer =>
-      Buffer.from(ListObjectsByIDsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListObjectsByIDsResponse => ListObjectsByIDsResponse.decode(value),
-  },
-  listMyObjects: {
-    path: '/primandproper.platform.mediaregistry.v1.MediaRegistryService/ListMyObjects' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListMyObjectsRequest): Buffer => Buffer.from(ListMyObjectsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListMyObjectsRequest => ListMyObjectsRequest.decode(value),
-    responseSerialize: (value: ListMyObjectsResponse): Buffer =>
-      Buffer.from(ListMyObjectsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListMyObjectsResponse => ListMyObjectsResponse.decode(value),
-  },
-  listObjectsBySubject: {
-    path: '/primandproper.platform.mediaregistry.v1.MediaRegistryService/ListObjectsBySubject' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListObjectsBySubjectRequest): Buffer =>
-      Buffer.from(ListObjectsBySubjectRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListObjectsBySubjectRequest => ListObjectsBySubjectRequest.decode(value),
-    responseSerialize: (value: ListObjectsBySubjectResponse): Buffer =>
-      Buffer.from(ListObjectsBySubjectResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListObjectsBySubjectResponse => ListObjectsBySubjectResponse.decode(value),
-  },
-  archiveObject: {
-    path: '/primandproper.platform.mediaregistry.v1.MediaRegistryService/ArchiveObject' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveObjectRequest): Buffer => Buffer.from(ArchiveObjectRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveObjectRequest => ArchiveObjectRequest.decode(value),
-    responseSerialize: (value: ArchiveObjectResponse): Buffer =>
-      Buffer.from(ArchiveObjectResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveObjectResponse => ArchiveObjectResponse.decode(value),
+export type MediaRegistryServiceDefinition = typeof MediaRegistryServiceDefinition;
+export const MediaRegistryServiceDefinition = {
+  name: 'MediaRegistryService',
+  fullName: 'primandproper.platform.mediaregistry.v1.MediaRegistryService',
+  methods: {
+    /**
+     * UploadObject streams an object into the bucket and registers it. The first
+     * message is the header; every one after it is a chunk.
+     */
+    uploadObject: {
+      name: 'UploadObject',
+      requestType: UploadObjectRequest as typeof UploadObjectRequest,
+      requestStream: true,
+      responseType: UploadObjectResponse as typeof UploadObjectResponse,
+      responseStream: false,
+      options: {},
+    },
+    recordObject: {
+      name: 'RecordObject',
+      requestType: RecordObjectRequest as typeof RecordObjectRequest,
+      requestStream: false,
+      responseType: RecordObjectResponse as typeof RecordObjectResponse,
+      responseStream: false,
+      options: {},
+    },
+    getObject: {
+      name: 'GetObject',
+      requestType: GetObjectRequest as typeof GetObjectRequest,
+      requestStream: false,
+      responseType: GetObjectResponse as typeof GetObjectResponse,
+      responseStream: false,
+      options: {},
+    },
+    listObjectsByIDs: {
+      name: 'ListObjectsByIDs',
+      requestType: ListObjectsByIDsRequest as typeof ListObjectsByIDsRequest,
+      requestStream: false,
+      responseType: ListObjectsByIDsResponse as typeof ListObjectsByIDsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listMyObjects: {
+      name: 'ListMyObjects',
+      requestType: ListMyObjectsRequest as typeof ListMyObjectsRequest,
+      requestStream: false,
+      responseType: ListMyObjectsResponse as typeof ListMyObjectsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listObjectsBySubject: {
+      name: 'ListObjectsBySubject',
+      requestType: ListObjectsBySubjectRequest as typeof ListObjectsBySubjectRequest,
+      requestStream: false,
+      responseType: ListObjectsBySubjectResponse as typeof ListObjectsBySubjectResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveObject: {
+      name: 'ArchiveObject',
+      requestType: ArchiveObjectRequest as typeof ArchiveObjectRequest,
+      requestStream: false,
+      responseType: ArchiveObjectResponse as typeof ArchiveObjectResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface MediaRegistryServiceServer extends UntypedServiceImplementation {
-  /**
-   * UploadObject streams an object into the bucket and registers it. The first
-   * message is the header; every one after it is a chunk.
-   */
-  uploadObject: handleClientStreamingCall<UploadObjectRequest, UploadObjectResponse>;
-  recordObject: handleUnaryCall<RecordObjectRequest, RecordObjectResponse>;
-  getObject: handleUnaryCall<GetObjectRequest, GetObjectResponse>;
-  listObjectsByIDs: handleUnaryCall<ListObjectsByIDsRequest, ListObjectsByIDsResponse>;
-  listMyObjects: handleUnaryCall<ListMyObjectsRequest, ListMyObjectsResponse>;
-  listObjectsBySubject: handleUnaryCall<ListObjectsBySubjectRequest, ListObjectsBySubjectResponse>;
-  archiveObject: handleUnaryCall<ArchiveObjectRequest, ArchiveObjectResponse>;
-}
-
-export interface MediaRegistryServiceClient extends Client {
-  /**
-   * UploadObject streams an object into the bucket and registers it. The first
-   * message is the header; every one after it is a chunk.
-   */
-  uploadObject(
-    callback: (error: ServiceError | null, response: UploadObjectResponse) => void,
-  ): ClientWritableStream<UploadObjectRequest>;
-  uploadObject(
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UploadObjectResponse) => void,
-  ): ClientWritableStream<UploadObjectRequest>;
-  uploadObject(
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UploadObjectResponse) => void,
-  ): ClientWritableStream<UploadObjectRequest>;
-  uploadObject(
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UploadObjectResponse) => void,
-  ): ClientWritableStream<UploadObjectRequest>;
-  recordObject(
-    request: RecordObjectRequest,
-    callback: (error: ServiceError | null, response: RecordObjectResponse) => void,
-  ): ClientUnaryCall;
-  recordObject(
-    request: RecordObjectRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RecordObjectResponse) => void,
-  ): ClientUnaryCall;
-  recordObject(
-    request: RecordObjectRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RecordObjectResponse) => void,
-  ): ClientUnaryCall;
-  getObject(
-    request: GetObjectRequest,
-    callback: (error: ServiceError | null, response: GetObjectResponse) => void,
-  ): ClientUnaryCall;
-  getObject(
-    request: GetObjectRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetObjectResponse) => void,
-  ): ClientUnaryCall;
-  getObject(
-    request: GetObjectRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetObjectResponse) => void,
-  ): ClientUnaryCall;
-  listObjectsByIDs(
-    request: ListObjectsByIDsRequest,
-    callback: (error: ServiceError | null, response: ListObjectsByIDsResponse) => void,
-  ): ClientUnaryCall;
-  listObjectsByIDs(
-    request: ListObjectsByIDsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListObjectsByIDsResponse) => void,
-  ): ClientUnaryCall;
-  listObjectsByIDs(
-    request: ListObjectsByIDsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListObjectsByIDsResponse) => void,
-  ): ClientUnaryCall;
-  listMyObjects(
-    request: ListMyObjectsRequest,
-    callback: (error: ServiceError | null, response: ListMyObjectsResponse) => void,
-  ): ClientUnaryCall;
-  listMyObjects(
-    request: ListMyObjectsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListMyObjectsResponse) => void,
-  ): ClientUnaryCall;
-  listMyObjects(
-    request: ListMyObjectsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListMyObjectsResponse) => void,
-  ): ClientUnaryCall;
-  listObjectsBySubject(
-    request: ListObjectsBySubjectRequest,
-    callback: (error: ServiceError | null, response: ListObjectsBySubjectResponse) => void,
-  ): ClientUnaryCall;
-  listObjectsBySubject(
-    request: ListObjectsBySubjectRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListObjectsBySubjectResponse) => void,
-  ): ClientUnaryCall;
-  listObjectsBySubject(
-    request: ListObjectsBySubjectRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListObjectsBySubjectResponse) => void,
-  ): ClientUnaryCall;
-  archiveObject(
-    request: ArchiveObjectRequest,
-    callback: (error: ServiceError | null, response: ArchiveObjectResponse) => void,
-  ): ClientUnaryCall;
-  archiveObject(
-    request: ArchiveObjectRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveObjectResponse) => void,
-  ): ClientUnaryCall;
-  archiveObject(
-    request: ArchiveObjectRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveObjectResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const MediaRegistryServiceClient = makeGenericClientConstructor(
-  MediaRegistryServiceService,
-  'primandproper.platform.mediaregistry.v1.MediaRegistryService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): MediaRegistryServiceClient;
-  service: typeof MediaRegistryServiceService;
-  serviceName: string;
-};
 
 function bytesFromBase64(b64: string): Uint8Array {
   if ((globalThis as any).Buffer) {

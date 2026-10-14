@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
 
@@ -3747,532 +3735,173 @@ export const ArchiveSignupResponse: MessageFns<ArchiveSignupResponse> = {
  * that answers "is this address on this list" at all, now that the public Join
  * does not.
  */
-export type WaitlistsServiceService = typeof WaitlistsServiceService;
-export const WaitlistsServiceService = {
-  /**
-   * The catalog: what lists exist, what they are for, and when each stops
-   * taking signups. ListOpenLists is the public one.
-   */
-  createList: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/CreateList' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: CreateListRequest): Buffer => Buffer.from(CreateListRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): CreateListRequest => CreateListRequest.decode(value),
-    responseSerialize: (value: CreateListResponse): Buffer => Buffer.from(CreateListResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): CreateListResponse => CreateListResponse.decode(value),
-  },
-  getList: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/GetList' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetListRequest): Buffer => Buffer.from(GetListRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetListRequest => GetListRequest.decode(value),
-    responseSerialize: (value: GetListResponse): Buffer => Buffer.from(GetListResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetListResponse => GetListResponse.decode(value),
-  },
-  listLists: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/ListLists' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListListsRequest): Buffer => Buffer.from(ListListsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListListsRequest => ListListsRequest.decode(value),
-    responseSerialize: (value: ListListsResponse): Buffer => Buffer.from(ListListsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListListsResponse => ListListsResponse.decode(value),
-  },
-  listOpenLists: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/ListOpenLists' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListOpenListsRequest): Buffer => Buffer.from(ListOpenListsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListOpenListsRequest => ListOpenListsRequest.decode(value),
-    responseSerialize: (value: ListOpenListsResponse): Buffer =>
-      Buffer.from(ListOpenListsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListOpenListsResponse => ListOpenListsResponse.decode(value),
-  },
-  updateList: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/UpdateList' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateListRequest): Buffer => Buffer.from(UpdateListRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateListRequest => UpdateListRequest.decode(value),
-    responseSerialize: (value: UpdateListResponse): Buffer => Buffer.from(UpdateListResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateListResponse => UpdateListResponse.decode(value),
-  },
-  archiveList: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/ArchiveList' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveListRequest): Buffer => Buffer.from(ArchiveListRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveListRequest => ArchiveListRequest.decode(value),
-    responseSerialize: (value: ArchiveListResponse): Buffer => Buffer.from(ArchiveListResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveListResponse => ArchiveListResponse.decode(value),
-  },
-  /**
-   * The queue. Join, Confirm, Withdraw and Unsubscribe are the person's own;
-   * the rest are the operator's.
-   */
-  join: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/Join' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: JoinRequest): Buffer => Buffer.from(JoinRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): JoinRequest => JoinRequest.decode(value),
-    responseSerialize: (value: JoinResponse): Buffer => Buffer.from(JoinResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): JoinResponse => JoinResponse.decode(value),
-  },
-  confirm: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/Confirm' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ConfirmRequest): Buffer => Buffer.from(ConfirmRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ConfirmRequest => ConfirmRequest.decode(value),
-    responseSerialize: (value: ConfirmResponse): Buffer => Buffer.from(ConfirmResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ConfirmResponse => ConfirmResponse.decode(value),
-  },
-  getSignup: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/GetSignup' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetSignupRequest): Buffer => Buffer.from(GetSignupRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetSignupRequest => GetSignupRequest.decode(value),
-    responseSerialize: (value: GetSignupResponse): Buffer => Buffer.from(GetSignupResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetSignupResponse => GetSignupResponse.decode(value),
-  },
-  getSignupByContact: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/GetSignupByContact' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetSignupByContactRequest): Buffer =>
-      Buffer.from(GetSignupByContactRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetSignupByContactRequest => GetSignupByContactRequest.decode(value),
-    responseSerialize: (value: GetSignupByContactResponse): Buffer =>
-      Buffer.from(GetSignupByContactResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetSignupByContactResponse => GetSignupByContactResponse.decode(value),
-  },
-  listSignups: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/ListSignups' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListSignupsRequest): Buffer => Buffer.from(ListSignupsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListSignupsRequest => ListSignupsRequest.decode(value),
-    responseSerialize: (value: ListSignupsResponse): Buffer => Buffer.from(ListSignupsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListSignupsResponse => ListSignupsResponse.decode(value),
-  },
-  listSignupsForSubject: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/ListSignupsForSubject' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListSignupsForSubjectRequest): Buffer =>
-      Buffer.from(ListSignupsForSubjectRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListSignupsForSubjectRequest => ListSignupsForSubjectRequest.decode(value),
-    responseSerialize: (value: ListSignupsForSubjectResponse): Buffer =>
-      Buffer.from(ListSignupsForSubjectResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListSignupsForSubjectResponse => ListSignupsForSubjectResponse.decode(value),
-  },
-  updateSignupNotes: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/UpdateSignupNotes' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateSignupNotesRequest): Buffer =>
-      Buffer.from(UpdateSignupNotesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateSignupNotesRequest => UpdateSignupNotesRequest.decode(value),
-    responseSerialize: (value: UpdateSignupNotesResponse): Buffer =>
-      Buffer.from(UpdateSignupNotesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateSignupNotesResponse => UpdateSignupNotesResponse.decode(value),
-  },
-  invite: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/Invite' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: InviteRequest): Buffer => Buffer.from(InviteRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): InviteRequest => InviteRequest.decode(value),
-    responseSerialize: (value: InviteResponse): Buffer => Buffer.from(InviteResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): InviteResponse => InviteResponse.decode(value),
-  },
-  convert: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/Convert' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ConvertRequest): Buffer => Buffer.from(ConvertRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ConvertRequest => ConvertRequest.decode(value),
-    responseSerialize: (value: ConvertResponse): Buffer => Buffer.from(ConvertResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ConvertResponse => ConvertResponse.decode(value),
-  },
-  withdraw: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/Withdraw' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: WithdrawRequest): Buffer => Buffer.from(WithdrawRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): WithdrawRequest => WithdrawRequest.decode(value),
-    responseSerialize: (value: WithdrawResponse): Buffer => Buffer.from(WithdrawResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): WithdrawResponse => WithdrawResponse.decode(value),
-  },
-  unsubscribe: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/Unsubscribe' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UnsubscribeRequest): Buffer => Buffer.from(UnsubscribeRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UnsubscribeRequest => UnsubscribeRequest.decode(value),
-    responseSerialize: (value: UnsubscribeResponse): Buffer => Buffer.from(UnsubscribeResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UnsubscribeResponse => UnsubscribeResponse.decode(value),
-  },
-  withdrawSignupsForSubject: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/WithdrawSignupsForSubject' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: WithdrawSignupsForSubjectRequest): Buffer =>
-      Buffer.from(WithdrawSignupsForSubjectRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): WithdrawSignupsForSubjectRequest =>
-      WithdrawSignupsForSubjectRequest.decode(value),
-    responseSerialize: (value: WithdrawSignupsForSubjectResponse): Buffer =>
-      Buffer.from(WithdrawSignupsForSubjectResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): WithdrawSignupsForSubjectResponse =>
-      WithdrawSignupsForSubjectResponse.decode(value),
-  },
-  archiveSignup: {
-    path: '/primandproper.platform.waitlists.v1.WaitlistsService/ArchiveSignup' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveSignupRequest): Buffer => Buffer.from(ArchiveSignupRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveSignupRequest => ArchiveSignupRequest.decode(value),
-    responseSerialize: (value: ArchiveSignupResponse): Buffer =>
-      Buffer.from(ArchiveSignupResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveSignupResponse => ArchiveSignupResponse.decode(value),
+export type WaitlistsServiceDefinition = typeof WaitlistsServiceDefinition;
+export const WaitlistsServiceDefinition = {
+  name: 'WaitlistsService',
+  fullName: 'primandproper.platform.waitlists.v1.WaitlistsService',
+  methods: {
+    /**
+     * The catalog: what lists exist, what they are for, and when each stops
+     * taking signups. ListOpenLists is the public one.
+     */
+    createList: {
+      name: 'CreateList',
+      requestType: CreateListRequest as typeof CreateListRequest,
+      requestStream: false,
+      responseType: CreateListResponse as typeof CreateListResponse,
+      responseStream: false,
+      options: {},
+    },
+    getList: {
+      name: 'GetList',
+      requestType: GetListRequest as typeof GetListRequest,
+      requestStream: false,
+      responseType: GetListResponse as typeof GetListResponse,
+      responseStream: false,
+      options: {},
+    },
+    listLists: {
+      name: 'ListLists',
+      requestType: ListListsRequest as typeof ListListsRequest,
+      requestStream: false,
+      responseType: ListListsResponse as typeof ListListsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listOpenLists: {
+      name: 'ListOpenLists',
+      requestType: ListOpenListsRequest as typeof ListOpenListsRequest,
+      requestStream: false,
+      responseType: ListOpenListsResponse as typeof ListOpenListsResponse,
+      responseStream: false,
+      options: {},
+    },
+    updateList: {
+      name: 'UpdateList',
+      requestType: UpdateListRequest as typeof UpdateListRequest,
+      requestStream: false,
+      responseType: UpdateListResponse as typeof UpdateListResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveList: {
+      name: 'ArchiveList',
+      requestType: ArchiveListRequest as typeof ArchiveListRequest,
+      requestStream: false,
+      responseType: ArchiveListResponse as typeof ArchiveListResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * The queue. Join, Confirm, Withdraw and Unsubscribe are the person's own;
+     * the rest are the operator's.
+     */
+    join: {
+      name: 'Join',
+      requestType: JoinRequest as typeof JoinRequest,
+      requestStream: false,
+      responseType: JoinResponse as typeof JoinResponse,
+      responseStream: false,
+      options: {},
+    },
+    confirm: {
+      name: 'Confirm',
+      requestType: ConfirmRequest as typeof ConfirmRequest,
+      requestStream: false,
+      responseType: ConfirmResponse as typeof ConfirmResponse,
+      responseStream: false,
+      options: {},
+    },
+    getSignup: {
+      name: 'GetSignup',
+      requestType: GetSignupRequest as typeof GetSignupRequest,
+      requestStream: false,
+      responseType: GetSignupResponse as typeof GetSignupResponse,
+      responseStream: false,
+      options: {},
+    },
+    getSignupByContact: {
+      name: 'GetSignupByContact',
+      requestType: GetSignupByContactRequest as typeof GetSignupByContactRequest,
+      requestStream: false,
+      responseType: GetSignupByContactResponse as typeof GetSignupByContactResponse,
+      responseStream: false,
+      options: {},
+    },
+    listSignups: {
+      name: 'ListSignups',
+      requestType: ListSignupsRequest as typeof ListSignupsRequest,
+      requestStream: false,
+      responseType: ListSignupsResponse as typeof ListSignupsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listSignupsForSubject: {
+      name: 'ListSignupsForSubject',
+      requestType: ListSignupsForSubjectRequest as typeof ListSignupsForSubjectRequest,
+      requestStream: false,
+      responseType: ListSignupsForSubjectResponse as typeof ListSignupsForSubjectResponse,
+      responseStream: false,
+      options: {},
+    },
+    updateSignupNotes: {
+      name: 'UpdateSignupNotes',
+      requestType: UpdateSignupNotesRequest as typeof UpdateSignupNotesRequest,
+      requestStream: false,
+      responseType: UpdateSignupNotesResponse as typeof UpdateSignupNotesResponse,
+      responseStream: false,
+      options: {},
+    },
+    invite: {
+      name: 'Invite',
+      requestType: InviteRequest as typeof InviteRequest,
+      requestStream: false,
+      responseType: InviteResponse as typeof InviteResponse,
+      responseStream: false,
+      options: {},
+    },
+    convert: {
+      name: 'Convert',
+      requestType: ConvertRequest as typeof ConvertRequest,
+      requestStream: false,
+      responseType: ConvertResponse as typeof ConvertResponse,
+      responseStream: false,
+      options: {},
+    },
+    withdraw: {
+      name: 'Withdraw',
+      requestType: WithdrawRequest as typeof WithdrawRequest,
+      requestStream: false,
+      responseType: WithdrawResponse as typeof WithdrawResponse,
+      responseStream: false,
+      options: {},
+    },
+    unsubscribe: {
+      name: 'Unsubscribe',
+      requestType: UnsubscribeRequest as typeof UnsubscribeRequest,
+      requestStream: false,
+      responseType: UnsubscribeResponse as typeof UnsubscribeResponse,
+      responseStream: false,
+      options: {},
+    },
+    withdrawSignupsForSubject: {
+      name: 'WithdrawSignupsForSubject',
+      requestType: WithdrawSignupsForSubjectRequest as typeof WithdrawSignupsForSubjectRequest,
+      requestStream: false,
+      responseType: WithdrawSignupsForSubjectResponse as typeof WithdrawSignupsForSubjectResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveSignup: {
+      name: 'ArchiveSignup',
+      requestType: ArchiveSignupRequest as typeof ArchiveSignupRequest,
+      requestStream: false,
+      responseType: ArchiveSignupResponse as typeof ArchiveSignupResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface WaitlistsServiceServer extends UntypedServiceImplementation {
-  /**
-   * The catalog: what lists exist, what they are for, and when each stops
-   * taking signups. ListOpenLists is the public one.
-   */
-  createList: handleUnaryCall<CreateListRequest, CreateListResponse>;
-  getList: handleUnaryCall<GetListRequest, GetListResponse>;
-  listLists: handleUnaryCall<ListListsRequest, ListListsResponse>;
-  listOpenLists: handleUnaryCall<ListOpenListsRequest, ListOpenListsResponse>;
-  updateList: handleUnaryCall<UpdateListRequest, UpdateListResponse>;
-  archiveList: handleUnaryCall<ArchiveListRequest, ArchiveListResponse>;
-  /**
-   * The queue. Join, Confirm, Withdraw and Unsubscribe are the person's own;
-   * the rest are the operator's.
-   */
-  join: handleUnaryCall<JoinRequest, JoinResponse>;
-  confirm: handleUnaryCall<ConfirmRequest, ConfirmResponse>;
-  getSignup: handleUnaryCall<GetSignupRequest, GetSignupResponse>;
-  getSignupByContact: handleUnaryCall<GetSignupByContactRequest, GetSignupByContactResponse>;
-  listSignups: handleUnaryCall<ListSignupsRequest, ListSignupsResponse>;
-  listSignupsForSubject: handleUnaryCall<ListSignupsForSubjectRequest, ListSignupsForSubjectResponse>;
-  updateSignupNotes: handleUnaryCall<UpdateSignupNotesRequest, UpdateSignupNotesResponse>;
-  invite: handleUnaryCall<InviteRequest, InviteResponse>;
-  convert: handleUnaryCall<ConvertRequest, ConvertResponse>;
-  withdraw: handleUnaryCall<WithdrawRequest, WithdrawResponse>;
-  unsubscribe: handleUnaryCall<UnsubscribeRequest, UnsubscribeResponse>;
-  withdrawSignupsForSubject: handleUnaryCall<WithdrawSignupsForSubjectRequest, WithdrawSignupsForSubjectResponse>;
-  archiveSignup: handleUnaryCall<ArchiveSignupRequest, ArchiveSignupResponse>;
-}
-
-export interface WaitlistsServiceClient extends Client {
-  /**
-   * The catalog: what lists exist, what they are for, and when each stops
-   * taking signups. ListOpenLists is the public one.
-   */
-  createList(
-    request: CreateListRequest,
-    callback: (error: ServiceError | null, response: CreateListResponse) => void,
-  ): ClientUnaryCall;
-  createList(
-    request: CreateListRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: CreateListResponse) => void,
-  ): ClientUnaryCall;
-  createList(
-    request: CreateListRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: CreateListResponse) => void,
-  ): ClientUnaryCall;
-  getList(
-    request: GetListRequest,
-    callback: (error: ServiceError | null, response: GetListResponse) => void,
-  ): ClientUnaryCall;
-  getList(
-    request: GetListRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetListResponse) => void,
-  ): ClientUnaryCall;
-  getList(
-    request: GetListRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetListResponse) => void,
-  ): ClientUnaryCall;
-  listLists(
-    request: ListListsRequest,
-    callback: (error: ServiceError | null, response: ListListsResponse) => void,
-  ): ClientUnaryCall;
-  listLists(
-    request: ListListsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListListsResponse) => void,
-  ): ClientUnaryCall;
-  listLists(
-    request: ListListsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListListsResponse) => void,
-  ): ClientUnaryCall;
-  listOpenLists(
-    request: ListOpenListsRequest,
-    callback: (error: ServiceError | null, response: ListOpenListsResponse) => void,
-  ): ClientUnaryCall;
-  listOpenLists(
-    request: ListOpenListsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListOpenListsResponse) => void,
-  ): ClientUnaryCall;
-  listOpenLists(
-    request: ListOpenListsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListOpenListsResponse) => void,
-  ): ClientUnaryCall;
-  updateList(
-    request: UpdateListRequest,
-    callback: (error: ServiceError | null, response: UpdateListResponse) => void,
-  ): ClientUnaryCall;
-  updateList(
-    request: UpdateListRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateListResponse) => void,
-  ): ClientUnaryCall;
-  updateList(
-    request: UpdateListRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateListResponse) => void,
-  ): ClientUnaryCall;
-  archiveList(
-    request: ArchiveListRequest,
-    callback: (error: ServiceError | null, response: ArchiveListResponse) => void,
-  ): ClientUnaryCall;
-  archiveList(
-    request: ArchiveListRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveListResponse) => void,
-  ): ClientUnaryCall;
-  archiveList(
-    request: ArchiveListRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveListResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * The queue. Join, Confirm, Withdraw and Unsubscribe are the person's own;
-   * the rest are the operator's.
-   */
-  join(request: JoinRequest, callback: (error: ServiceError | null, response: JoinResponse) => void): ClientUnaryCall;
-  join(
-    request: JoinRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: JoinResponse) => void,
-  ): ClientUnaryCall;
-  join(
-    request: JoinRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: JoinResponse) => void,
-  ): ClientUnaryCall;
-  confirm(
-    request: ConfirmRequest,
-    callback: (error: ServiceError | null, response: ConfirmResponse) => void,
-  ): ClientUnaryCall;
-  confirm(
-    request: ConfirmRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ConfirmResponse) => void,
-  ): ClientUnaryCall;
-  confirm(
-    request: ConfirmRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ConfirmResponse) => void,
-  ): ClientUnaryCall;
-  getSignup(
-    request: GetSignupRequest,
-    callback: (error: ServiceError | null, response: GetSignupResponse) => void,
-  ): ClientUnaryCall;
-  getSignup(
-    request: GetSignupRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetSignupResponse) => void,
-  ): ClientUnaryCall;
-  getSignup(
-    request: GetSignupRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetSignupResponse) => void,
-  ): ClientUnaryCall;
-  getSignupByContact(
-    request: GetSignupByContactRequest,
-    callback: (error: ServiceError | null, response: GetSignupByContactResponse) => void,
-  ): ClientUnaryCall;
-  getSignupByContact(
-    request: GetSignupByContactRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetSignupByContactResponse) => void,
-  ): ClientUnaryCall;
-  getSignupByContact(
-    request: GetSignupByContactRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetSignupByContactResponse) => void,
-  ): ClientUnaryCall;
-  listSignups(
-    request: ListSignupsRequest,
-    callback: (error: ServiceError | null, response: ListSignupsResponse) => void,
-  ): ClientUnaryCall;
-  listSignups(
-    request: ListSignupsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListSignupsResponse) => void,
-  ): ClientUnaryCall;
-  listSignups(
-    request: ListSignupsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListSignupsResponse) => void,
-  ): ClientUnaryCall;
-  listSignupsForSubject(
-    request: ListSignupsForSubjectRequest,
-    callback: (error: ServiceError | null, response: ListSignupsForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  listSignupsForSubject(
-    request: ListSignupsForSubjectRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListSignupsForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  listSignupsForSubject(
-    request: ListSignupsForSubjectRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListSignupsForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  updateSignupNotes(
-    request: UpdateSignupNotesRequest,
-    callback: (error: ServiceError | null, response: UpdateSignupNotesResponse) => void,
-  ): ClientUnaryCall;
-  updateSignupNotes(
-    request: UpdateSignupNotesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateSignupNotesResponse) => void,
-  ): ClientUnaryCall;
-  updateSignupNotes(
-    request: UpdateSignupNotesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateSignupNotesResponse) => void,
-  ): ClientUnaryCall;
-  invite(
-    request: InviteRequest,
-    callback: (error: ServiceError | null, response: InviteResponse) => void,
-  ): ClientUnaryCall;
-  invite(
-    request: InviteRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: InviteResponse) => void,
-  ): ClientUnaryCall;
-  invite(
-    request: InviteRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: InviteResponse) => void,
-  ): ClientUnaryCall;
-  convert(
-    request: ConvertRequest,
-    callback: (error: ServiceError | null, response: ConvertResponse) => void,
-  ): ClientUnaryCall;
-  convert(
-    request: ConvertRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ConvertResponse) => void,
-  ): ClientUnaryCall;
-  convert(
-    request: ConvertRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ConvertResponse) => void,
-  ): ClientUnaryCall;
-  withdraw(
-    request: WithdrawRequest,
-    callback: (error: ServiceError | null, response: WithdrawResponse) => void,
-  ): ClientUnaryCall;
-  withdraw(
-    request: WithdrawRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: WithdrawResponse) => void,
-  ): ClientUnaryCall;
-  withdraw(
-    request: WithdrawRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: WithdrawResponse) => void,
-  ): ClientUnaryCall;
-  unsubscribe(
-    request: UnsubscribeRequest,
-    callback: (error: ServiceError | null, response: UnsubscribeResponse) => void,
-  ): ClientUnaryCall;
-  unsubscribe(
-    request: UnsubscribeRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UnsubscribeResponse) => void,
-  ): ClientUnaryCall;
-  unsubscribe(
-    request: UnsubscribeRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UnsubscribeResponse) => void,
-  ): ClientUnaryCall;
-  withdrawSignupsForSubject(
-    request: WithdrawSignupsForSubjectRequest,
-    callback: (error: ServiceError | null, response: WithdrawSignupsForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  withdrawSignupsForSubject(
-    request: WithdrawSignupsForSubjectRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: WithdrawSignupsForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  withdrawSignupsForSubject(
-    request: WithdrawSignupsForSubjectRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: WithdrawSignupsForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  archiveSignup(
-    request: ArchiveSignupRequest,
-    callback: (error: ServiceError | null, response: ArchiveSignupResponse) => void,
-  ): ClientUnaryCall;
-  archiveSignup(
-    request: ArchiveSignupRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveSignupResponse) => void,
-  ): ClientUnaryCall;
-  archiveSignup(
-    request: ArchiveSignupRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveSignupResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const WaitlistsServiceClient = makeGenericClientConstructor(
-  WaitlistsServiceService,
-  'primandproper.platform.waitlists.v1.WaitlistsService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): WaitlistsServiceClient;
-  service: typeof WaitlistsServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

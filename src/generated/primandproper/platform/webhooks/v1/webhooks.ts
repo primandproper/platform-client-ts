@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Duration } from '../../../../google/protobuf/duration';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
@@ -3024,315 +3012,101 @@ export const ListAttemptsResponse: MessageFns<ListAttemptsResponse> = {
  * process's own RPC -- the one whose handler owns the transaction the write
  * belongs in -- and calls webhooks.Dispatcher.Dispatch inside it.
  */
-export type WebhooksServiceService = typeof WebhooksServiceService;
-export const WebhooksServiceService = {
-  saveEndpoint: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/SaveEndpoint' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: SaveEndpointRequest): Buffer => Buffer.from(SaveEndpointRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): SaveEndpointRequest => SaveEndpointRequest.decode(value),
-    responseSerialize: (value: SaveEndpointResponse): Buffer =>
-      Buffer.from(SaveEndpointResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): SaveEndpointResponse => SaveEndpointResponse.decode(value),
-  },
-  getEndpoint: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/GetEndpoint' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetEndpointRequest): Buffer => Buffer.from(GetEndpointRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetEndpointRequest => GetEndpointRequest.decode(value),
-    responseSerialize: (value: GetEndpointResponse): Buffer => Buffer.from(GetEndpointResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetEndpointResponse => GetEndpointResponse.decode(value),
-  },
-  listEndpoints: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/ListEndpoints' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListEndpointsRequest): Buffer => Buffer.from(ListEndpointsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListEndpointsRequest => ListEndpointsRequest.decode(value),
-    responseSerialize: (value: ListEndpointsResponse): Buffer =>
-      Buffer.from(ListEndpointsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListEndpointsResponse => ListEndpointsResponse.decode(value),
-  },
-  archiveEndpoint: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/ArchiveEndpoint' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveEndpointRequest): Buffer =>
-      Buffer.from(ArchiveEndpointRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveEndpointRequest => ArchiveEndpointRequest.decode(value),
-    responseSerialize: (value: ArchiveEndpointResponse): Buffer =>
-      Buffer.from(ArchiveEndpointResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveEndpointResponse => ArchiveEndpointResponse.decode(value),
-  },
-  rotateSecret: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/RotateSecret' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RotateSecretRequest): Buffer => Buffer.from(RotateSecretRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RotateSecretRequest => RotateSecretRequest.decode(value),
-    responseSerialize: (value: RotateSecretResponse): Buffer =>
-      Buffer.from(RotateSecretResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RotateSecretResponse => RotateSecretResponse.decode(value),
-  },
-  addSubscription: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/AddSubscription' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: AddSubscriptionRequest): Buffer =>
-      Buffer.from(AddSubscriptionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): AddSubscriptionRequest => AddSubscriptionRequest.decode(value),
-    responseSerialize: (value: AddSubscriptionResponse): Buffer =>
-      Buffer.from(AddSubscriptionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): AddSubscriptionResponse => AddSubscriptionResponse.decode(value),
-  },
-  getSubscription: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/GetSubscription' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetSubscriptionRequest): Buffer =>
-      Buffer.from(GetSubscriptionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetSubscriptionRequest => GetSubscriptionRequest.decode(value),
-    responseSerialize: (value: GetSubscriptionResponse): Buffer =>
-      Buffer.from(GetSubscriptionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetSubscriptionResponse => GetSubscriptionResponse.decode(value),
-  },
-  listSubscriptions: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/ListSubscriptions' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListSubscriptionsRequest): Buffer =>
-      Buffer.from(ListSubscriptionsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListSubscriptionsRequest => ListSubscriptionsRequest.decode(value),
-    responseSerialize: (value: ListSubscriptionsResponse): Buffer =>
-      Buffer.from(ListSubscriptionsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListSubscriptionsResponse => ListSubscriptionsResponse.decode(value),
-  },
-  archiveSubscription: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/ArchiveSubscription' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveSubscriptionRequest): Buffer =>
-      Buffer.from(ArchiveSubscriptionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveSubscriptionRequest => ArchiveSubscriptionRequest.decode(value),
-    responseSerialize: (value: ArchiveSubscriptionResponse): Buffer =>
-      Buffer.from(ArchiveSubscriptionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveSubscriptionResponse => ArchiveSubscriptionResponse.decode(value),
-  },
-  listAttempts: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/ListAttempts' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListAttemptsRequest): Buffer => Buffer.from(ListAttemptsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListAttemptsRequest => ListAttemptsRequest.decode(value),
-    responseSerialize: (value: ListAttemptsResponse): Buffer =>
-      Buffer.from(ListAttemptsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListAttemptsResponse => ListAttemptsResponse.decode(value),
-  },
-  listEventTypes: {
-    path: '/primandproper.platform.webhooks.v1.WebhooksService/ListEventTypes' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListEventTypesRequest): Buffer =>
-      Buffer.from(ListEventTypesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListEventTypesRequest => ListEventTypesRequest.decode(value),
-    responseSerialize: (value: ListEventTypesResponse): Buffer =>
-      Buffer.from(ListEventTypesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListEventTypesResponse => ListEventTypesResponse.decode(value),
+export type WebhooksServiceDefinition = typeof WebhooksServiceDefinition;
+export const WebhooksServiceDefinition = {
+  name: 'WebhooksService',
+  fullName: 'primandproper.platform.webhooks.v1.WebhooksService',
+  methods: {
+    saveEndpoint: {
+      name: 'SaveEndpoint',
+      requestType: SaveEndpointRequest as typeof SaveEndpointRequest,
+      requestStream: false,
+      responseType: SaveEndpointResponse as typeof SaveEndpointResponse,
+      responseStream: false,
+      options: {},
+    },
+    getEndpoint: {
+      name: 'GetEndpoint',
+      requestType: GetEndpointRequest as typeof GetEndpointRequest,
+      requestStream: false,
+      responseType: GetEndpointResponse as typeof GetEndpointResponse,
+      responseStream: false,
+      options: {},
+    },
+    listEndpoints: {
+      name: 'ListEndpoints',
+      requestType: ListEndpointsRequest as typeof ListEndpointsRequest,
+      requestStream: false,
+      responseType: ListEndpointsResponse as typeof ListEndpointsResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveEndpoint: {
+      name: 'ArchiveEndpoint',
+      requestType: ArchiveEndpointRequest as typeof ArchiveEndpointRequest,
+      requestStream: false,
+      responseType: ArchiveEndpointResponse as typeof ArchiveEndpointResponse,
+      responseStream: false,
+      options: {},
+    },
+    rotateSecret: {
+      name: 'RotateSecret',
+      requestType: RotateSecretRequest as typeof RotateSecretRequest,
+      requestStream: false,
+      responseType: RotateSecretResponse as typeof RotateSecretResponse,
+      responseStream: false,
+      options: {},
+    },
+    addSubscription: {
+      name: 'AddSubscription',
+      requestType: AddSubscriptionRequest as typeof AddSubscriptionRequest,
+      requestStream: false,
+      responseType: AddSubscriptionResponse as typeof AddSubscriptionResponse,
+      responseStream: false,
+      options: {},
+    },
+    getSubscription: {
+      name: 'GetSubscription',
+      requestType: GetSubscriptionRequest as typeof GetSubscriptionRequest,
+      requestStream: false,
+      responseType: GetSubscriptionResponse as typeof GetSubscriptionResponse,
+      responseStream: false,
+      options: {},
+    },
+    listSubscriptions: {
+      name: 'ListSubscriptions',
+      requestType: ListSubscriptionsRequest as typeof ListSubscriptionsRequest,
+      requestStream: false,
+      responseType: ListSubscriptionsResponse as typeof ListSubscriptionsResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveSubscription: {
+      name: 'ArchiveSubscription',
+      requestType: ArchiveSubscriptionRequest as typeof ArchiveSubscriptionRequest,
+      requestStream: false,
+      responseType: ArchiveSubscriptionResponse as typeof ArchiveSubscriptionResponse,
+      responseStream: false,
+      options: {},
+    },
+    listAttempts: {
+      name: 'ListAttempts',
+      requestType: ListAttemptsRequest as typeof ListAttemptsRequest,
+      requestStream: false,
+      responseType: ListAttemptsResponse as typeof ListAttemptsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listEventTypes: {
+      name: 'ListEventTypes',
+      requestType: ListEventTypesRequest as typeof ListEventTypesRequest,
+      requestStream: false,
+      responseType: ListEventTypesResponse as typeof ListEventTypesResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface WebhooksServiceServer extends UntypedServiceImplementation {
-  saveEndpoint: handleUnaryCall<SaveEndpointRequest, SaveEndpointResponse>;
-  getEndpoint: handleUnaryCall<GetEndpointRequest, GetEndpointResponse>;
-  listEndpoints: handleUnaryCall<ListEndpointsRequest, ListEndpointsResponse>;
-  archiveEndpoint: handleUnaryCall<ArchiveEndpointRequest, ArchiveEndpointResponse>;
-  rotateSecret: handleUnaryCall<RotateSecretRequest, RotateSecretResponse>;
-  addSubscription: handleUnaryCall<AddSubscriptionRequest, AddSubscriptionResponse>;
-  getSubscription: handleUnaryCall<GetSubscriptionRequest, GetSubscriptionResponse>;
-  listSubscriptions: handleUnaryCall<ListSubscriptionsRequest, ListSubscriptionsResponse>;
-  archiveSubscription: handleUnaryCall<ArchiveSubscriptionRequest, ArchiveSubscriptionResponse>;
-  listAttempts: handleUnaryCall<ListAttemptsRequest, ListAttemptsResponse>;
-  listEventTypes: handleUnaryCall<ListEventTypesRequest, ListEventTypesResponse>;
-}
-
-export interface WebhooksServiceClient extends Client {
-  saveEndpoint(
-    request: SaveEndpointRequest,
-    callback: (error: ServiceError | null, response: SaveEndpointResponse) => void,
-  ): ClientUnaryCall;
-  saveEndpoint(
-    request: SaveEndpointRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: SaveEndpointResponse) => void,
-  ): ClientUnaryCall;
-  saveEndpoint(
-    request: SaveEndpointRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SaveEndpointResponse) => void,
-  ): ClientUnaryCall;
-  getEndpoint(
-    request: GetEndpointRequest,
-    callback: (error: ServiceError | null, response: GetEndpointResponse) => void,
-  ): ClientUnaryCall;
-  getEndpoint(
-    request: GetEndpointRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetEndpointResponse) => void,
-  ): ClientUnaryCall;
-  getEndpoint(
-    request: GetEndpointRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetEndpointResponse) => void,
-  ): ClientUnaryCall;
-  listEndpoints(
-    request: ListEndpointsRequest,
-    callback: (error: ServiceError | null, response: ListEndpointsResponse) => void,
-  ): ClientUnaryCall;
-  listEndpoints(
-    request: ListEndpointsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListEndpointsResponse) => void,
-  ): ClientUnaryCall;
-  listEndpoints(
-    request: ListEndpointsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListEndpointsResponse) => void,
-  ): ClientUnaryCall;
-  archiveEndpoint(
-    request: ArchiveEndpointRequest,
-    callback: (error: ServiceError | null, response: ArchiveEndpointResponse) => void,
-  ): ClientUnaryCall;
-  archiveEndpoint(
-    request: ArchiveEndpointRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveEndpointResponse) => void,
-  ): ClientUnaryCall;
-  archiveEndpoint(
-    request: ArchiveEndpointRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveEndpointResponse) => void,
-  ): ClientUnaryCall;
-  rotateSecret(
-    request: RotateSecretRequest,
-    callback: (error: ServiceError | null, response: RotateSecretResponse) => void,
-  ): ClientUnaryCall;
-  rotateSecret(
-    request: RotateSecretRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RotateSecretResponse) => void,
-  ): ClientUnaryCall;
-  rotateSecret(
-    request: RotateSecretRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RotateSecretResponse) => void,
-  ): ClientUnaryCall;
-  addSubscription(
-    request: AddSubscriptionRequest,
-    callback: (error: ServiceError | null, response: AddSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  addSubscription(
-    request: AddSubscriptionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: AddSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  addSubscription(
-    request: AddSubscriptionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: AddSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  getSubscription(
-    request: GetSubscriptionRequest,
-    callback: (error: ServiceError | null, response: GetSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  getSubscription(
-    request: GetSubscriptionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  getSubscription(
-    request: GetSubscriptionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  listSubscriptions(
-    request: ListSubscriptionsRequest,
-    callback: (error: ServiceError | null, response: ListSubscriptionsResponse) => void,
-  ): ClientUnaryCall;
-  listSubscriptions(
-    request: ListSubscriptionsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListSubscriptionsResponse) => void,
-  ): ClientUnaryCall;
-  listSubscriptions(
-    request: ListSubscriptionsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListSubscriptionsResponse) => void,
-  ): ClientUnaryCall;
-  archiveSubscription(
-    request: ArchiveSubscriptionRequest,
-    callback: (error: ServiceError | null, response: ArchiveSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  archiveSubscription(
-    request: ArchiveSubscriptionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  archiveSubscription(
-    request: ArchiveSubscriptionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  listAttempts(
-    request: ListAttemptsRequest,
-    callback: (error: ServiceError | null, response: ListAttemptsResponse) => void,
-  ): ClientUnaryCall;
-  listAttempts(
-    request: ListAttemptsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListAttemptsResponse) => void,
-  ): ClientUnaryCall;
-  listAttempts(
-    request: ListAttemptsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListAttemptsResponse) => void,
-  ): ClientUnaryCall;
-  listEventTypes(
-    request: ListEventTypesRequest,
-    callback: (error: ServiceError | null, response: ListEventTypesResponse) => void,
-  ): ClientUnaryCall;
-  listEventTypes(
-    request: ListEventTypesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListEventTypesResponse) => void,
-  ): ClientUnaryCall;
-  listEventTypes(
-    request: ListEventTypesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListEventTypesResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const WebhooksServiceClient = makeGenericClientConstructor(
-  WebhooksServiceService,
-  'primandproper.platform.webhooks.v1.WebhooksService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): WebhooksServiceClient;
-  service: typeof WebhooksServiceService;
-  serviceName: string;
-};
 
 function bytesFromBase64(b64: string): Uint8Array {
   if ((globalThis as any).Buffer) {

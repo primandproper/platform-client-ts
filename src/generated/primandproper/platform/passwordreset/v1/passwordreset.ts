@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 
 export const protobufPackage = 'primandproper.platform.passwordreset.v1';
@@ -503,107 +491,37 @@ export const CompletePasswordResetResponse: MessageFns<CompletePasswordResetResp
  * RequestPasswordReset sends mail on request, and it is the one RPC here that
  * does anything on behalf of somebody who has proven nothing at all.
  */
-export type PasswordResetServiceService = typeof PasswordResetServiceService;
-export const PasswordResetServiceService = {
-  requestPasswordReset: {
-    path: '/primandproper.platform.passwordreset.v1.PasswordResetService/RequestPasswordReset' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: RequestPasswordResetRequest): Buffer =>
-      Buffer.from(RequestPasswordResetRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): RequestPasswordResetRequest => RequestPasswordResetRequest.decode(value),
-    responseSerialize: (value: RequestPasswordResetResponse): Buffer =>
-      Buffer.from(RequestPasswordResetResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): RequestPasswordResetResponse => RequestPasswordResetResponse.decode(value),
-  },
-  verifyPasswordResetToken: {
-    path: '/primandproper.platform.passwordreset.v1.PasswordResetService/VerifyPasswordResetToken' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: VerifyPasswordResetTokenRequest): Buffer =>
-      Buffer.from(VerifyPasswordResetTokenRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): VerifyPasswordResetTokenRequest =>
-      VerifyPasswordResetTokenRequest.decode(value),
-    responseSerialize: (value: VerifyPasswordResetTokenResponse): Buffer =>
-      Buffer.from(VerifyPasswordResetTokenResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): VerifyPasswordResetTokenResponse =>
-      VerifyPasswordResetTokenResponse.decode(value),
-  },
-  completePasswordReset: {
-    path: '/primandproper.platform.passwordreset.v1.PasswordResetService/CompletePasswordReset' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: CompletePasswordResetRequest): Buffer =>
-      Buffer.from(CompletePasswordResetRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): CompletePasswordResetRequest => CompletePasswordResetRequest.decode(value),
-    responseSerialize: (value: CompletePasswordResetResponse): Buffer =>
-      Buffer.from(CompletePasswordResetResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): CompletePasswordResetResponse => CompletePasswordResetResponse.decode(value),
+export type PasswordResetServiceDefinition = typeof PasswordResetServiceDefinition;
+export const PasswordResetServiceDefinition = {
+  name: 'PasswordResetService',
+  fullName: 'primandproper.platform.passwordreset.v1.PasswordResetService',
+  methods: {
+    requestPasswordReset: {
+      name: 'RequestPasswordReset',
+      requestType: RequestPasswordResetRequest as typeof RequestPasswordResetRequest,
+      requestStream: false,
+      responseType: RequestPasswordResetResponse as typeof RequestPasswordResetResponse,
+      responseStream: false,
+      options: {},
+    },
+    verifyPasswordResetToken: {
+      name: 'VerifyPasswordResetToken',
+      requestType: VerifyPasswordResetTokenRequest as typeof VerifyPasswordResetTokenRequest,
+      requestStream: false,
+      responseType: VerifyPasswordResetTokenResponse as typeof VerifyPasswordResetTokenResponse,
+      responseStream: false,
+      options: {},
+    },
+    completePasswordReset: {
+      name: 'CompletePasswordReset',
+      requestType: CompletePasswordResetRequest as typeof CompletePasswordResetRequest,
+      requestStream: false,
+      responseType: CompletePasswordResetResponse as typeof CompletePasswordResetResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface PasswordResetServiceServer extends UntypedServiceImplementation {
-  requestPasswordReset: handleUnaryCall<RequestPasswordResetRequest, RequestPasswordResetResponse>;
-  verifyPasswordResetToken: handleUnaryCall<VerifyPasswordResetTokenRequest, VerifyPasswordResetTokenResponse>;
-  completePasswordReset: handleUnaryCall<CompletePasswordResetRequest, CompletePasswordResetResponse>;
-}
-
-export interface PasswordResetServiceClient extends Client {
-  requestPasswordReset(
-    request: RequestPasswordResetRequest,
-    callback: (error: ServiceError | null, response: RequestPasswordResetResponse) => void,
-  ): ClientUnaryCall;
-  requestPasswordReset(
-    request: RequestPasswordResetRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: RequestPasswordResetResponse) => void,
-  ): ClientUnaryCall;
-  requestPasswordReset(
-    request: RequestPasswordResetRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: RequestPasswordResetResponse) => void,
-  ): ClientUnaryCall;
-  verifyPasswordResetToken(
-    request: VerifyPasswordResetTokenRequest,
-    callback: (error: ServiceError | null, response: VerifyPasswordResetTokenResponse) => void,
-  ): ClientUnaryCall;
-  verifyPasswordResetToken(
-    request: VerifyPasswordResetTokenRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: VerifyPasswordResetTokenResponse) => void,
-  ): ClientUnaryCall;
-  verifyPasswordResetToken(
-    request: VerifyPasswordResetTokenRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: VerifyPasswordResetTokenResponse) => void,
-  ): ClientUnaryCall;
-  completePasswordReset(
-    request: CompletePasswordResetRequest,
-    callback: (error: ServiceError | null, response: CompletePasswordResetResponse) => void,
-  ): ClientUnaryCall;
-  completePasswordReset(
-    request: CompletePasswordResetRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: CompletePasswordResetResponse) => void,
-  ): ClientUnaryCall;
-  completePasswordReset(
-    request: CompletePasswordResetRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: CompletePasswordResetResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const PasswordResetServiceClient = makeGenericClientConstructor(
-  PasswordResetServiceService,
-  'primandproper.platform.passwordreset.v1.PasswordResetService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): PasswordResetServiceClient;
-  service: typeof PasswordResetServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

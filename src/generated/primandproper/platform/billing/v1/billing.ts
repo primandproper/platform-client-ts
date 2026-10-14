@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
 
@@ -4346,545 +4334,169 @@ export const ArchiveTransactionResponse: MessageFns<ArchiveTransactionResponse> 
  * permission of their own, so that a consumer can hand out "read my invoices"
  * without handing out the customer ledger.
  */
-export type BillingServiceService = typeof BillingServiceService;
-export const BillingServiceService = {
-  /**
-   * The catalog: reads any member of the scope may make, and administrative
-   * writes.
-   */
-  createProduct: {
-    path: '/primandproper.platform.billing.v1.BillingService/CreateProduct' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: CreateProductRequest): Buffer => Buffer.from(CreateProductRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): CreateProductRequest => CreateProductRequest.decode(value),
-    responseSerialize: (value: CreateProductResponse): Buffer =>
-      Buffer.from(CreateProductResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): CreateProductResponse => CreateProductResponse.decode(value),
-  },
-  getProduct: {
-    path: '/primandproper.platform.billing.v1.BillingService/GetProduct' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetProductRequest): Buffer => Buffer.from(GetProductRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetProductRequest => GetProductRequest.decode(value),
-    responseSerialize: (value: GetProductResponse): Buffer => Buffer.from(GetProductResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetProductResponse => GetProductResponse.decode(value),
-  },
-  listProducts: {
-    path: '/primandproper.platform.billing.v1.BillingService/ListProducts' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListProductsRequest): Buffer => Buffer.from(ListProductsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListProductsRequest => ListProductsRequest.decode(value),
-    responseSerialize: (value: ListProductsResponse): Buffer =>
-      Buffer.from(ListProductsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListProductsResponse => ListProductsResponse.decode(value),
-  },
-  updateProduct: {
-    path: '/primandproper.platform.billing.v1.BillingService/UpdateProduct' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateProductRequest): Buffer => Buffer.from(UpdateProductRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateProductRequest => UpdateProductRequest.decode(value),
-    responseSerialize: (value: UpdateProductResponse): Buffer =>
-      Buffer.from(UpdateProductResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateProductResponse => UpdateProductResponse.decode(value),
-  },
-  archiveProduct: {
-    path: '/primandproper.platform.billing.v1.BillingService/ArchiveProduct' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveProductRequest): Buffer =>
-      Buffer.from(ArchiveProductRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveProductRequest => ArchiveProductRequest.decode(value),
-    responseSerialize: (value: ArchiveProductResponse): Buffer =>
-      Buffer.from(ArchiveProductResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveProductResponse => ArchiveProductResponse.decode(value),
-  },
-  /**
-   * The recurring half. ListCurrentSubscriptions is the one an entitlement
-   * screen reads: it pages the agreements whose paid period covers now, and
-   * deliberately does not filter on status, because which status leaves an
-   * account entitled is the consumer's ruling.
-   */
-  getSubscription: {
-    path: '/primandproper.platform.billing.v1.BillingService/GetSubscription' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetSubscriptionRequest): Buffer =>
-      Buffer.from(GetSubscriptionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetSubscriptionRequest => GetSubscriptionRequest.decode(value),
-    responseSerialize: (value: GetSubscriptionResponse): Buffer =>
-      Buffer.from(GetSubscriptionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetSubscriptionResponse => GetSubscriptionResponse.decode(value),
-  },
-  listSubscriptions: {
-    path: '/primandproper.platform.billing.v1.BillingService/ListSubscriptions' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListSubscriptionsRequest): Buffer =>
-      Buffer.from(ListSubscriptionsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListSubscriptionsRequest => ListSubscriptionsRequest.decode(value),
-    responseSerialize: (value: ListSubscriptionsResponse): Buffer =>
-      Buffer.from(ListSubscriptionsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListSubscriptionsResponse => ListSubscriptionsResponse.decode(value),
-  },
-  listSubscriptionsForAccount: {
-    path: '/primandproper.platform.billing.v1.BillingService/ListSubscriptionsForAccount' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListSubscriptionsForAccountRequest): Buffer =>
-      Buffer.from(ListSubscriptionsForAccountRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListSubscriptionsForAccountRequest =>
-      ListSubscriptionsForAccountRequest.decode(value),
-    responseSerialize: (value: ListSubscriptionsForAccountResponse): Buffer =>
-      Buffer.from(ListSubscriptionsForAccountResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListSubscriptionsForAccountResponse =>
-      ListSubscriptionsForAccountResponse.decode(value),
-  },
-  listCurrentSubscriptions: {
-    path: '/primandproper.platform.billing.v1.BillingService/ListCurrentSubscriptions' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListCurrentSubscriptionsRequest): Buffer =>
-      Buffer.from(ListCurrentSubscriptionsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListCurrentSubscriptionsRequest =>
-      ListCurrentSubscriptionsRequest.decode(value),
-    responseSerialize: (value: ListCurrentSubscriptionsResponse): Buffer =>
-      Buffer.from(ListCurrentSubscriptionsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListCurrentSubscriptionsResponse =>
-      ListCurrentSubscriptionsResponse.decode(value),
-  },
-  archiveSubscription: {
-    path: '/primandproper.platform.billing.v1.BillingService/ArchiveSubscription' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveSubscriptionRequest): Buffer =>
-      Buffer.from(ArchiveSubscriptionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveSubscriptionRequest => ArchiveSubscriptionRequest.decode(value),
-    responseSerialize: (value: ArchiveSubscriptionResponse): Buffer =>
-      Buffer.from(ArchiveSubscriptionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveSubscriptionResponse => ArchiveSubscriptionResponse.decode(value),
-  },
-  /** The one-time half. */
-  getPurchase: {
-    path: '/primandproper.platform.billing.v1.BillingService/GetPurchase' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetPurchaseRequest): Buffer => Buffer.from(GetPurchaseRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetPurchaseRequest => GetPurchaseRequest.decode(value),
-    responseSerialize: (value: GetPurchaseResponse): Buffer => Buffer.from(GetPurchaseResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetPurchaseResponse => GetPurchaseResponse.decode(value),
-  },
-  listPurchases: {
-    path: '/primandproper.platform.billing.v1.BillingService/ListPurchases' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListPurchasesRequest): Buffer => Buffer.from(ListPurchasesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListPurchasesRequest => ListPurchasesRequest.decode(value),
-    responseSerialize: (value: ListPurchasesResponse): Buffer =>
-      Buffer.from(ListPurchasesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListPurchasesResponse => ListPurchasesResponse.decode(value),
-  },
-  listPurchasesForAccount: {
-    path: '/primandproper.platform.billing.v1.BillingService/ListPurchasesForAccount' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListPurchasesForAccountRequest): Buffer =>
-      Buffer.from(ListPurchasesForAccountRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListPurchasesForAccountRequest => ListPurchasesForAccountRequest.decode(value),
-    responseSerialize: (value: ListPurchasesForAccountResponse): Buffer =>
-      Buffer.from(ListPurchasesForAccountResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListPurchasesForAccountResponse =>
-      ListPurchasesForAccountResponse.decode(value),
-  },
-  archivePurchase: {
-    path: '/primandproper.platform.billing.v1.BillingService/ArchivePurchase' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchivePurchaseRequest): Buffer =>
-      Buffer.from(ArchivePurchaseRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchivePurchaseRequest => ArchivePurchaseRequest.decode(value),
-    responseSerialize: (value: ArchivePurchaseResponse): Buffer =>
-      Buffer.from(ArchivePurchaseResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchivePurchaseResponse => ArchivePurchaseResponse.decode(value),
-  },
-  /** The ledger. */
-  getTransaction: {
-    path: '/primandproper.platform.billing.v1.BillingService/GetTransaction' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetTransactionRequest): Buffer =>
-      Buffer.from(GetTransactionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetTransactionRequest => GetTransactionRequest.decode(value),
-    responseSerialize: (value: GetTransactionResponse): Buffer =>
-      Buffer.from(GetTransactionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetTransactionResponse => GetTransactionResponse.decode(value),
-  },
-  listTransactions: {
-    path: '/primandproper.platform.billing.v1.BillingService/ListTransactions' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListTransactionsRequest): Buffer =>
-      Buffer.from(ListTransactionsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListTransactionsRequest => ListTransactionsRequest.decode(value),
-    responseSerialize: (value: ListTransactionsResponse): Buffer =>
-      Buffer.from(ListTransactionsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListTransactionsResponse => ListTransactionsResponse.decode(value),
-  },
-  listTransactionsForAccount: {
-    path: '/primandproper.platform.billing.v1.BillingService/ListTransactionsForAccount' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListTransactionsForAccountRequest): Buffer =>
-      Buffer.from(ListTransactionsForAccountRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListTransactionsForAccountRequest =>
-      ListTransactionsForAccountRequest.decode(value),
-    responseSerialize: (value: ListTransactionsForAccountResponse): Buffer =>
-      Buffer.from(ListTransactionsForAccountResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListTransactionsForAccountResponse =>
-      ListTransactionsForAccountResponse.decode(value),
-  },
-  archiveTransaction: {
-    path: '/primandproper.platform.billing.v1.BillingService/ArchiveTransaction' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveTransactionRequest): Buffer =>
-      Buffer.from(ArchiveTransactionRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveTransactionRequest => ArchiveTransactionRequest.decode(value),
-    responseSerialize: (value: ArchiveTransactionResponse): Buffer =>
-      Buffer.from(ArchiveTransactionResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveTransactionResponse => ArchiveTransactionResponse.decode(value),
+export type BillingServiceDefinition = typeof BillingServiceDefinition;
+export const BillingServiceDefinition = {
+  name: 'BillingService',
+  fullName: 'primandproper.platform.billing.v1.BillingService',
+  methods: {
+    /**
+     * The catalog: reads any member of the scope may make, and administrative
+     * writes.
+     */
+    createProduct: {
+      name: 'CreateProduct',
+      requestType: CreateProductRequest as typeof CreateProductRequest,
+      requestStream: false,
+      responseType: CreateProductResponse as typeof CreateProductResponse,
+      responseStream: false,
+      options: {},
+    },
+    getProduct: {
+      name: 'GetProduct',
+      requestType: GetProductRequest as typeof GetProductRequest,
+      requestStream: false,
+      responseType: GetProductResponse as typeof GetProductResponse,
+      responseStream: false,
+      options: {},
+    },
+    listProducts: {
+      name: 'ListProducts',
+      requestType: ListProductsRequest as typeof ListProductsRequest,
+      requestStream: false,
+      responseType: ListProductsResponse as typeof ListProductsResponse,
+      responseStream: false,
+      options: {},
+    },
+    updateProduct: {
+      name: 'UpdateProduct',
+      requestType: UpdateProductRequest as typeof UpdateProductRequest,
+      requestStream: false,
+      responseType: UpdateProductResponse as typeof UpdateProductResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveProduct: {
+      name: 'ArchiveProduct',
+      requestType: ArchiveProductRequest as typeof ArchiveProductRequest,
+      requestStream: false,
+      responseType: ArchiveProductResponse as typeof ArchiveProductResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * The recurring half. ListCurrentSubscriptions is the one an entitlement
+     * screen reads: it pages the agreements whose paid period covers now, and
+     * deliberately does not filter on status, because which status leaves an
+     * account entitled is the consumer's ruling.
+     */
+    getSubscription: {
+      name: 'GetSubscription',
+      requestType: GetSubscriptionRequest as typeof GetSubscriptionRequest,
+      requestStream: false,
+      responseType: GetSubscriptionResponse as typeof GetSubscriptionResponse,
+      responseStream: false,
+      options: {},
+    },
+    listSubscriptions: {
+      name: 'ListSubscriptions',
+      requestType: ListSubscriptionsRequest as typeof ListSubscriptionsRequest,
+      requestStream: false,
+      responseType: ListSubscriptionsResponse as typeof ListSubscriptionsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listSubscriptionsForAccount: {
+      name: 'ListSubscriptionsForAccount',
+      requestType: ListSubscriptionsForAccountRequest as typeof ListSubscriptionsForAccountRequest,
+      requestStream: false,
+      responseType: ListSubscriptionsForAccountResponse as typeof ListSubscriptionsForAccountResponse,
+      responseStream: false,
+      options: {},
+    },
+    listCurrentSubscriptions: {
+      name: 'ListCurrentSubscriptions',
+      requestType: ListCurrentSubscriptionsRequest as typeof ListCurrentSubscriptionsRequest,
+      requestStream: false,
+      responseType: ListCurrentSubscriptionsResponse as typeof ListCurrentSubscriptionsResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveSubscription: {
+      name: 'ArchiveSubscription',
+      requestType: ArchiveSubscriptionRequest as typeof ArchiveSubscriptionRequest,
+      requestStream: false,
+      responseType: ArchiveSubscriptionResponse as typeof ArchiveSubscriptionResponse,
+      responseStream: false,
+      options: {},
+    },
+    /** The one-time half. */
+    getPurchase: {
+      name: 'GetPurchase',
+      requestType: GetPurchaseRequest as typeof GetPurchaseRequest,
+      requestStream: false,
+      responseType: GetPurchaseResponse as typeof GetPurchaseResponse,
+      responseStream: false,
+      options: {},
+    },
+    listPurchases: {
+      name: 'ListPurchases',
+      requestType: ListPurchasesRequest as typeof ListPurchasesRequest,
+      requestStream: false,
+      responseType: ListPurchasesResponse as typeof ListPurchasesResponse,
+      responseStream: false,
+      options: {},
+    },
+    listPurchasesForAccount: {
+      name: 'ListPurchasesForAccount',
+      requestType: ListPurchasesForAccountRequest as typeof ListPurchasesForAccountRequest,
+      requestStream: false,
+      responseType: ListPurchasesForAccountResponse as typeof ListPurchasesForAccountResponse,
+      responseStream: false,
+      options: {},
+    },
+    archivePurchase: {
+      name: 'ArchivePurchase',
+      requestType: ArchivePurchaseRequest as typeof ArchivePurchaseRequest,
+      requestStream: false,
+      responseType: ArchivePurchaseResponse as typeof ArchivePurchaseResponse,
+      responseStream: false,
+      options: {},
+    },
+    /** The ledger. */
+    getTransaction: {
+      name: 'GetTransaction',
+      requestType: GetTransactionRequest as typeof GetTransactionRequest,
+      requestStream: false,
+      responseType: GetTransactionResponse as typeof GetTransactionResponse,
+      responseStream: false,
+      options: {},
+    },
+    listTransactions: {
+      name: 'ListTransactions',
+      requestType: ListTransactionsRequest as typeof ListTransactionsRequest,
+      requestStream: false,
+      responseType: ListTransactionsResponse as typeof ListTransactionsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listTransactionsForAccount: {
+      name: 'ListTransactionsForAccount',
+      requestType: ListTransactionsForAccountRequest as typeof ListTransactionsForAccountRequest,
+      requestStream: false,
+      responseType: ListTransactionsForAccountResponse as typeof ListTransactionsForAccountResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveTransaction: {
+      name: 'ArchiveTransaction',
+      requestType: ArchiveTransactionRequest as typeof ArchiveTransactionRequest,
+      requestStream: false,
+      responseType: ArchiveTransactionResponse as typeof ArchiveTransactionResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface BillingServiceServer extends UntypedServiceImplementation {
-  /**
-   * The catalog: reads any member of the scope may make, and administrative
-   * writes.
-   */
-  createProduct: handleUnaryCall<CreateProductRequest, CreateProductResponse>;
-  getProduct: handleUnaryCall<GetProductRequest, GetProductResponse>;
-  listProducts: handleUnaryCall<ListProductsRequest, ListProductsResponse>;
-  updateProduct: handleUnaryCall<UpdateProductRequest, UpdateProductResponse>;
-  archiveProduct: handleUnaryCall<ArchiveProductRequest, ArchiveProductResponse>;
-  /**
-   * The recurring half. ListCurrentSubscriptions is the one an entitlement
-   * screen reads: it pages the agreements whose paid period covers now, and
-   * deliberately does not filter on status, because which status leaves an
-   * account entitled is the consumer's ruling.
-   */
-  getSubscription: handleUnaryCall<GetSubscriptionRequest, GetSubscriptionResponse>;
-  listSubscriptions: handleUnaryCall<ListSubscriptionsRequest, ListSubscriptionsResponse>;
-  listSubscriptionsForAccount: handleUnaryCall<ListSubscriptionsForAccountRequest, ListSubscriptionsForAccountResponse>;
-  listCurrentSubscriptions: handleUnaryCall<ListCurrentSubscriptionsRequest, ListCurrentSubscriptionsResponse>;
-  archiveSubscription: handleUnaryCall<ArchiveSubscriptionRequest, ArchiveSubscriptionResponse>;
-  /** The one-time half. */
-  getPurchase: handleUnaryCall<GetPurchaseRequest, GetPurchaseResponse>;
-  listPurchases: handleUnaryCall<ListPurchasesRequest, ListPurchasesResponse>;
-  listPurchasesForAccount: handleUnaryCall<ListPurchasesForAccountRequest, ListPurchasesForAccountResponse>;
-  archivePurchase: handleUnaryCall<ArchivePurchaseRequest, ArchivePurchaseResponse>;
-  /** The ledger. */
-  getTransaction: handleUnaryCall<GetTransactionRequest, GetTransactionResponse>;
-  listTransactions: handleUnaryCall<ListTransactionsRequest, ListTransactionsResponse>;
-  listTransactionsForAccount: handleUnaryCall<ListTransactionsForAccountRequest, ListTransactionsForAccountResponse>;
-  archiveTransaction: handleUnaryCall<ArchiveTransactionRequest, ArchiveTransactionResponse>;
-}
-
-export interface BillingServiceClient extends Client {
-  /**
-   * The catalog: reads any member of the scope may make, and administrative
-   * writes.
-   */
-  createProduct(
-    request: CreateProductRequest,
-    callback: (error: ServiceError | null, response: CreateProductResponse) => void,
-  ): ClientUnaryCall;
-  createProduct(
-    request: CreateProductRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: CreateProductResponse) => void,
-  ): ClientUnaryCall;
-  createProduct(
-    request: CreateProductRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: CreateProductResponse) => void,
-  ): ClientUnaryCall;
-  getProduct(
-    request: GetProductRequest,
-    callback: (error: ServiceError | null, response: GetProductResponse) => void,
-  ): ClientUnaryCall;
-  getProduct(
-    request: GetProductRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetProductResponse) => void,
-  ): ClientUnaryCall;
-  getProduct(
-    request: GetProductRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetProductResponse) => void,
-  ): ClientUnaryCall;
-  listProducts(
-    request: ListProductsRequest,
-    callback: (error: ServiceError | null, response: ListProductsResponse) => void,
-  ): ClientUnaryCall;
-  listProducts(
-    request: ListProductsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListProductsResponse) => void,
-  ): ClientUnaryCall;
-  listProducts(
-    request: ListProductsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListProductsResponse) => void,
-  ): ClientUnaryCall;
-  updateProduct(
-    request: UpdateProductRequest,
-    callback: (error: ServiceError | null, response: UpdateProductResponse) => void,
-  ): ClientUnaryCall;
-  updateProduct(
-    request: UpdateProductRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateProductResponse) => void,
-  ): ClientUnaryCall;
-  updateProduct(
-    request: UpdateProductRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateProductResponse) => void,
-  ): ClientUnaryCall;
-  archiveProduct(
-    request: ArchiveProductRequest,
-    callback: (error: ServiceError | null, response: ArchiveProductResponse) => void,
-  ): ClientUnaryCall;
-  archiveProduct(
-    request: ArchiveProductRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveProductResponse) => void,
-  ): ClientUnaryCall;
-  archiveProduct(
-    request: ArchiveProductRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveProductResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * The recurring half. ListCurrentSubscriptions is the one an entitlement
-   * screen reads: it pages the agreements whose paid period covers now, and
-   * deliberately does not filter on status, because which status leaves an
-   * account entitled is the consumer's ruling.
-   */
-  getSubscription(
-    request: GetSubscriptionRequest,
-    callback: (error: ServiceError | null, response: GetSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  getSubscription(
-    request: GetSubscriptionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  getSubscription(
-    request: GetSubscriptionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  listSubscriptions(
-    request: ListSubscriptionsRequest,
-    callback: (error: ServiceError | null, response: ListSubscriptionsResponse) => void,
-  ): ClientUnaryCall;
-  listSubscriptions(
-    request: ListSubscriptionsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListSubscriptionsResponse) => void,
-  ): ClientUnaryCall;
-  listSubscriptions(
-    request: ListSubscriptionsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListSubscriptionsResponse) => void,
-  ): ClientUnaryCall;
-  listSubscriptionsForAccount(
-    request: ListSubscriptionsForAccountRequest,
-    callback: (error: ServiceError | null, response: ListSubscriptionsForAccountResponse) => void,
-  ): ClientUnaryCall;
-  listSubscriptionsForAccount(
-    request: ListSubscriptionsForAccountRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListSubscriptionsForAccountResponse) => void,
-  ): ClientUnaryCall;
-  listSubscriptionsForAccount(
-    request: ListSubscriptionsForAccountRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListSubscriptionsForAccountResponse) => void,
-  ): ClientUnaryCall;
-  listCurrentSubscriptions(
-    request: ListCurrentSubscriptionsRequest,
-    callback: (error: ServiceError | null, response: ListCurrentSubscriptionsResponse) => void,
-  ): ClientUnaryCall;
-  listCurrentSubscriptions(
-    request: ListCurrentSubscriptionsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListCurrentSubscriptionsResponse) => void,
-  ): ClientUnaryCall;
-  listCurrentSubscriptions(
-    request: ListCurrentSubscriptionsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListCurrentSubscriptionsResponse) => void,
-  ): ClientUnaryCall;
-  archiveSubscription(
-    request: ArchiveSubscriptionRequest,
-    callback: (error: ServiceError | null, response: ArchiveSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  archiveSubscription(
-    request: ArchiveSubscriptionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  archiveSubscription(
-    request: ArchiveSubscriptionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveSubscriptionResponse) => void,
-  ): ClientUnaryCall;
-  /** The one-time half. */
-  getPurchase(
-    request: GetPurchaseRequest,
-    callback: (error: ServiceError | null, response: GetPurchaseResponse) => void,
-  ): ClientUnaryCall;
-  getPurchase(
-    request: GetPurchaseRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetPurchaseResponse) => void,
-  ): ClientUnaryCall;
-  getPurchase(
-    request: GetPurchaseRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetPurchaseResponse) => void,
-  ): ClientUnaryCall;
-  listPurchases(
-    request: ListPurchasesRequest,
-    callback: (error: ServiceError | null, response: ListPurchasesResponse) => void,
-  ): ClientUnaryCall;
-  listPurchases(
-    request: ListPurchasesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListPurchasesResponse) => void,
-  ): ClientUnaryCall;
-  listPurchases(
-    request: ListPurchasesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListPurchasesResponse) => void,
-  ): ClientUnaryCall;
-  listPurchasesForAccount(
-    request: ListPurchasesForAccountRequest,
-    callback: (error: ServiceError | null, response: ListPurchasesForAccountResponse) => void,
-  ): ClientUnaryCall;
-  listPurchasesForAccount(
-    request: ListPurchasesForAccountRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListPurchasesForAccountResponse) => void,
-  ): ClientUnaryCall;
-  listPurchasesForAccount(
-    request: ListPurchasesForAccountRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListPurchasesForAccountResponse) => void,
-  ): ClientUnaryCall;
-  archivePurchase(
-    request: ArchivePurchaseRequest,
-    callback: (error: ServiceError | null, response: ArchivePurchaseResponse) => void,
-  ): ClientUnaryCall;
-  archivePurchase(
-    request: ArchivePurchaseRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchivePurchaseResponse) => void,
-  ): ClientUnaryCall;
-  archivePurchase(
-    request: ArchivePurchaseRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchivePurchaseResponse) => void,
-  ): ClientUnaryCall;
-  /** The ledger. */
-  getTransaction(
-    request: GetTransactionRequest,
-    callback: (error: ServiceError | null, response: GetTransactionResponse) => void,
-  ): ClientUnaryCall;
-  getTransaction(
-    request: GetTransactionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetTransactionResponse) => void,
-  ): ClientUnaryCall;
-  getTransaction(
-    request: GetTransactionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetTransactionResponse) => void,
-  ): ClientUnaryCall;
-  listTransactions(
-    request: ListTransactionsRequest,
-    callback: (error: ServiceError | null, response: ListTransactionsResponse) => void,
-  ): ClientUnaryCall;
-  listTransactions(
-    request: ListTransactionsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListTransactionsResponse) => void,
-  ): ClientUnaryCall;
-  listTransactions(
-    request: ListTransactionsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListTransactionsResponse) => void,
-  ): ClientUnaryCall;
-  listTransactionsForAccount(
-    request: ListTransactionsForAccountRequest,
-    callback: (error: ServiceError | null, response: ListTransactionsForAccountResponse) => void,
-  ): ClientUnaryCall;
-  listTransactionsForAccount(
-    request: ListTransactionsForAccountRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListTransactionsForAccountResponse) => void,
-  ): ClientUnaryCall;
-  listTransactionsForAccount(
-    request: ListTransactionsForAccountRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListTransactionsForAccountResponse) => void,
-  ): ClientUnaryCall;
-  archiveTransaction(
-    request: ArchiveTransactionRequest,
-    callback: (error: ServiceError | null, response: ArchiveTransactionResponse) => void,
-  ): ClientUnaryCall;
-  archiveTransaction(
-    request: ArchiveTransactionRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveTransactionResponse) => void,
-  ): ClientUnaryCall;
-  archiveTransaction(
-    request: ArchiveTransactionRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveTransactionResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const BillingServiceClient = makeGenericClientConstructor(
-  BillingServiceService,
-  'primandproper.platform.billing.v1.BillingService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): BillingServiceClient;
-  service: typeof BillingServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

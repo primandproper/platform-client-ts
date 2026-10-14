@@ -1,7 +1,9 @@
 import { PlatformError } from './errors';
-import { PasswordResetServiceService } from './generated/primandproper/platform/passwordreset/v1/passwordreset';
+import { PasswordResetServiceDefinition } from './generated/primandproper/platform/passwordreset/v1/passwordreset';
 import type { Session } from './session';
-import { type CallOptions, Code } from './transport';
+import { type CallOptions, Code, methodsOf } from './transport';
+
+const PasswordResetService = methodsOf(PasswordResetServiceDefinition);
 
 /**
  * DeadLink is a reset link that cannot be spent: expired, already used, or never a link. The three are told apart only
@@ -28,7 +30,7 @@ export async function requestPasswordReset(
   emailAddress: string,
   options?: CallOptions,
 ): Promise<void> {
-  await session.callAnonymous(PasswordResetServiceService.requestPasswordReset, { emailAddress }, options);
+  await session.callAnonymous(PasswordResetService.requestPasswordReset, { emailAddress }, options);
 }
 
 /**
@@ -43,11 +45,7 @@ export async function verifyPasswordResetToken(
   options?: CallOptions,
 ): Promise<VerifyResult> {
   try {
-    const response = await session.callAnonymous(
-      PasswordResetServiceService.verifyPasswordResetToken,
-      { token },
-      options,
-    );
+    const response = await session.callAnonymous(PasswordResetService.verifyPasswordResetToken, { token }, options);
     return { kind: 'live', expiresAt: response.expiresAt };
   } catch (err) {
     return deadLinkOrThrow(err);
@@ -70,7 +68,7 @@ export async function completePasswordReset(
   options?: CallOptions,
 ): Promise<CompleteResult> {
   try {
-    await session.callAnonymous(PasswordResetServiceService.completePasswordReset, { token, newPassword }, options);
+    await session.callAnonymous(PasswordResetService.completePasswordReset, { token, newPassword }, options);
     return { kind: 'reset' };
   } catch (err) {
     return deadLinkOrThrow(err);

@@ -32,8 +32,9 @@ speaks rather than mirroring it, because a client-only fix needs a version numbe
 ## Using it
 
 One `Session` per login, for every service that login calls: platform's and the product's own. It holds the session,
-refreshes it, and sends the tenant's metadata on every call (R12). Any ts-proto `outputServices=grpc-js` method
-definition goes through it, so a product's own services share the same refresher instead of racing it.
+refreshes it, and sends the tenant's metadata on every call (R12). Any service ts-proto generates with
+`outputServices=generic-definitions` goes through it once `methodsOf` has turned the definition into methods, so a
+product's own services share the same refresher instead of racing it.
 
 **One `ExchangeCoordinator` per deployment.** A refresh token works once (R1), and every `Session` exchanges through a
 coordinator that makes sure each token is presented once however many Sessions hold it, keeping the outcome for a minute
@@ -43,8 +44,11 @@ coordinator they all share, which is `SharedExchangeCoordinator` ([below](#sever
 
 ```ts
 import * as grpc from '@grpc/grpc-js';
-import { createGrpcJsTransport, getAuthStatus, Session, signIn } from '@primandproper/platform-client';
-import { RecipesServiceService } from './generated/recipes'; // a product's own stubs
+import { getAuthStatus, methodsOf, Session, signIn } from '@primandproper/platform-client';
+import { createGrpcJsTransport } from '@primandproper/platform-client/grpc-js';
+import { RecipesServiceDefinition } from './generated/recipes'; // a product's own stubs
+
+const RecipesService = methodsOf(RecipesServiceDefinition);
 
 const session = new Session({
   transport: createGrpcJsTransport({ address: 'api.example.com:443', credentials: grpc.credentials.createSsl() }),
@@ -59,7 +63,7 @@ if (result.kind === 'second_factor_required') {
 }
 
 const status = await getAuthStatus(session); // status.requiredActions says where to send them
-const recipe = await session.call(RecipesServiceService.getRecipe, { id });
+const recipe = await session.call(RecipesService.getRecipe, { id });
 ```
 
 **There is no default `CredentialStore`.** It holds the refresh token, which belongs in the platform's most protected
@@ -117,7 +121,7 @@ export const handle: Handle = ({ event, resolve }) => {
 // In a load function or form action:
 const recipe = await redirectOnNotSignedIn(
   locals.session,
-  () => locals.session.call(RecipesServiceService.getRecipe, { id }),
+  () => locals.session.call(RecipesService.getRecipe, { id }),
   () => redirect(302, '/login'),
 );
 ```
@@ -177,15 +181,16 @@ handed.
 import { TokenCaller } from '@primandproper/platform-client';
 
 const caller = new TokenCaller({ transport, metadata: { 'x-tenant': 'acme' } });
-const recipe = await caller.call(RecipesServiceService.getRecipe, accessTokenFromCookie, { id });
+const recipe = await caller.call(RecipesService.getRecipe, accessTokenFromCookie, { id });
 ```
 
 It holds no state, so R1–R7 do not apply to it. It never refreshes and never retries: a call answered `UNAUTHENTICATED`
 rejects with that `PlatformError`, and signing the user in again is the caller's job. Once the login moves onto
 platform's `SignInService`, the caller should be a `Session`.
 
-**Only a Node transport ships today** (`@grpc/grpc-js`). A browser calling services directly would need a gRPC-web or
-Connect transport behind the same `Transport` interface.
+**Only a Node transport ships today**: `createGrpcJsTransport`, from `@primandproper/platform-client/grpc-js` rather
+than the root, because `@grpc/grpc-js` needs Node the moment it loads and the root must not. A browser calling services
+directly would need a gRPC-web or Connect transport behind the same `Transport` interface.
 
 ## The contract, rule by rule
 
@@ -266,8 +271,11 @@ module cache the way DDB's Makefile does. `google/rpc/status.proto` and `error_d
 reasons, are googleapis rather than protoc's well-knowns, and are vendored under `third_party/googleapis` at the commit
 recorded beside them.
 
-Flags match DDB's (`outputServices=grpc-js`, `esModuleInterop=true`, then prettier), because output that does not match
-is output that cannot be dropped in.
+Flags are `outputServices=generic-definitions` and `esModuleInterop=true`, then prettier. `generic-definitions` rather
+than DDB's `grpc-js` because grpc-js's method definitions serialize with `Buffer`, which neither a browser nor React
+Native has; a generic definition's `encode` and `decode` work on `Uint8Array`, and `createGrpcJsTransport` wraps them in
+`Buffer` itself. The cost is that the output no longer drops into DDB's copies unchanged: a call site moves from
+`SignInServiceService.getSelf` to `methodsOf(SignInServiceDefinition).getSelf`.
 
 ### In a product
 
@@ -279,9 +287,13 @@ rather than generating a second copy of platform's messages:
 --ts_proto_opt=Mprimandproper/platform/filtering/v1/filtering.proto=@primandproper/platform-client/filtering/v1
 ```
 
+Generate its services with `--ts_proto_opt=outputServices=generic-definitions` too, and hand each definition to
+`methodsOf` once. A `grpc-js` stub is not a shape any `Transport` takes.
+
 The product's generated `encode` then hands its `BinaryWriter` to ours, which only typechecks if both sides load the
 same `@bufbuild/protobuf`. That is why it and `@grpc/grpc-js` are peer dependencies: the product installs them, and this
-package uses the product's copy.
+package uses the product's copy. `@grpc/grpc-js` is an optional one, needed only by a product that imports
+`@primandproper/platform-client/grpc-js`.
 
 ### Upgrading
 
