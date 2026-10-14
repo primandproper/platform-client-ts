@@ -2,14 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { type ExchangeCoordinator, InMemoryExchangeCoordinator } from './coordinator';
 import { PlatformError, SignInReason } from './errors';
-import { type IssuedToken, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { type IssuedToken, SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import { NotSignedInError, Session, type SessionConfig } from './session';
 import { FakeClock, fakeIssuedToken, FakeTransport, MemoryCredentialStore, refusal } from './testing';
-import { Code, StatusError } from './transport';
+import { Code, methodsOf, StatusError } from './transport';
 
-const getSelf = SignInServiceService.getSelf;
-const exchange = SignInServiceService.exchangeRefreshToken;
-const switchAccount = SignInServiceService.switchAccount;
+const SignInService = methodsOf(SignInServiceDefinition);
+
+const getSelf = SignInService.getSelf;
+const exchange = SignInService.exchangeRefreshToken;
+const switchAccount = SignInService.switchAccount;
 
 function setup(held = true, config: Partial<SessionConfig> = {}) {
   const clock = new FakeClock();
@@ -205,7 +207,7 @@ describe('Session.switchAccount', () => {
 
   it('switches the login it held when a sign-in in flight is refused', async () => {
     const { clock, transport, store, session } = setup();
-    const login = SignInServiceService.loginForToken;
+    const login = SignInService.loginForToken;
     let release!: () => void;
     const held = new Promise<void>((resolve) => (release = resolve));
     transport.handle(login, async () => {

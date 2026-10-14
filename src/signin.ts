@@ -2,10 +2,12 @@ import { PlatformError, SignInReason } from './errors';
 import {
   type Credentials,
   type IssuedToken,
-  SignInServiceService,
+  SignInServiceDefinition,
 } from './generated/primandproper/platform/signin/v1/signin';
 import type { Session, TokenResponse } from './session';
-import type { CallOptions, UnaryMethod } from './transport';
+import { type CallOptions, methodsOf, type UnaryMethod } from './transport';
+
+const SignInService = methodsOf(SignInServiceDefinition);
 
 /** Handle names who is signing in: a username or an email address, never both and never neither. */
 export type Handle = { username: string } | { emailAddress: string };
@@ -48,12 +50,12 @@ export type SignInResult =
 
 /** signIn signs in with a password through `LoginForToken`. */
 export function signIn(session: Session, request: PasswordSignIn, options?: CallOptions): Promise<SignInResult> {
-  return passwordDoor(session, SignInServiceService.loginForToken, request, options);
+  return passwordDoor(session, SignInService.loginForToken, request, options);
 }
 
 /** adminSignIn signs in through the administrative door, `AdminLoginForToken`. */
 export function adminSignIn(session: Session, request: PasswordSignIn, options?: CallOptions): Promise<SignInResult> {
-  return passwordDoor(session, SignInServiceService.adminLoginForToken, request, options);
+  return passwordDoor(session, SignInService.adminLoginForToken, request, options);
 }
 
 /** redeemMagicLink signs in with the token a mailed link carried. */
@@ -64,7 +66,7 @@ export function redeemMagicLink(
 ): Promise<SignInResult> {
   return attempt(
     session,
-    SignInServiceService.redeemMagicLink,
+    SignInService.redeemMagicLink,
     {
       token: request.token,
       totpCode: request.totpCode ?? '',

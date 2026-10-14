@@ -1,6 +1,8 @@
-import { type AuthStatus, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { type AuthStatus, SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import type { Session } from './session';
-import type { CallOptions } from './transport';
+import { type CallOptions, methodsOf } from './transport';
+
+const SignInService = methodsOf(SignInServiceDefinition);
 
 /**
  * RequiredAction is something the signed-in user has to be sent to do. The service signs such users in anyway, since
@@ -38,7 +40,7 @@ export type AuthStatusResult =
  * cannot be resolved from this.
  */
 export async function getAuthStatus(session: Session, options?: CallOptions): Promise<AuthStatusResult> {
-  const response = await session.callOptionallyAuthenticated(SignInServiceService.getAuthStatus, {}, options);
+  const response = await session.callOptionallyAuthenticated(SignInService.getAuthStatus, {}, options);
   if (!response.authenticated || !response.status) {
     return { authenticated: false };
   }

@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import { NotSignedInError, Session } from './session';
 import { signOut, signOutEverywhere } from './signout';
 import { FakeClock, fakeIssuedToken, FakeTransport, MemoryCredentialStore } from './testing';
-import { Code, StatusError } from './transport';
+import { Code, methodsOf, StatusError } from './transport';
 import type { IssuedToken } from './generated/primandproper/platform/signin/v1/signin';
 
-const signOutRpc = SignInServiceService.signOut;
-const everywhere = SignInServiceService.signOutEverywhere;
-const exchange = SignInServiceService.exchangeRefreshToken;
+const SignInService = methodsOf(SignInServiceDefinition);
+
+const signOutRpc = SignInService.signOut;
+const everywhere = SignInService.signOutEverywhere;
+const exchange = SignInService.exchangeRefreshToken;
 
 function setup(held?: (now: Date) => IssuedToken) {
   const clock = new FakeClock();
@@ -93,11 +95,11 @@ describe('signOut', () => {
     transport.handle(exchange, () => ({
       token: fakeIssuedToken(clock.now(), { token: 'access-2', refreshToken: 'refresh-2' }),
     }));
-    transport.handle(SignInServiceService.getSelf, () => ({ user: undefined }));
+    transport.handle(SignInService.getSelf, () => ({ user: undefined }));
     transport.handle(signOutRpc, () => ({}));
 
     clock.advance(60 * 60 * 1000);
-    const calling = session.call(SignInServiceService.getSelf, {});
+    const calling = session.call(SignInService.getSelf, {});
     await signOut(session);
     await calling;
 

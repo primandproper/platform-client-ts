@@ -1,9 +1,11 @@
 import { type ExchangeAttempt, type ExchangeCoordinator, InMemoryExchangeCoordinator } from './coordinator';
 import { isAmbiguous, NotSignedInError, PlatformError } from './errors';
-import { type IssuedToken, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { type IssuedToken, SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import { type Authorizer, type Clock, type CredentialStore, type Metadata, systemClock } from './seams';
 import { TokenCaller } from './token-caller';
-import { type CallOptions, Code, type Transport, type UnaryMethod } from './transport';
+import { type CallOptions, Code, methodsOf, type Transport, type UnaryMethod } from './transport';
+
+const SignInService = methodsOf(SignInServiceDefinition);
 
 export { NotSignedInError } from './errors';
 
@@ -290,9 +292,9 @@ export class Session {
   }
 
   private async switchOnce(refreshToken: string, accountId: string, options?: CallOptions): Promise<IssuedToken> {
-    const response = await this.callAnonymous(SignInServiceService.switchAccount, { refreshToken, accountId }, options);
+    const response = await this.callAnonymous(SignInService.switchAccount, { refreshToken, accountId }, options);
     if (!response.token) {
-      throw new Error(`${SignInServiceService.switchAccount.path} answered OK with no token`);
+      throw new Error(`${SignInService.switchAccount.path} answered OK with no token`);
     }
     return response.token;
   }
@@ -424,14 +426,14 @@ export class Session {
 
     if (!response.token) {
       // It is not a PlatformError, so it is ambiguous, and the refresh token is abandoned.
-      throw new Error(`${SignInServiceService.exchangeRefreshToken.path} answered OK with no token`);
+      throw new Error(`${SignInService.exchangeRefreshToken.path} answered OK with no token`);
     }
     return response.token;
   }
 
   private exchangeOnce(refreshToken: string, key: string | undefined): Promise<TokenResponse> {
     return this.callAnonymous(
-      SignInServiceService.exchangeRefreshToken,
+      SignInService.exchangeRefreshToken,
       { refreshToken },
       {
         // A deadline is wall-clock time for the transport, not the Clock seam's, which decides expiry.

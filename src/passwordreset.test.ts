@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { PlatformError } from './errors';
-import { PasswordResetServiceService } from './generated/primandproper/platform/passwordreset/v1/passwordreset';
+import { PasswordResetServiceDefinition } from './generated/primandproper/platform/passwordreset/v1/passwordreset';
 import { completePasswordReset, requestPasswordReset, verifyPasswordResetToken } from './passwordreset';
 import { Session } from './session';
 import { FakeTransport, MemoryCredentialStore } from './testing';
-import { Code, StatusError } from './transport';
+import { Code, methodsOf, StatusError } from './transport';
 
-const request = PasswordResetServiceService.requestPasswordReset;
-const verify = PasswordResetServiceService.verifyPasswordResetToken;
-const complete = PasswordResetServiceService.completePasswordReset;
+const PasswordResetService = methodsOf(PasswordResetServiceDefinition);
+
+const request = PasswordResetService.requestPasswordReset;
+const verify = PasswordResetService.verifyPasswordResetToken;
+const complete = PasswordResetService.completePasswordReset;
 
 function setup() {
   const transport = new FakeTransport();

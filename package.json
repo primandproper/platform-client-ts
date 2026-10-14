@@ -1,6 +1,6 @@
 {
   "name": "@primandproper/platform-client",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Client for services built on platform-go",
   "license": "AGPL-3.0-or-later",
   "repository": {
@@ -15,6 +15,7 @@
     "./billing/v1": "./dist/billing/v1.mjs",
     "./comments/v1": "./dist/comments/v1.mjs",
     "./filtering/v1": "./dist/filtering/v1.mjs",
+    "./grpc-js": "./dist/grpc-js.mjs",
     "./identity/v1": "./dist/identity/v1.mjs",
     "./issuereports/v1": "./dist/issuereports/v1.mjs",
     "./mediaregistry/v1": "./dist/mediaregistry/v1.mjs",
@@ -63,6 +64,11 @@
   "peerDependencies": {
     "@bufbuild/protobuf": "^2.10.1",
     "@grpc/grpc-js": "^1.14.3"
+  },
+  "peerDependenciesMeta": {
+    "@grpc/grpc-js": {
+      "optional": true
+    }
   },
   "packageManager": "pnpm@10.33.0"
 }

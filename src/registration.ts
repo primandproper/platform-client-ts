@@ -1,11 +1,13 @@
 import { PlatformError, SignInReason } from './errors';
-import { SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import type { DeadLink } from './passwordreset';
 import type { Session } from './session';
-import { type CallOptions, Code } from './transport';
+import { type CallOptions, Code, methodsOf } from './transport';
+
+const SignInService = methodsOf(SignInServiceDefinition);
 
 // Register has no helper: it is one anonymous call that mints no session, so a sign-up screen calls
-// `SignInServiceService.register` through `callAnonymous`, and branches on REGISTRATION_REFUSED and REGISTRATION_CLOSED.
+// `SignInService.register` through `callAnonymous`, and branches on REGISTRATION_REFUSED and REGISTRATION_CLOSED.
 // What follows it, and is anonymous, is here.
 
 export type VerifyEmailResult = { kind: 'verified' } | DeadLink;
@@ -33,7 +35,7 @@ export async function verifyEmailAddress(
   options?: CallOptions,
 ): Promise<VerifyEmailResult> {
   try {
-    await session.callAnonymous(SignInServiceService.verifyEmailAddress, { token }, options);
+    await session.callAnonymous(SignInService.verifyEmailAddress, { token }, options);
     return { kind: 'verified' };
   } catch (err) {
     return deadLinkOrThrow(err);
@@ -52,7 +54,7 @@ export async function attachPassword(
   options?: CallOptions,
 ): Promise<AttachPasswordResult> {
   try {
-    await session.callAnonymous(SignInServiceService.attachPassword, { token, newPassword }, options);
+    await session.callAnonymous(SignInService.attachPassword, { token, newPassword }, options);
     return { kind: 'attached' };
   } catch (err) {
     if (err instanceof PlatformError && err.is(SignInReason.PASSWORD_ALREADY_SET)) {
@@ -68,7 +70,7 @@ export async function attachPassword(
  * rebuilds the enumerator the server's padded timing exists to prevent. The link is answered with `redeemMagicLink`.
  */
 export async function requestMagicLink(session: Session, emailAddress: string, options?: CallOptions): Promise<void> {
-  await session.callAnonymous(SignInServiceService.requestMagicLink, { emailAddress }, options);
+  await session.callAnonymous(SignInService.requestMagicLink, { emailAddress }, options);
 }
 
 function deadLinkOrThrow(err: unknown): DeadLink {

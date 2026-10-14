@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
 
@@ -2864,349 +2852,109 @@ export const ArchiveReportResponse: MessageFns<ArchiveReportResponse> = {
  * issues.reports.read_any, which issuereports/grpc declares and grants to
  * nobody. A deployment gives it to its operators or to no one.
  */
-export type IssueReportsServiceService = typeof IssueReportsServiceService;
-export const IssueReportsServiceService = {
-  createReport: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/CreateReport' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: CreateReportRequest): Buffer => Buffer.from(CreateReportRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): CreateReportRequest => CreateReportRequest.decode(value),
-    responseSerialize: (value: CreateReportResponse): Buffer =>
-      Buffer.from(CreateReportResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): CreateReportResponse => CreateReportResponse.decode(value),
-  },
-  getReport: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/GetReport' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetReportRequest): Buffer => Buffer.from(GetReportRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetReportRequest => GetReportRequest.decode(value),
-    responseSerialize: (value: GetReportResponse): Buffer => Buffer.from(GetReportResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetReportResponse => GetReportResponse.decode(value),
-  },
-  listReports: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/ListReports' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListReportsRequest): Buffer => Buffer.from(ListReportsRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListReportsRequest => ListReportsRequest.decode(value),
-    responseSerialize: (value: ListReportsResponse): Buffer => Buffer.from(ListReportsResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListReportsResponse => ListReportsResponse.decode(value),
-  },
-  listReportsByStatus: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/ListReportsByStatus' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListReportsByStatusRequest): Buffer =>
-      Buffer.from(ListReportsByStatusRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListReportsByStatusRequest => ListReportsByStatusRequest.decode(value),
-    responseSerialize: (value: ListReportsByStatusResponse): Buffer =>
-      Buffer.from(ListReportsByStatusResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListReportsByStatusResponse => ListReportsByStatusResponse.decode(value),
-  },
-  listReportsByReporter: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/ListReportsByReporter' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListReportsByReporterRequest): Buffer =>
-      Buffer.from(ListReportsByReporterRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListReportsByReporterRequest => ListReportsByReporterRequest.decode(value),
-    responseSerialize: (value: ListReportsByReporterResponse): Buffer =>
-      Buffer.from(ListReportsByReporterResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListReportsByReporterResponse => ListReportsByReporterResponse.decode(value),
-  },
-  listReportsBySubjectType: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/ListReportsBySubjectType' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListReportsBySubjectTypeRequest): Buffer =>
-      Buffer.from(ListReportsBySubjectTypeRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListReportsBySubjectTypeRequest =>
-      ListReportsBySubjectTypeRequest.decode(value),
-    responseSerialize: (value: ListReportsBySubjectTypeResponse): Buffer =>
-      Buffer.from(ListReportsBySubjectTypeResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListReportsBySubjectTypeResponse =>
-      ListReportsBySubjectTypeResponse.decode(value),
-  },
-  listReportsForSubject: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/ListReportsForSubject' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListReportsForSubjectRequest): Buffer =>
-      Buffer.from(ListReportsForSubjectRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListReportsForSubjectRequest => ListReportsForSubjectRequest.decode(value),
-    responseSerialize: (value: ListReportsForSubjectResponse): Buffer =>
-      Buffer.from(ListReportsForSubjectResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListReportsForSubjectResponse => ListReportsForSubjectResponse.decode(value),
-  },
-  listReportsAcrossScopes: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/ListReportsAcrossScopes' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListReportsAcrossScopesRequest): Buffer =>
-      Buffer.from(ListReportsAcrossScopesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListReportsAcrossScopesRequest => ListReportsAcrossScopesRequest.decode(value),
-    responseSerialize: (value: ListReportsAcrossScopesResponse): Buffer =>
-      Buffer.from(ListReportsAcrossScopesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListReportsAcrossScopesResponse =>
-      ListReportsAcrossScopesResponse.decode(value),
-  },
-  listReportsByStatusAcrossScopes: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/ListReportsByStatusAcrossScopes' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListReportsByStatusAcrossScopesRequest): Buffer =>
-      Buffer.from(ListReportsByStatusAcrossScopesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListReportsByStatusAcrossScopesRequest =>
-      ListReportsByStatusAcrossScopesRequest.decode(value),
-    responseSerialize: (value: ListReportsByStatusAcrossScopesResponse): Buffer =>
-      Buffer.from(ListReportsByStatusAcrossScopesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListReportsByStatusAcrossScopesResponse =>
-      ListReportsByStatusAcrossScopesResponse.decode(value),
-  },
-  updateReport: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/UpdateReport' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: UpdateReportRequest): Buffer => Buffer.from(UpdateReportRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): UpdateReportRequest => UpdateReportRequest.decode(value),
-    responseSerialize: (value: UpdateReportResponse): Buffer =>
-      Buffer.from(UpdateReportResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): UpdateReportResponse => UpdateReportResponse.decode(value),
-  },
-  transitionReport: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/TransitionReport' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: TransitionReportRequest): Buffer =>
-      Buffer.from(TransitionReportRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): TransitionReportRequest => TransitionReportRequest.decode(value),
-    responseSerialize: (value: TransitionReportResponse): Buffer =>
-      Buffer.from(TransitionReportResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): TransitionReportResponse => TransitionReportResponse.decode(value),
-  },
-  archiveReport: {
-    path: '/primandproper.platform.issuereports.v1.IssueReportsService/ArchiveReport' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchiveReportRequest): Buffer => Buffer.from(ArchiveReportRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchiveReportRequest => ArchiveReportRequest.decode(value),
-    responseSerialize: (value: ArchiveReportResponse): Buffer =>
-      Buffer.from(ArchiveReportResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchiveReportResponse => ArchiveReportResponse.decode(value),
+export type IssueReportsServiceDefinition = typeof IssueReportsServiceDefinition;
+export const IssueReportsServiceDefinition = {
+  name: 'IssueReportsService',
+  fullName: 'primandproper.platform.issuereports.v1.IssueReportsService',
+  methods: {
+    createReport: {
+      name: 'CreateReport',
+      requestType: CreateReportRequest as typeof CreateReportRequest,
+      requestStream: false,
+      responseType: CreateReportResponse as typeof CreateReportResponse,
+      responseStream: false,
+      options: {},
+    },
+    getReport: {
+      name: 'GetReport',
+      requestType: GetReportRequest as typeof GetReportRequest,
+      requestStream: false,
+      responseType: GetReportResponse as typeof GetReportResponse,
+      responseStream: false,
+      options: {},
+    },
+    listReports: {
+      name: 'ListReports',
+      requestType: ListReportsRequest as typeof ListReportsRequest,
+      requestStream: false,
+      responseType: ListReportsResponse as typeof ListReportsResponse,
+      responseStream: false,
+      options: {},
+    },
+    listReportsByStatus: {
+      name: 'ListReportsByStatus',
+      requestType: ListReportsByStatusRequest as typeof ListReportsByStatusRequest,
+      requestStream: false,
+      responseType: ListReportsByStatusResponse as typeof ListReportsByStatusResponse,
+      responseStream: false,
+      options: {},
+    },
+    listReportsByReporter: {
+      name: 'ListReportsByReporter',
+      requestType: ListReportsByReporterRequest as typeof ListReportsByReporterRequest,
+      requestStream: false,
+      responseType: ListReportsByReporterResponse as typeof ListReportsByReporterResponse,
+      responseStream: false,
+      options: {},
+    },
+    listReportsBySubjectType: {
+      name: 'ListReportsBySubjectType',
+      requestType: ListReportsBySubjectTypeRequest as typeof ListReportsBySubjectTypeRequest,
+      requestStream: false,
+      responseType: ListReportsBySubjectTypeResponse as typeof ListReportsBySubjectTypeResponse,
+      responseStream: false,
+      options: {},
+    },
+    listReportsForSubject: {
+      name: 'ListReportsForSubject',
+      requestType: ListReportsForSubjectRequest as typeof ListReportsForSubjectRequest,
+      requestStream: false,
+      responseType: ListReportsForSubjectResponse as typeof ListReportsForSubjectResponse,
+      responseStream: false,
+      options: {},
+    },
+    listReportsAcrossScopes: {
+      name: 'ListReportsAcrossScopes',
+      requestType: ListReportsAcrossScopesRequest as typeof ListReportsAcrossScopesRequest,
+      requestStream: false,
+      responseType: ListReportsAcrossScopesResponse as typeof ListReportsAcrossScopesResponse,
+      responseStream: false,
+      options: {},
+    },
+    listReportsByStatusAcrossScopes: {
+      name: 'ListReportsByStatusAcrossScopes',
+      requestType: ListReportsByStatusAcrossScopesRequest as typeof ListReportsByStatusAcrossScopesRequest,
+      requestStream: false,
+      responseType: ListReportsByStatusAcrossScopesResponse as typeof ListReportsByStatusAcrossScopesResponse,
+      responseStream: false,
+      options: {},
+    },
+    updateReport: {
+      name: 'UpdateReport',
+      requestType: UpdateReportRequest as typeof UpdateReportRequest,
+      requestStream: false,
+      responseType: UpdateReportResponse as typeof UpdateReportResponse,
+      responseStream: false,
+      options: {},
+    },
+    transitionReport: {
+      name: 'TransitionReport',
+      requestType: TransitionReportRequest as typeof TransitionReportRequest,
+      requestStream: false,
+      responseType: TransitionReportResponse as typeof TransitionReportResponse,
+      responseStream: false,
+      options: {},
+    },
+    archiveReport: {
+      name: 'ArchiveReport',
+      requestType: ArchiveReportRequest as typeof ArchiveReportRequest,
+      requestStream: false,
+      responseType: ArchiveReportResponse as typeof ArchiveReportResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface IssueReportsServiceServer extends UntypedServiceImplementation {
-  createReport: handleUnaryCall<CreateReportRequest, CreateReportResponse>;
-  getReport: handleUnaryCall<GetReportRequest, GetReportResponse>;
-  listReports: handleUnaryCall<ListReportsRequest, ListReportsResponse>;
-  listReportsByStatus: handleUnaryCall<ListReportsByStatusRequest, ListReportsByStatusResponse>;
-  listReportsByReporter: handleUnaryCall<ListReportsByReporterRequest, ListReportsByReporterResponse>;
-  listReportsBySubjectType: handleUnaryCall<ListReportsBySubjectTypeRequest, ListReportsBySubjectTypeResponse>;
-  listReportsForSubject: handleUnaryCall<ListReportsForSubjectRequest, ListReportsForSubjectResponse>;
-  listReportsAcrossScopes: handleUnaryCall<ListReportsAcrossScopesRequest, ListReportsAcrossScopesResponse>;
-  listReportsByStatusAcrossScopes: handleUnaryCall<
-    ListReportsByStatusAcrossScopesRequest,
-    ListReportsByStatusAcrossScopesResponse
-  >;
-  updateReport: handleUnaryCall<UpdateReportRequest, UpdateReportResponse>;
-  transitionReport: handleUnaryCall<TransitionReportRequest, TransitionReportResponse>;
-  archiveReport: handleUnaryCall<ArchiveReportRequest, ArchiveReportResponse>;
-}
-
-export interface IssueReportsServiceClient extends Client {
-  createReport(
-    request: CreateReportRequest,
-    callback: (error: ServiceError | null, response: CreateReportResponse) => void,
-  ): ClientUnaryCall;
-  createReport(
-    request: CreateReportRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: CreateReportResponse) => void,
-  ): ClientUnaryCall;
-  createReport(
-    request: CreateReportRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: CreateReportResponse) => void,
-  ): ClientUnaryCall;
-  getReport(
-    request: GetReportRequest,
-    callback: (error: ServiceError | null, response: GetReportResponse) => void,
-  ): ClientUnaryCall;
-  getReport(
-    request: GetReportRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetReportResponse) => void,
-  ): ClientUnaryCall;
-  getReport(
-    request: GetReportRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetReportResponse) => void,
-  ): ClientUnaryCall;
-  listReports(
-    request: ListReportsRequest,
-    callback: (error: ServiceError | null, response: ListReportsResponse) => void,
-  ): ClientUnaryCall;
-  listReports(
-    request: ListReportsRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListReportsResponse) => void,
-  ): ClientUnaryCall;
-  listReports(
-    request: ListReportsRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListReportsResponse) => void,
-  ): ClientUnaryCall;
-  listReportsByStatus(
-    request: ListReportsByStatusRequest,
-    callback: (error: ServiceError | null, response: ListReportsByStatusResponse) => void,
-  ): ClientUnaryCall;
-  listReportsByStatus(
-    request: ListReportsByStatusRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListReportsByStatusResponse) => void,
-  ): ClientUnaryCall;
-  listReportsByStatus(
-    request: ListReportsByStatusRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListReportsByStatusResponse) => void,
-  ): ClientUnaryCall;
-  listReportsByReporter(
-    request: ListReportsByReporterRequest,
-    callback: (error: ServiceError | null, response: ListReportsByReporterResponse) => void,
-  ): ClientUnaryCall;
-  listReportsByReporter(
-    request: ListReportsByReporterRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListReportsByReporterResponse) => void,
-  ): ClientUnaryCall;
-  listReportsByReporter(
-    request: ListReportsByReporterRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListReportsByReporterResponse) => void,
-  ): ClientUnaryCall;
-  listReportsBySubjectType(
-    request: ListReportsBySubjectTypeRequest,
-    callback: (error: ServiceError | null, response: ListReportsBySubjectTypeResponse) => void,
-  ): ClientUnaryCall;
-  listReportsBySubjectType(
-    request: ListReportsBySubjectTypeRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListReportsBySubjectTypeResponse) => void,
-  ): ClientUnaryCall;
-  listReportsBySubjectType(
-    request: ListReportsBySubjectTypeRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListReportsBySubjectTypeResponse) => void,
-  ): ClientUnaryCall;
-  listReportsForSubject(
-    request: ListReportsForSubjectRequest,
-    callback: (error: ServiceError | null, response: ListReportsForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  listReportsForSubject(
-    request: ListReportsForSubjectRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListReportsForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  listReportsForSubject(
-    request: ListReportsForSubjectRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListReportsForSubjectResponse) => void,
-  ): ClientUnaryCall;
-  listReportsAcrossScopes(
-    request: ListReportsAcrossScopesRequest,
-    callback: (error: ServiceError | null, response: ListReportsAcrossScopesResponse) => void,
-  ): ClientUnaryCall;
-  listReportsAcrossScopes(
-    request: ListReportsAcrossScopesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListReportsAcrossScopesResponse) => void,
-  ): ClientUnaryCall;
-  listReportsAcrossScopes(
-    request: ListReportsAcrossScopesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListReportsAcrossScopesResponse) => void,
-  ): ClientUnaryCall;
-  listReportsByStatusAcrossScopes(
-    request: ListReportsByStatusAcrossScopesRequest,
-    callback: (error: ServiceError | null, response: ListReportsByStatusAcrossScopesResponse) => void,
-  ): ClientUnaryCall;
-  listReportsByStatusAcrossScopes(
-    request: ListReportsByStatusAcrossScopesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListReportsByStatusAcrossScopesResponse) => void,
-  ): ClientUnaryCall;
-  listReportsByStatusAcrossScopes(
-    request: ListReportsByStatusAcrossScopesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListReportsByStatusAcrossScopesResponse) => void,
-  ): ClientUnaryCall;
-  updateReport(
-    request: UpdateReportRequest,
-    callback: (error: ServiceError | null, response: UpdateReportResponse) => void,
-  ): ClientUnaryCall;
-  updateReport(
-    request: UpdateReportRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: UpdateReportResponse) => void,
-  ): ClientUnaryCall;
-  updateReport(
-    request: UpdateReportRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: UpdateReportResponse) => void,
-  ): ClientUnaryCall;
-  transitionReport(
-    request: TransitionReportRequest,
-    callback: (error: ServiceError | null, response: TransitionReportResponse) => void,
-  ): ClientUnaryCall;
-  transitionReport(
-    request: TransitionReportRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: TransitionReportResponse) => void,
-  ): ClientUnaryCall;
-  transitionReport(
-    request: TransitionReportRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: TransitionReportResponse) => void,
-  ): ClientUnaryCall;
-  archiveReport(
-    request: ArchiveReportRequest,
-    callback: (error: ServiceError | null, response: ArchiveReportResponse) => void,
-  ): ClientUnaryCall;
-  archiveReport(
-    request: ArchiveReportRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchiveReportResponse) => void,
-  ): ClientUnaryCall;
-  archiveReport(
-    request: ArchiveReportRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchiveReportResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const IssueReportsServiceClient = makeGenericClientConstructor(
-  IssueReportsServiceService,
-  'primandproper.platform.issuereports.v1.IssueReportsService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): IssueReportsServiceClient;
-  service: typeof IssueReportsServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

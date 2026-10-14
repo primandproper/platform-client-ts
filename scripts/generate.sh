@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Generate the TypeScript client from the fetched .proto files.
 #
-# Flags match what dinnerdonebetter already generates with, because the output has to
-# drop into that app in place of the copies it maintains by hand.
+# outputServices=generic-definitions rather than grpc-js, whose method definitions call Buffer
+# at runtime and so cannot run in a browser or React Native. methodsOf in src/transport.ts turns
+# a definition into the methods a Transport carries.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -19,7 +20,7 @@ while IFS= read -r proto; do PROTOS+=("$proto"); done < <(find "$INCLUDE" -name 
 
 PATH="$ROOT/node_modules/.bin:$PATH" protoc \
   --ts_proto_out="$OUT" \
-  --ts_proto_opt=outputServices=grpc-js \
+  --ts_proto_opt=outputServices=generic-definitions \
   --ts_proto_opt=esModuleInterop=true \
   --proto_path "$INCLUDE" \
   "${PROTOS[@]}"

@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { PlatformError, SignInReason } from './errors';
-import { SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import { Session } from './session';
 import { adminSignIn, redeemMagicLink, signIn } from './signin';
 import { FakeClock, fakeIssuedToken, FakeTransport, MemoryCredentialStore, refusal } from './testing';
-import { Code, StatusError } from './transport';
+import { Code, methodsOf, StatusError } from './transport';
 
-const login = SignInServiceService.loginForToken;
-const adminLogin = SignInServiceService.adminLoginForToken;
-const magicLink = SignInServiceService.redeemMagicLink;
+const SignInService = methodsOf(SignInServiceDefinition);
+
+const login = SignInService.loginForToken;
+const adminLogin = SignInService.adminLoginForToken;
+const magicLink = SignInService.redeemMagicLink;
 
 function setup() {
   const clock = new FakeClock();

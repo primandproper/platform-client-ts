@@ -92,7 +92,7 @@ EOF
 # The consumer builds the channel credentials; our transport opens the channel with them.
 cat >transport.ts <<'EOF'
 import { credentials } from '@grpc/grpc-js';
-import { createGrpcJsTransport } from '@primandproper/platform-client';
+import { createGrpcJsTransport } from '@primandproper/platform-client/grpc-js';
 
 export const transport = createGrpcJsTransport({ address: 'localhost:0', credentials: credentials.createInsecure() });
 EOF

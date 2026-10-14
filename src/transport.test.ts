@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
-import type { CallOptions, Transport } from './transport';
+import { MediaRegistryServiceDefinition } from './generated/primandproper/platform/mediaregistry/v1/mediaregistry';
+import { SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
+import { type CallOptions, methodsOf, type Transport } from './transport';
 import { withConstantMetadata } from './transport';
+
+const SignInService = methodsOf(SignInServiceDefinition);
 
 function recordingTransport(): { transport: Transport; calls: CallOptions[] } {
   const calls: CallOptions[] = [];
@@ -19,7 +22,7 @@ describe('withConstantMetadata', () => {
   it('sends the entries on a call that carries no metadata of its own', async () => {
     const { transport, calls } = recordingTransport();
 
-    await withConstantMetadata(transport, { 'x-tenant': 'acme' }).unary(SignInServiceService.getAuthStatus, {});
+    await withConstantMetadata(transport, { 'x-tenant': 'acme' }).unary(SignInService.getAuthStatus, {});
 
     expect(calls).toEqual([{ metadata: { 'x-tenant': 'acme' } }]);
   });
@@ -29,7 +32,7 @@ describe('withConstantMetadata', () => {
     const deadline = new Date();
 
     await withConstantMetadata(transport, { 'x-tenant': 'acme' }).unary(
-      SignInServiceService.getAuthStatus,
+      SignInService.getAuthStatus,
       {},
       { metadata: { authorization: 'Bearer abc' }, deadline },
     );
@@ -41,7 +44,7 @@ describe('withConstantMetadata', () => {
     const { transport, calls } = recordingTransport();
 
     await withConstantMetadata(transport, { 'x-tenant': 'acme' }).unary(
-      SignInServiceService.getAuthStatus,
+      SignInService.getAuthStatus,
       {},
       { metadata: { 'x-tenant': 'globex' } },
     );
@@ -55,8 +58,30 @@ describe('withConstantMetadata', () => {
     const withTenant = withConstantMetadata(transport, entries);
 
     entries['x-tenant'] = 'globex';
-    await withTenant.unary(SignInServiceService.getAuthStatus, {});
+    await withTenant.unary(SignInService.getAuthStatus, {});
 
     expect(calls[0]?.metadata).toEqual({ 'x-tenant': 'acme' });
+  });
+});
+
+describe('methodsOf', () => {
+  it('dials each method under the full name of its service', () => {
+    expect(SignInService.getSelf.path).toBe('/primandproper.platform.signin.v1.SignInService/GetSelf');
+  });
+
+  it('carries the messages on and off the wire as Uint8Array', () => {
+    const { requestType } = SignInService.exchangeRefreshToken;
+
+    const bytes = requestType.encode({ refreshToken: 'refresh-1' }).finish();
+
+    expect(bytes).toBeInstanceOf(Uint8Array);
+    expect(requestType.decode(bytes)).toEqual({ refreshToken: 'refresh-1' });
+  });
+
+  it('leaves out a streaming method, which no Transport carries', () => {
+    const media = methodsOf(MediaRegistryServiceDefinition);
+
+    expect(media.recordObject.path).toBe('/primandproper.platform.mediaregistry.v1.MediaRegistryService/RecordObject');
+    expect('uploadObject' in media).toBe(false);
   });
 });

@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { PlatformError } from './errors';
-import { SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import { FakeTransport } from './testing';
 import { TokenCaller } from './token-caller';
-import { Code, StatusError } from './transport';
+import { Code, methodsOf, StatusError } from './transport';
 
-const getSelf = SignInServiceService.getSelf;
+const SignInService = methodsOf(SignInServiceDefinition);
+
+const getSelf = SignInService.getSelf;
 
 function setup() {
   const transport = new FakeTransport().handle(getSelf, () => ({ user: undefined }));

@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { IssuedToken } from '../../signin/v1/signin';
 
@@ -1074,190 +1062,64 @@ export const ArchivePasskeyResponse: MessageFns<ArchivePasskeyResponse> = {
   },
 };
 
-export type PasskeysServiceService = typeof PasskeysServiceService;
-export const PasskeysServiceService = {
-  /** Enrolling a passkey on the caller's own account. */
-  beginRegistration: {
-    path: '/primandproper.platform.passkeys.v1.PasskeysService/BeginRegistration' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: BeginRegistrationRequest): Buffer =>
-      Buffer.from(BeginRegistrationRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): BeginRegistrationRequest => BeginRegistrationRequest.decode(value),
-    responseSerialize: (value: BeginRegistrationResponse): Buffer =>
-      Buffer.from(BeginRegistrationResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): BeginRegistrationResponse => BeginRegistrationResponse.decode(value),
-  },
-  finishRegistration: {
-    path: '/primandproper.platform.passkeys.v1.PasskeysService/FinishRegistration' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: FinishRegistrationRequest): Buffer =>
-      Buffer.from(FinishRegistrationRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): FinishRegistrationRequest => FinishRegistrationRequest.decode(value),
-    responseSerialize: (value: FinishRegistrationResponse): Buffer =>
-      Buffer.from(FinishRegistrationResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): FinishRegistrationResponse => FinishRegistrationResponse.decode(value),
-  },
-  /** Signing in with one. Both are anonymous. */
-  beginLogin: {
-    path: '/primandproper.platform.passkeys.v1.PasskeysService/BeginLogin' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: BeginLoginRequest): Buffer => Buffer.from(BeginLoginRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): BeginLoginRequest => BeginLoginRequest.decode(value),
-    responseSerialize: (value: BeginLoginResponse): Buffer => Buffer.from(BeginLoginResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): BeginLoginResponse => BeginLoginResponse.decode(value),
-  },
-  finishLogin: {
-    path: '/primandproper.platform.passkeys.v1.PasskeysService/FinishLogin' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: FinishLoginRequest): Buffer => Buffer.from(FinishLoginRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): FinishLoginRequest => FinishLoginRequest.decode(value),
-    responseSerialize: (value: FinishLoginResponse): Buffer => Buffer.from(FinishLoginResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): FinishLoginResponse => FinishLoginResponse.decode(value),
-  },
-  /** The settings page. */
-  listPasskeys: {
-    path: '/primandproper.platform.passkeys.v1.PasskeysService/ListPasskeys' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListPasskeysRequest): Buffer => Buffer.from(ListPasskeysRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListPasskeysRequest => ListPasskeysRequest.decode(value),
-    responseSerialize: (value: ListPasskeysResponse): Buffer =>
-      Buffer.from(ListPasskeysResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListPasskeysResponse => ListPasskeysResponse.decode(value),
-  },
-  archivePasskey: {
-    path: '/primandproper.platform.passkeys.v1.PasskeysService/ArchivePasskey' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ArchivePasskeyRequest): Buffer =>
-      Buffer.from(ArchivePasskeyRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ArchivePasskeyRequest => ArchivePasskeyRequest.decode(value),
-    responseSerialize: (value: ArchivePasskeyResponse): Buffer =>
-      Buffer.from(ArchivePasskeyResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ArchivePasskeyResponse => ArchivePasskeyResponse.decode(value),
+export type PasskeysServiceDefinition = typeof PasskeysServiceDefinition;
+export const PasskeysServiceDefinition = {
+  name: 'PasskeysService',
+  fullName: 'primandproper.platform.passkeys.v1.PasskeysService',
+  methods: {
+    /** Enrolling a passkey on the caller's own account. */
+    beginRegistration: {
+      name: 'BeginRegistration',
+      requestType: BeginRegistrationRequest as typeof BeginRegistrationRequest,
+      requestStream: false,
+      responseType: BeginRegistrationResponse as typeof BeginRegistrationResponse,
+      responseStream: false,
+      options: {},
+    },
+    finishRegistration: {
+      name: 'FinishRegistration',
+      requestType: FinishRegistrationRequest as typeof FinishRegistrationRequest,
+      requestStream: false,
+      responseType: FinishRegistrationResponse as typeof FinishRegistrationResponse,
+      responseStream: false,
+      options: {},
+    },
+    /** Signing in with one. Both are anonymous. */
+    beginLogin: {
+      name: 'BeginLogin',
+      requestType: BeginLoginRequest as typeof BeginLoginRequest,
+      requestStream: false,
+      responseType: BeginLoginResponse as typeof BeginLoginResponse,
+      responseStream: false,
+      options: {},
+    },
+    finishLogin: {
+      name: 'FinishLogin',
+      requestType: FinishLoginRequest as typeof FinishLoginRequest,
+      requestStream: false,
+      responseType: FinishLoginResponse as typeof FinishLoginResponse,
+      responseStream: false,
+      options: {},
+    },
+    /** The settings page. */
+    listPasskeys: {
+      name: 'ListPasskeys',
+      requestType: ListPasskeysRequest as typeof ListPasskeysRequest,
+      requestStream: false,
+      responseType: ListPasskeysResponse as typeof ListPasskeysResponse,
+      responseStream: false,
+      options: {},
+    },
+    archivePasskey: {
+      name: 'ArchivePasskey',
+      requestType: ArchivePasskeyRequest as typeof ArchivePasskeyRequest,
+      requestStream: false,
+      responseType: ArchivePasskeyResponse as typeof ArchivePasskeyResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface PasskeysServiceServer extends UntypedServiceImplementation {
-  /** Enrolling a passkey on the caller's own account. */
-  beginRegistration: handleUnaryCall<BeginRegistrationRequest, BeginRegistrationResponse>;
-  finishRegistration: handleUnaryCall<FinishRegistrationRequest, FinishRegistrationResponse>;
-  /** Signing in with one. Both are anonymous. */
-  beginLogin: handleUnaryCall<BeginLoginRequest, BeginLoginResponse>;
-  finishLogin: handleUnaryCall<FinishLoginRequest, FinishLoginResponse>;
-  /** The settings page. */
-  listPasskeys: handleUnaryCall<ListPasskeysRequest, ListPasskeysResponse>;
-  archivePasskey: handleUnaryCall<ArchivePasskeyRequest, ArchivePasskeyResponse>;
-}
-
-export interface PasskeysServiceClient extends Client {
-  /** Enrolling a passkey on the caller's own account. */
-  beginRegistration(
-    request: BeginRegistrationRequest,
-    callback: (error: ServiceError | null, response: BeginRegistrationResponse) => void,
-  ): ClientUnaryCall;
-  beginRegistration(
-    request: BeginRegistrationRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: BeginRegistrationResponse) => void,
-  ): ClientUnaryCall;
-  beginRegistration(
-    request: BeginRegistrationRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: BeginRegistrationResponse) => void,
-  ): ClientUnaryCall;
-  finishRegistration(
-    request: FinishRegistrationRequest,
-    callback: (error: ServiceError | null, response: FinishRegistrationResponse) => void,
-  ): ClientUnaryCall;
-  finishRegistration(
-    request: FinishRegistrationRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: FinishRegistrationResponse) => void,
-  ): ClientUnaryCall;
-  finishRegistration(
-    request: FinishRegistrationRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: FinishRegistrationResponse) => void,
-  ): ClientUnaryCall;
-  /** Signing in with one. Both are anonymous. */
-  beginLogin(
-    request: BeginLoginRequest,
-    callback: (error: ServiceError | null, response: BeginLoginResponse) => void,
-  ): ClientUnaryCall;
-  beginLogin(
-    request: BeginLoginRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: BeginLoginResponse) => void,
-  ): ClientUnaryCall;
-  beginLogin(
-    request: BeginLoginRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: BeginLoginResponse) => void,
-  ): ClientUnaryCall;
-  finishLogin(
-    request: FinishLoginRequest,
-    callback: (error: ServiceError | null, response: FinishLoginResponse) => void,
-  ): ClientUnaryCall;
-  finishLogin(
-    request: FinishLoginRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: FinishLoginResponse) => void,
-  ): ClientUnaryCall;
-  finishLogin(
-    request: FinishLoginRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: FinishLoginResponse) => void,
-  ): ClientUnaryCall;
-  /** The settings page. */
-  listPasskeys(
-    request: ListPasskeysRequest,
-    callback: (error: ServiceError | null, response: ListPasskeysResponse) => void,
-  ): ClientUnaryCall;
-  listPasskeys(
-    request: ListPasskeysRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListPasskeysResponse) => void,
-  ): ClientUnaryCall;
-  listPasskeys(
-    request: ListPasskeysRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListPasskeysResponse) => void,
-  ): ClientUnaryCall;
-  archivePasskey(
-    request: ArchivePasskeyRequest,
-    callback: (error: ServiceError | null, response: ArchivePasskeyResponse) => void,
-  ): ClientUnaryCall;
-  archivePasskey(
-    request: ArchivePasskeyRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ArchivePasskeyResponse) => void,
-  ): ClientUnaryCall;
-  archivePasskey(
-    request: ArchivePasskeyRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ArchivePasskeyResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const PasskeysServiceClient = makeGenericClientConstructor(
-  PasskeysServiceService,
-  'primandproper.platform.passkeys.v1.PasskeysService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): PasskeysServiceClient;
-  service: typeof PasskeysServiceService;
-  serviceName: string;
-};
 
 function bytesFromBase64(b64: string): Uint8Array {
   if ((globalThis as any).Buffer) {

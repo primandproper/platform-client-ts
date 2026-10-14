@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { type ExchangeAttempt, hashToken } from './coordinator';
 import { describeExchangeCoordinator } from './coordinator.conformance';
 import { ExchangeNotSentError, PlatformError, SignInReason } from './errors';
-import { type IssuedToken, SignInServiceService } from './generated/primandproper/platform/signin/v1/signin';
+import { type IssuedToken, SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
 import { Session } from './session';
 import {
   type CoordinationStore,
@@ -19,7 +19,9 @@ import {
   MemoryCredentialStore,
   refusal,
 } from './testing';
-import { Code } from './transport';
+import { Code, methodsOf } from './transport';
+
+const SignInService = methodsOf(SignInServiceDefinition);
 
 describeExchangeCoordinator(
   'SharedExchangeCoordinator',
@@ -187,8 +189,8 @@ describe('SharedExchangeCoordinator', () => {
 });
 
 describe('Session over SharedExchangeCoordinator', () => {
-  const getSelf = SignInServiceService.getSelf;
-  const exchange = SignInServiceService.exchangeRefreshToken;
+  const getSelf = SignInService.getSelf;
+  const exchange = SignInService.exchangeRefreshToken;
 
   it('never sends the refresh token a second time after a claimant crashed, with R10 off (R5)', async () => {
     const clock = new FakeClock();

@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import { PasskeyReason, passkeyReasonDomain, PlatformError } from './errors';
-import { PasskeysServiceService } from './generated/primandproper/platform/passkeys/v1/passkeys';
+import { PasskeysServiceDefinition } from './generated/primandproper/platform/passkeys/v1/passkeys';
 import { beginPasskeyRegistration, beginPasskeySignIn, finishPasskeyRegistration, passkeySignIn } from './passkeys';
 import { Session } from './session';
 import { FakeClock, fakeIssuedToken, FakeTransport, MemoryCredentialStore, refusal } from './testing';
-import { Code } from './transport';
+import { Code, methodsOf } from './transport';
 
-const beginLogin = PasskeysServiceService.beginLogin;
-const finishLogin = PasskeysServiceService.finishLogin;
-const beginRegistration = PasskeysServiceService.beginRegistration;
-const finishRegistration = PasskeysServiceService.finishRegistration;
+const PasskeysService = methodsOf(PasskeysServiceDefinition);
+
+const beginLogin = PasskeysService.beginLogin;
+const finishLogin = PasskeysService.finishLogin;
+const beginRegistration = PasskeysService.beginRegistration;
+const finishRegistration = PasskeysService.finishRegistration;
 const assertion = new TextEncoder().encode('{"id":"credential"}');
 
 function setup(signedIn = false) {

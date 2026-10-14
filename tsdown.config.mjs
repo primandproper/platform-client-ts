@@ -25,8 +25,10 @@ const platformEntries = readdirSync(platform).flatMap((name) =>
 export default defineConfig([
   {
     entry: {
-      index: 'src/index.ts',
-      testing: 'src/testing.ts',
+      'index': 'src/index.ts',
+      'testing': 'src/testing.ts',
+      // Its own entry so that the root never loads @grpc/grpc-js, which needs Node (Buffer, http2) the moment it loads.
+      'grpc-js': 'src/grpc-js.ts',
       ...Object.fromEntries(platformEntries),
     },
     format: 'esm',

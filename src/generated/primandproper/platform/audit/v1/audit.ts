@@ -6,18 +6,6 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from '@bufbuild/protobuf/wire';
-import {
-  type CallOptions,
-  type ChannelCredentials,
-  Client,
-  type ClientOptions,
-  type ClientUnaryCall,
-  type handleUnaryCall,
-  makeGenericClientConstructor,
-  type Metadata,
-  type ServiceError,
-  type UntypedServiceImplementation,
-} from '@grpc/grpc-js';
 import { Value } from '../../../../google/protobuf/struct';
 import { Timestamp } from '../../../../google/protobuf/timestamp';
 import { Pagination, QueryFilter } from '../../filtering/v1/filtering';
@@ -2307,144 +2295,52 @@ export const ListAnyEntriesResponse: MessageFns<ListAnyEntriesResponse> = {
  * What is absent is the recording -- see this file's documentation for why a
  * write that belongs inside the caller's transaction cannot be an RPC.
  */
-export type AuditServiceService = typeof AuditServiceService;
-export const AuditServiceService = {
-  /**
-   * GetEntry reads one entry by id.
-   *
-   * An entry in another scope reads as absent, which is what it is from here.
-   */
-  getEntry: {
-    path: '/primandproper.platform.audit.v1.AuditService/GetEntry' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetEntryRequest): Buffer => Buffer.from(GetEntryRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetEntryRequest => GetEntryRequest.decode(value),
-    responseSerialize: (value: GetEntryResponse): Buffer => Buffer.from(GetEntryResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetEntryResponse => GetEntryResponse.decode(value),
-  },
-  /** ListEntries pages the caller's scope, narrowed by the query. */
-  listEntries: {
-    path: '/primandproper.platform.audit.v1.AuditService/ListEntries' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListEntriesRequest): Buffer => Buffer.from(ListEntriesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListEntriesRequest => ListEntriesRequest.decode(value),
-    responseSerialize: (value: ListEntriesResponse): Buffer => Buffer.from(ListEntriesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListEntriesResponse => ListEntriesResponse.decode(value),
-  },
-  /**
-   * VerifyChain walks the caller's chain over a time range and reports the
-   * first break, or that there was none.
-   *
-   * A break is a finding rather than a failure: a chain that did not hold
-   * together is an ordinary response carrying first_break, not an error status.
-   * The error statuses here are the ones that mean the question could not be
-   * answered at all.
-   */
-  verifyChain: {
-    path: '/primandproper.platform.audit.v1.AuditService/VerifyChain' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: VerifyChainRequest): Buffer => Buffer.from(VerifyChainRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): VerifyChainRequest => VerifyChainRequest.decode(value),
-    responseSerialize: (value: VerifyChainResponse): Buffer => Buffer.from(VerifyChainResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): VerifyChainResponse => VerifyChainResponse.decode(value),
+export type AuditServiceDefinition = typeof AuditServiceDefinition;
+export const AuditServiceDefinition = {
+  name: 'AuditService',
+  fullName: 'primandproper.platform.audit.v1.AuditService',
+  methods: {
+    /**
+     * GetEntry reads one entry by id.
+     *
+     * An entry in another scope reads as absent, which is what it is from here.
+     */
+    getEntry: {
+      name: 'GetEntry',
+      requestType: GetEntryRequest as typeof GetEntryRequest,
+      requestStream: false,
+      responseType: GetEntryResponse as typeof GetEntryResponse,
+      responseStream: false,
+      options: {},
+    },
+    /** ListEntries pages the caller's scope, narrowed by the query. */
+    listEntries: {
+      name: 'ListEntries',
+      requestType: ListEntriesRequest as typeof ListEntriesRequest,
+      requestStream: false,
+      responseType: ListEntriesResponse as typeof ListEntriesResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * VerifyChain walks the caller's chain over a time range and reports the
+     * first break, or that there was none.
+     *
+     * A break is a finding rather than a failure: a chain that did not hold
+     * together is an ordinary response carrying first_break, not an error status.
+     * The error statuses here are the ones that mean the question could not be
+     * answered at all.
+     */
+    verifyChain: {
+      name: 'VerifyChain',
+      requestType: VerifyChainRequest as typeof VerifyChainRequest,
+      requestStream: false,
+      responseType: VerifyChainResponse as typeof VerifyChainResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface AuditServiceServer extends UntypedServiceImplementation {
-  /**
-   * GetEntry reads one entry by id.
-   *
-   * An entry in another scope reads as absent, which is what it is from here.
-   */
-  getEntry: handleUnaryCall<GetEntryRequest, GetEntryResponse>;
-  /** ListEntries pages the caller's scope, narrowed by the query. */
-  listEntries: handleUnaryCall<ListEntriesRequest, ListEntriesResponse>;
-  /**
-   * VerifyChain walks the caller's chain over a time range and reports the
-   * first break, or that there was none.
-   *
-   * A break is a finding rather than a failure: a chain that did not hold
-   * together is an ordinary response carrying first_break, not an error status.
-   * The error statuses here are the ones that mean the question could not be
-   * answered at all.
-   */
-  verifyChain: handleUnaryCall<VerifyChainRequest, VerifyChainResponse>;
-}
-
-export interface AuditServiceClient extends Client {
-  /**
-   * GetEntry reads one entry by id.
-   *
-   * An entry in another scope reads as absent, which is what it is from here.
-   */
-  getEntry(
-    request: GetEntryRequest,
-    callback: (error: ServiceError | null, response: GetEntryResponse) => void,
-  ): ClientUnaryCall;
-  getEntry(
-    request: GetEntryRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetEntryResponse) => void,
-  ): ClientUnaryCall;
-  getEntry(
-    request: GetEntryRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetEntryResponse) => void,
-  ): ClientUnaryCall;
-  /** ListEntries pages the caller's scope, narrowed by the query. */
-  listEntries(
-    request: ListEntriesRequest,
-    callback: (error: ServiceError | null, response: ListEntriesResponse) => void,
-  ): ClientUnaryCall;
-  listEntries(
-    request: ListEntriesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListEntriesResponse) => void,
-  ): ClientUnaryCall;
-  listEntries(
-    request: ListEntriesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListEntriesResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * VerifyChain walks the caller's chain over a time range and reports the
-   * first break, or that there was none.
-   *
-   * A break is a finding rather than a failure: a chain that did not hold
-   * together is an ordinary response carrying first_break, not an error status.
-   * The error statuses here are the ones that mean the question could not be
-   * answered at all.
-   */
-  verifyChain(
-    request: VerifyChainRequest,
-    callback: (error: ServiceError | null, response: VerifyChainResponse) => void,
-  ): ClientUnaryCall;
-  verifyChain(
-    request: VerifyChainRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: VerifyChainResponse) => void,
-  ): ClientUnaryCall;
-  verifyChain(
-    request: VerifyChainRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: VerifyChainResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const AuditServiceClient = makeGenericClientConstructor(
-  AuditServiceService,
-  'primandproper.platform.audit.v1.AuditService',
-) as unknown as {
-  new (address: string, credentials: ChannelCredentials, options?: Partial<ClientOptions>): AuditServiceClient;
-  service: typeof AuditServiceService;
-  serviceName: string;
-};
 
 /**
  * AuditAdministrationService is an operator's read of the audit log: an entry
@@ -2457,110 +2353,39 @@ export const AuditServiceClient = makeGenericClientConstructor(
  * records each call in the caller's own chain before it answers -- a server with
  * nowhere to record one answers every call here Unimplemented.
  */
-export type AuditAdministrationServiceService = typeof AuditAdministrationServiceService;
-export const AuditAdministrationServiceService = {
-  /**
-   * GetAnyEntry reads one entry by id from whichever tenant's chain holds it.
-   *
-   * An id no chain holds is NotFound and is not recorded: the read found
-   * nothing to disclose.
-   */
-  getAnyEntry: {
-    path: '/primandproper.platform.audit.v1.AuditAdministrationService/GetAnyEntry' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: GetAnyEntryRequest): Buffer => Buffer.from(GetAnyEntryRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): GetAnyEntryRequest => GetAnyEntryRequest.decode(value),
-    responseSerialize: (value: GetAnyEntryResponse): Buffer => Buffer.from(GetAnyEntryResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): GetAnyEntryResponse => GetAnyEntryResponse.decode(value),
-  },
-  /**
-   * ListAnyEntries pages every tenant's entries, or one tenant's where
-   * owner_id names it, narrowed by the query.
-   */
-  listAnyEntries: {
-    path: '/primandproper.platform.audit.v1.AuditAdministrationService/ListAnyEntries' as const,
-    requestStream: false as const,
-    responseStream: false as const,
-    requestSerialize: (value: ListAnyEntriesRequest): Buffer =>
-      Buffer.from(ListAnyEntriesRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer): ListAnyEntriesRequest => ListAnyEntriesRequest.decode(value),
-    responseSerialize: (value: ListAnyEntriesResponse): Buffer =>
-      Buffer.from(ListAnyEntriesResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer): ListAnyEntriesResponse => ListAnyEntriesResponse.decode(value),
+export type AuditAdministrationServiceDefinition = typeof AuditAdministrationServiceDefinition;
+export const AuditAdministrationServiceDefinition = {
+  name: 'AuditAdministrationService',
+  fullName: 'primandproper.platform.audit.v1.AuditAdministrationService',
+  methods: {
+    /**
+     * GetAnyEntry reads one entry by id from whichever tenant's chain holds it.
+     *
+     * An id no chain holds is NotFound and is not recorded: the read found
+     * nothing to disclose.
+     */
+    getAnyEntry: {
+      name: 'GetAnyEntry',
+      requestType: GetAnyEntryRequest as typeof GetAnyEntryRequest,
+      requestStream: false,
+      responseType: GetAnyEntryResponse as typeof GetAnyEntryResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * ListAnyEntries pages every tenant's entries, or one tenant's where
+     * owner_id names it, narrowed by the query.
+     */
+    listAnyEntries: {
+      name: 'ListAnyEntries',
+      requestType: ListAnyEntriesRequest as typeof ListAnyEntriesRequest,
+      requestStream: false,
+      responseType: ListAnyEntriesResponse as typeof ListAnyEntriesResponse,
+      responseStream: false,
+      options: {},
+    },
   },
 } as const;
-
-export interface AuditAdministrationServiceServer extends UntypedServiceImplementation {
-  /**
-   * GetAnyEntry reads one entry by id from whichever tenant's chain holds it.
-   *
-   * An id no chain holds is NotFound and is not recorded: the read found
-   * nothing to disclose.
-   */
-  getAnyEntry: handleUnaryCall<GetAnyEntryRequest, GetAnyEntryResponse>;
-  /**
-   * ListAnyEntries pages every tenant's entries, or one tenant's where
-   * owner_id names it, narrowed by the query.
-   */
-  listAnyEntries: handleUnaryCall<ListAnyEntriesRequest, ListAnyEntriesResponse>;
-}
-
-export interface AuditAdministrationServiceClient extends Client {
-  /**
-   * GetAnyEntry reads one entry by id from whichever tenant's chain holds it.
-   *
-   * An id no chain holds is NotFound and is not recorded: the read found
-   * nothing to disclose.
-   */
-  getAnyEntry(
-    request: GetAnyEntryRequest,
-    callback: (error: ServiceError | null, response: GetAnyEntryResponse) => void,
-  ): ClientUnaryCall;
-  getAnyEntry(
-    request: GetAnyEntryRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: GetAnyEntryResponse) => void,
-  ): ClientUnaryCall;
-  getAnyEntry(
-    request: GetAnyEntryRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: GetAnyEntryResponse) => void,
-  ): ClientUnaryCall;
-  /**
-   * ListAnyEntries pages every tenant's entries, or one tenant's where
-   * owner_id names it, narrowed by the query.
-   */
-  listAnyEntries(
-    request: ListAnyEntriesRequest,
-    callback: (error: ServiceError | null, response: ListAnyEntriesResponse) => void,
-  ): ClientUnaryCall;
-  listAnyEntries(
-    request: ListAnyEntriesRequest,
-    metadata: Metadata,
-    callback: (error: ServiceError | null, response: ListAnyEntriesResponse) => void,
-  ): ClientUnaryCall;
-  listAnyEntries(
-    request: ListAnyEntriesRequest,
-    metadata: Metadata,
-    options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: ListAnyEntriesResponse) => void,
-  ): ClientUnaryCall;
-}
-
-export const AuditAdministrationServiceClient = makeGenericClientConstructor(
-  AuditAdministrationServiceService,
-  'primandproper.platform.audit.v1.AuditAdministrationService',
-) as unknown as {
-  new (
-    address: string,
-    credentials: ChannelCredentials,
-    options?: Partial<ClientOptions>,
-  ): AuditAdministrationServiceClient;
-  service: typeof AuditAdministrationServiceService;
-  serviceName: string;
-};
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 

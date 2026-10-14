@@ -1,8 +1,10 @@
 import { PlatformError, SignInReason } from './errors';
 import type { IssuedToken } from './generated/primandproper/platform/signin/v1/signin';
-import { type Passkey, PasskeysServiceService } from './generated/primandproper/platform/passkeys/v1/passkeys';
+import { type Passkey, PasskeysServiceDefinition } from './generated/primandproper/platform/passkeys/v1/passkeys';
 import type { Session } from './session';
-import type { CallOptions } from './transport';
+import { type CallOptions, methodsOf } from './transport';
+
+const PasskeysService = methodsOf(PasskeysServiceDefinition);
 
 export interface PasskeySignIn {
   /** username is the one `beginPasskeySignIn` was sent, empty for a discoverable login. */
@@ -28,7 +30,7 @@ export type PasskeySignInResult = { kind: 'signed_in'; token: IssuedToken } | { 
  * for a username nobody holds as for one somebody does, so show the same prompt either way.
  */
 export async function beginPasskeySignIn(session: Session, username = '', options?: CallOptions): Promise<Uint8Array> {
-  const response = await session.callAnonymous(PasskeysServiceService.beginLogin, { username }, options);
+  const response = await session.callAnonymous(PasskeysService.beginLogin, { username }, options);
   return response.options;
 }
 
@@ -48,7 +50,7 @@ export async function passkeySignIn(
 ): Promise<PasskeySignInResult> {
   try {
     const token = await session.signIn(
-      PasskeysServiceService.finishLogin,
+      PasskeysService.finishLogin,
       {
         username: request.username ?? '',
         response: request.response,
@@ -79,7 +81,7 @@ export interface PasskeyRegistration {
  * passkeys, so an authenticator already holding one declines to register a second.
  */
 export async function beginPasskeyRegistration(session: Session, options?: CallOptions): Promise<Uint8Array> {
-  const response = await session.call(PasskeysServiceService.beginRegistration, {}, options);
+  const response = await session.call(PasskeysService.beginRegistration, {}, options);
   return response.options;
 }
 
@@ -93,12 +95,12 @@ export async function finishPasskeyRegistration(
   options?: CallOptions,
 ): Promise<Passkey> {
   const response = await session.call(
-    PasskeysServiceService.finishRegistration,
+    PasskeysService.finishRegistration,
     { friendlyName: attestation.friendlyName, response: attestation.response },
     options,
   );
   if (!response.passkey) {
-    throw new Error(`${PasskeysServiceService.finishRegistration.path} answered OK with no passkey`);
+    throw new Error(`${PasskeysService.finishRegistration.path} answered OK with no passkey`);
   }
   return response.passkey;
 }
