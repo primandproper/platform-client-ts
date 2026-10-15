@@ -68,9 +68,10 @@ const recipe = await session.call(RecipesService.getRecipe, { id });
 
 **There is no default `CredentialStore`.** It holds the refresh token, which belongs in the platform's most protected
 store and nowhere a log, a crash report or a URL can reach. A default that could not meet that bar would be worse than
-none. A backend-for-frontend has one to opt into, [`encryptedCredentialStore`](#a-session-per-request). The in-memory
-`MemoryCredentialStore` in `@primandproper/platform-client/testing` is for tests, alongside `FakeTransport` and
-`FakeClock`.
+none. A backend-for-frontend has one to opt into, [`encryptedCredentialStore`](#a-session-per-request), and so does a
+browser talking gRPC-web to the server itself, [`refreshCookieCredentialStore`](#a-browser-with-no-backend). The
+in-memory `MemoryCredentialStore` in `@primandproper/platform-client/testing` is for tests, alongside `FakeTransport`
+and `FakeClock`.
 
 ### A Session per request
 
@@ -207,6 +208,37 @@ from something in front of the server) rejects with a `GrpcWebTransportError`, w
 status-less failure. `credentials: 'include'` is what sends a cookie to another origin. Across origins the server's CORS
 must also expose `grpc-status`, `grpc-message` and `grpc-status-details-bin`, or a trailers-only refusal arrives with
 its status unreadable and rejects as a transport failure.
+
+### A browser with no backend
+
+From v15.2.0 a platform-go server mounting gRPC-web keeps a browser's refresh token in a sealed httpOnly cookie on that
+route, so page code never holds it: every sign-in answers with the body's `refresh_token` empty and its
+`refresh_token_expires_at` set. `refreshCookieCredentialStore` is the store for that. It keeps the access token in
+memory and persists only the expiry, in `localStorage` unless given somewhere else, as a hint that a cookie should
+exist. `Session` sees the store's `refreshTokenInCookie` and spends the token (exchange, switch, sign-out) by sending
+the field empty, which the server fills from the cookie.
+
+```ts
+import { createGrpcWebTransport, refreshCookieCredentialStore, Session } from '@primandproper/platform-client';
+
+const session = new Session({
+  transport: createGrpcWebTransport({ baseUrl: 'https://api.example.com', credentials: 'include' }),
+  store: refreshCookieCredentialStore(),
+});
+```
+
+After a reload the session holds the hint and no access token, so its first call exchanges the cookie and goes on signed
+in. A cookie that expired, was rotated by another device or was revoked is refused, and the session lands signed out
+(`anonymous`, the hint cleared) with the call rejecting `UNAUTHENTICATED`, as any refused refresh does. `signOut` sends
+`SignOut` with the field empty, which deletes the cookie, and clears the hint.
+
+**Tabs exchange one at a time.** Every tab presents the same cookie, and the server has no grace for a token presented
+twice: two tabs exchanging at once is reuse, and the login ends everywhere (R1). So `Session` holds a Web Lock, shared
+by every tab and worker of the origin, around each RPC that spends the cookie. A tab that waited on another's exchange
+then presents the cookie that one left behind, and gets a successor of its own. Where there is no Web Locks API (React
+Native, say) the lock covers only its own JavaScript context; `exchangeLock` takes one that reaches further. The lock
+cannot help with what the server never answered: with `idempotentRefresh` off, a tab whose exchange failed ambiguously
+stops refreshing (R5), but another tab does not know the cookie may be spent, and its next exchange can end the login.
 
 ## The contract, rule by rule
 
