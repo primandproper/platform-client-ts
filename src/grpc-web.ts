@@ -94,9 +94,10 @@ async function call(send: NonNullable<GrpcWebTransportConfig['fetch']>, url: str
     throw new GrpcWebTransportError(`${url}: request failed`, { cause: err });
   }
 
-  // Trailers-only: the server answered with a status and no message, and put the status in the headers.
+  // Trailers-only: the server answered with a status and no message, and put the status in the headers. An OK there
+  // carries no message for a unary call, so it falls through to the body and fails as OK with no trailer frame would.
   const headerStatus = readStatus((key) => response.headers.get(key));
-  if (headerStatus) {
+  if (headerStatus && headerStatus.code !== Code.OK) {
     throw headerStatus;
   }
   if (response.status !== 200) {

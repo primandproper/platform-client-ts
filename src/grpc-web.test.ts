@@ -154,6 +154,19 @@ describe('createGrpcWebTransport', () => {
     expect(err).toMatchObject({ code: Code.PERMISSION_DENIED, message: 'not yours', statusDetails: undefined });
   });
 
+  it('rejects a trailers-only OK, which carries no message, as a transport failure rather than an OK StatusError', async () => {
+    const { fetch } = fakeFetch(
+      () =>
+        new Response(null, {
+          status: 200,
+          headers: { 'content-type': 'application/grpc-web+proto', 'grpc-status': String(Code.OK) },
+        }),
+    );
+    const transport = createGrpcWebTransport({ baseUrl: 'https://api.example.com', fetch });
+
+    await expect(transport.unary(SignInService.getAuthStatus, {})).rejects.toBeInstanceOf(GrpcWebTransportError);
+  });
+
   it('rejects a body with no trailer frame as a transport failure', async () => {
     const { fetch } = fakeFetch(() =>
       grpcWebResponse(frame(0, GetAuthStatusResponse.encode({ authenticated: true, status: undefined }).finish())),
