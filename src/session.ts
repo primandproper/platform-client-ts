@@ -30,7 +30,12 @@ const defaultExchangeDeadlineMs = 30_000;
 /** processCoordinator is what every Session in a process shares unless it is given a coordinator of its own. */
 const processCoordinator = new InMemoryExchangeCoordinator();
 
-export type SessionState = 'anonymous' | 'authenticating' | 'authenticated' | 'refreshing';
+/**
+ * SessionState is where the sign-in state machine stands. `unreachable` is a refresh-token cookie whose exchange failed
+ * ambiguously while the session held no usable access token: the cookie may still be good, so it is neither signed in
+ * nor signed out, and the next call (or a reload) tries the cookie again.
+ */
+export type SessionState = 'anonymous' | 'authenticating' | 'authenticated' | 'refreshing' | 'unreachable';
 
 export interface SessionConfig {
   transport: Transport;
@@ -323,16 +328,27 @@ export class Session {
     request: Req,
     options?: CallOptions,
   ): Promise<IssuedToken> {
+    // A sign-in that mints nothing leaves the session as it was: an unreachable cookie stays unreachable, not signed in,
+    // unless something else settled the session meanwhile.
+    const before = this.current;
+    const wasUnreachable = this.currentState === 'unreachable';
+    const settle = () => {
+      if (!this.current) {
+        this.setState('anonymous');
+      } else {
+        this.setState(wasUnreachable && this.current === before ? 'unreachable' : 'authenticated');
+      }
+    };
     this.setState('authenticating');
     let response: TokenResponse;
     try {
       response = await this.callAnonymous(method, request, options);
     } catch (err) {
-      this.setState(this.current ? 'authenticated' : 'anonymous');
+      settle();
       throw err;
     }
     if (!response.token) {
-      this.setState(this.current ? 'authenticated' : 'anonymous');
+      settle();
       throw new Error(`${method.path} answered OK with no token`);
     }
     await this.adopt(response.token);
@@ -481,6 +497,11 @@ export class Session {
     if (err instanceof PlatformError && (err.code === Code.UNAUTHENTICATED || err.code === Code.PERMISSION_DENIED)) {
       // R7: signed out, and there is no learning why. PERMISSION_DENIED is the directory refusing them: stop asking.
       await this.end();
+    } else if (isAmbiguous(err) && spendableRefreshToken(held, this.refreshTokenInCookie) === '') {
+      // A cookie is not this Session's to abandon: dropping the hint would only stop this page resuming. So the cookie
+      // is tried again, and if the exchange did land and its Set-Cookie was lost, that is reuse, and the server ends a
+      // login that every tab holding the same jar had already lost.
+      this.setState(usable(held, this.clock.now()) ? 'authenticated' : 'unreachable');
     } else if (isAmbiguous(err)) {
       await this.abandonRefreshToken(held);
     } else {
@@ -566,6 +587,11 @@ export function spendableRefreshToken(held: IssuedToken, inCookie: boolean): str
     return held.refreshToken;
   }
   return inCookie && held.refreshTokenExpiresAt ? '' : undefined;
+}
+
+/** usable reports whether `held` carries an access token that has not expired. */
+function usable(held: IssuedToken, now: Date): boolean {
+  return !!held.token && !(held.expiresAt && now.getTime() >= held.expiresAt.getTime());
 }
 
 function isUnauthenticated(err: unknown): boolean {

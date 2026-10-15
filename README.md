@@ -232,13 +232,21 @@ in. A cookie that expired, was rotated by another device or was revoked is refus
 (`anonymous`, the hint cleared) with the call rejecting `UNAUTHENTICATED`, as any refused refresh does. `signOut` sends
 `SignOut` with the field empty, which deletes the cookie, and clears the hint.
 
+**Offline is not signed out.** An exchange that fails ambiguously (no answer at all, or `UNAVAILABLE`,
+`DEADLINE_EXCEEDED`, `INTERNAL`, `UNKNOWN`) while the session holds no usable access token, as after a reload with no
+network, lands in `unreachable`: the call rejects with that failure, the hint stays, and the next call tries the cookie
+again. A UI can offer to retry there rather than a sign-in form. A refresh in the skew that fails that way keeps the
+access token it still has, and stays `authenticated`.
+
 **Tabs exchange one at a time.** Every tab presents the same cookie, and the server has no grace for a token presented
 twice: two tabs exchanging at once is reuse, and the login ends everywhere (R1). So `Session` holds a Web Lock, shared
 by every tab and worker of the origin, around each RPC that spends the cookie. A tab that waited on another's exchange
 then presents the cookie that one left behind, and gets a successor of its own. Where there is no Web Locks API (React
 Native, say) the lock covers only its own JavaScript context; `exchangeLock` takes one that reaches further. The lock
-cannot help with what the server never answered: with `idempotentRefresh` off, a tab whose exchange failed ambiguously
-stops refreshing (R5), but another tab does not know the cookie may be spent, and its next exchange can end the login.
+cannot help with what the server never answered: with `idempotentRefresh` off, a cookie is tried again after an
+ambiguous failure, since there is no refresh token in the page to abandon (R5). If that exchange did land and its
+`Set-Cookie` was lost, the jar every tab shares holds a spent cookie, and the next exchange, from any tab, ends the
+login.
 
 ## The contract, rule by rule
 

@@ -46,13 +46,16 @@ function cookieIssued(now: Date, n: number, overrides: Partial<IssuedToken> = {}
 
 /**
  * cookieServer stands in for the server and the browser's cookie jar: an exchange sent with the field empty spends the
- * cookie the jar held when the request left, and a cookie presented twice is reuse.
+ * cookie the jar held when the request left, and a cookie presented twice is reuse. While `offline`, no request leaves.
  */
 function cookieServer(clock: FakeClock, transport: FakeTransport) {
-  const jar = { cookie: 'cookie-1' as string | undefined };
+  const jar = { cookie: 'cookie-1' as string | undefined, offline: false };
   const spent = new Set<string>();
   let n = 1;
   transport.handle(exchange, async (request) => {
+    if (jar.offline) {
+      throw new TypeError('Failed to fetch');
+    }
     const presented = request.refreshToken || jar.cookie;
     // The response takes a round trip, during which another tab may send the same cookie.
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -178,6 +181,77 @@ describe('Session with the refresh token in a cookie', () => {
     await expect(session.call(getSelf, {})).rejects.toBeInstanceOf(NotSignedInError);
     expect(transport.calls).toEqual([]);
     expect(hints.items.size).toBe(0);
+  });
+
+  it('is unreachable after an offline reload, keeps the hint, and resumes from the same cookie once back', async () => {
+    const { clock, hints, transport, session, states } = setup((now) => new Date(now.getTime() + dayMs));
+    const hint = hints.getItem('hint');
+    const jar = cookieServer(clock, transport);
+    jar.offline = true;
+
+    await expect(session.call(getSelf, {})).rejects.toBeInstanceOf(TypeError);
+
+    expect(session.state).toBe('unreachable');
+    expect(states.at(-1)).toBe('unreachable');
+    expect(hints.getItem('hint')).toBe(hint);
+    expect(transport.callsTo(getSelf)).toEqual([]);
+
+    jar.offline = false;
+    await session.call(getSelf, {});
+
+    expect(transport.callsTo(exchange)).toHaveLength(2);
+    expect(transport.callsTo(getSelf).map((c) => tokenSent(c.options))).toEqual(['Bearer access-2']);
+    expect(jar.cookie).toBe('cookie-2');
+    expect(session.state).toBe('authenticated');
+  });
+
+  it.each([Code.UNAVAILABLE, Code.DEADLINE_EXCEEDED, Code.INTERNAL, Code.UNKNOWN])(
+    'is unreachable after a reload whose exchange fails ambiguously with %s, and keeps the hint',
+    async (code) => {
+      const { hints, transport, session } = setup((now) => new Date(now.getTime() + dayMs));
+      const hint = hints.getItem('hint');
+      transport.handle(exchange, () => {
+        throw new StatusError(code, 'no answer');
+      });
+
+      await expect(session.call(getSelf, {})).rejects.toMatchObject({ code });
+
+      expect(session.state).toBe('unreachable');
+      expect(hints.getItem('hint')).toBe(hint);
+      expect(transport.callsTo(getSelf)).toEqual([]);
+    },
+  );
+
+  it('stays unreachable when a sign-in fails, rather than claiming the hint is a login', async () => {
+    const { transport, session } = setup((now) => new Date(now.getTime() + dayMs));
+    transport.handle(exchange, () => {
+      throw new TypeError('Failed to fetch');
+    });
+    transport.handle(login, () => {
+      throw new TypeError('Failed to fetch');
+    });
+    await expect(session.call(getSelf, {})).rejects.toBeInstanceOf(TypeError);
+
+    await expect(session.signIn(login, { credentials: undefined })).rejects.toBeInstanceOf(TypeError);
+
+    expect(session.state).toBe('unreachable');
+  });
+
+  it('keeps the access token it still holds when a refresh in the skew cannot reach the server', async () => {
+    const { clock, hints, transport, session } = setup();
+    const issued = cookieIssued(clock.now(), 1);
+    transport.handle(login, () => ({ token: issued }));
+    transport.handle(exchange, () => {
+      throw new TypeError('Failed to fetch');
+    });
+    await session.signIn(login, { credentials: undefined });
+
+    clock.advance(60 * 60 * 1000 - 30_000);
+    await expect(session.call(getSelf, {})).rejects.toBeInstanceOf(TypeError);
+
+    expect(session.state).toBe('authenticated');
+    expect(await session.held()).toBe(issued);
+    expect(hints.getItem('hint')).toBe(issued.refreshTokenExpiresAt!.toISOString());
   });
 
   it('refreshes in the skew by sending the field empty', async () => {
