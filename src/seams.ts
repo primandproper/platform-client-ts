@@ -12,6 +12,12 @@ export type Metadata = Readonly<Record<string, string>>;
  * URL can reach. There is deliberately no default: one that cannot meet that bar should not be written.
  */
 export interface CredentialStore {
+  /**
+   * refreshTokenInCookie says the server keeps the refresh token in an httpOnly cookie and this store never sees it. A
+   * held token with no refresh token but a `refreshTokenExpiresAt` is then one a cookie still carries, and `Session`
+   * spends it by sending the field empty.
+   */
+  readonly refreshTokenInCookie?: boolean;
   load(): Promise<IssuedToken | undefined>;
   save(token: IssuedToken): Promise<void>;
   clear(): Promise<void>;

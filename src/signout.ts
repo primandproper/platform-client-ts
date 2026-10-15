@@ -1,5 +1,5 @@
 import { SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
-import type { Session } from './session';
+import { type Session, spendableRefreshToken } from './session';
 import { methodsOf } from './transport';
 
 const SignInService = methodsOf(SignInServiceDefinition);
@@ -21,11 +21,13 @@ const signOutDeadlineMs = 5_000;
  */
 export async function signOut(session: Session): Promise<void> {
   const held = await session.held().catch(() => undefined);
+  const refreshToken = held && spendableRefreshToken(held, session.refreshTokenInCookie);
   try {
-    if (held?.refreshToken) {
+    if (refreshToken !== undefined) {
+      // Sent empty, the server signs out the cookie's token, and deletes the cookie once it has.
       await session.callAnonymous(
         SignInService.signOut,
-        { refreshToken: held.refreshToken },
+        { refreshToken },
         { deadline: new Date(Date.now() + signOutDeadlineMs) },
       );
     }

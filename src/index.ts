@@ -34,6 +34,12 @@ export {
   toPlatformError,
 } from './errors';
 export { NotSignedInError, Session, type SessionConfig, type SessionState, type TokenResponse } from './session';
+export {
+  type ExchangeLock,
+  type HintStorage,
+  refreshCookieCredentialStore,
+  type RefreshCookieCredentialStoreConfig,
+} from './refresh-cookie';
 export { TokenCaller, type TokenCallerConfig } from './token-caller';
 export {
   type ExchangeAttempt,

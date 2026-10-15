@@ -1,6 +1,7 @@
 import { type ExchangeAttempt, type ExchangeCoordinator, InMemoryExchangeCoordinator } from './coordinator';
 import { isAmbiguous, NotSignedInError, PlatformError } from './errors';
 import { type IssuedToken, SignInServiceDefinition } from './generated/primandproper/platform/signin/v1/signin';
+import { defaultExchangeLock, type ExchangeLock } from './refresh-cookie';
 import { type Authorizer, type Clock, type CredentialStore, type Metadata, systemClock } from './seams';
 import { TokenCaller } from './token-caller';
 import { type CallOptions, Code, methodsOf, type Transport, type UnaryMethod } from './transport';
@@ -58,8 +59,15 @@ export interface SessionConfig {
    * coordinator deduplicates exchanges across every Session that shares it, so that Sessions built per request over
    * the same refresh token present it once. One per deployment: the process-wide in-memory one unless set, which is
    * enough for a single process and not for several.
+   *
+   * A refresh token kept in a cookie (`CredentialStore.refreshTokenInCookie`) does not go through it: see `exchangeLock`.
    */
   coordinator?: ExchangeCoordinator;
+  /**
+   * exchangeLock serializes the RPCs that spend a refresh-token cookie, across every tab when the Web Locks API is there
+   * and within this context otherwise. It is used only when the store keeps the refresh token in a cookie.
+   */
+  exchangeLock?: ExchangeLock;
 }
 
 /** A response from one of the three doors that mint a session. */
@@ -75,6 +83,10 @@ export interface TokenResponse {
  * Across Sessions, the ExchangeCoordinator they share makes sure a refresh token is exchanged once. Sessions that share
  * no coordinator (two browser tabs, say) are two refreshers; a store shared that way has to serialize them itself, with
  * the Web Locks API or its equivalent.
+ *
+ * A refresh token the server keeps in a cookie is the exception, since every tab presents the same one and none can
+ * read it: those exchanges take the ExchangeLock instead, one tab at a time. A tab that waited on another's exchange then
+ * exchanges the cookie that one left behind, and gets a successor of its own.
  */
 export class Session {
   private readonly caller: TokenCaller;
@@ -83,6 +95,10 @@ export class Session {
   private readonly idempotentRefresh: boolean;
   private readonly exchangeDeadlineMs: number;
   private readonly coordinator: ExchangeCoordinator;
+  private readonly exchangeLock: ExchangeLock;
+
+  /** refreshTokenInCookie is the store's: whether the refresh token lives in a cookie this Session cannot read. */
+  readonly refreshTokenInCookie: boolean;
 
   private current: IssuedToken | undefined;
   private currentState: SessionState = 'anonymous';
@@ -98,6 +114,8 @@ export class Session {
     this.idempotentRefresh = config.idempotentRefresh ?? false;
     this.exchangeDeadlineMs = config.exchangeDeadlineMs ?? defaultExchangeDeadlineMs;
     this.coordinator = config.coordinator ?? processCoordinator;
+    this.exchangeLock = config.exchangeLock ?? defaultExchangeLock();
+    this.refreshTokenInCookie = config.store.refreshTokenInCookie ?? false;
   }
 
   get state(): SessionState {
@@ -250,7 +268,8 @@ export class Session {
     // the login in the account it was already in.
     for (let tries = 0; ; tries++) {
       const held = this.current;
-      if (!held?.refreshToken) {
+      const refreshToken = held && spendableRefreshToken(held, this.refreshTokenInCookie);
+      if (!held || refreshToken === undefined) {
         throw new NotSignedInError();
       }
       this.setState('refreshing');
@@ -258,20 +277,20 @@ export class Session {
       let refused: PlatformError | undefined;
       let successor: IssuedToken;
       try {
-        successor = await this.coordinator.run(held.refreshToken, async (attempt) => {
+        successor = await this.spend(refreshToken, async (attempt) => {
           if (attempt.takeover) {
             // An earlier attempt may have spent the token, and a switch carries no idempotency key to retry under.
             throw new Error('an earlier exchange of this refresh token never reported back');
           }
           try {
-            return await this.switchOnce(held.refreshToken, accountId, options);
+            return await this.switchOnce(refreshToken, accountId, options);
           } catch (err) {
             if (!(err instanceof PlatformError && err.code === Code.UNAUTHENTICATED)) {
               throw err;
             }
             refused = err;
           }
-          return this.exchangeWith(held.refreshToken, { ...attempt, takeover: false });
+          return this.exchangeWith(refreshToken, { ...attempt, takeover: false });
         });
       } catch (err) {
         await this.settleFailedExchange(held, err);
@@ -335,7 +354,7 @@ export class Session {
     }
     const now = this.clock.now().getTime();
 
-    if (!held.refreshToken) {
+    if (spendableRefreshToken(held, this.refreshTokenInCookie) === undefined) {
       // A service that stores no refresh tokens: the access token is the whole login, and it ends when it expires.
       if (held.expiresAt && now >= held.expiresAt.getTime()) {
         await this.end();
@@ -347,7 +366,8 @@ export class Session {
       await this.end();
       throw new NotSignedInError();
     }
-    if (held.expiresAt && now >= held.expiresAt.getTime() - refreshSkewMs) {
+    // No access token is a reload with the refresh token in a cookie: memory held the only one.
+    if (!held.token || (held.expiresAt && now >= held.expiresAt.getTime() - refreshSkewMs)) {
       return this.refresh();
     }
     return held;
@@ -361,7 +381,7 @@ export class Session {
       // Somebody else refreshed while this call was in flight; retry with what they got.
       return this.current;
     }
-    if (!this.current?.refreshToken) {
+    if (!this.current || spendableRefreshToken(this.current, this.refreshTokenInCookie) === undefined) {
       await this.end();
       throw new NotSignedInError();
     }
@@ -377,21 +397,35 @@ export class Session {
 
   private async exchange(): Promise<IssuedToken> {
     const held = this.current;
-    if (!held?.refreshToken) {
+    const refreshToken = held && spendableRefreshToken(held, this.refreshTokenInCookie);
+    if (!held || refreshToken === undefined) {
       throw new NotSignedInError();
     }
     this.setState('refreshing');
 
-    const refreshToken = held.refreshToken;
     let successor: IssuedToken;
     try {
-      successor = await this.coordinator.run(refreshToken, (attempt) => this.exchangeWith(refreshToken, attempt));
+      successor = await this.spend(refreshToken, (attempt) => this.exchangeWith(refreshToken, attempt));
     } catch (err) {
       await this.settleFailedExchange(held, err);
       throw err;
     }
     await this.adopt(successor);
     return successor;
+  }
+
+  /**
+   * spend runs an RPC that spends `refreshToken` through whatever keeps it from being presented twice: the coordinator,
+   * or for a cookie, which every Session sharing it presents under one name, the exchange lock.
+   */
+  private spend(
+    refreshToken: string,
+    exchange: (attempt: ExchangeAttempt) => Promise<IssuedToken>,
+  ): Promise<IssuedToken> {
+    if (refreshToken) {
+      return this.coordinator.run(refreshToken, exchange);
+    }
+    return this.exchangeLock.run(() => exchange({ idempotencyKey: globalThis.crypto.randomUUID(), takeover: false }));
   }
 
   /**
@@ -521,6 +555,17 @@ export class Session {
       listener(next);
     }
   }
+}
+
+/**
+ * spendableRefreshToken is what an RPC spending `held`'s refresh token sends: the token itself, or an empty field when a
+ * cookie carries it, which the server fills in. Undefined means there is none left to spend.
+ */
+export function spendableRefreshToken(held: IssuedToken, inCookie: boolean): string | undefined {
+  if (held.refreshToken) {
+    return held.refreshToken;
+  }
+  return inCookie && held.refreshTokenExpiresAt ? '' : undefined;
 }
 
 function isUnauthenticated(err: unknown): boolean {
