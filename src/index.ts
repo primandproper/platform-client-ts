@@ -18,6 +18,7 @@ export {
   type UnaryMethods,
   withConstantMetadata,
 } from './transport';
+export { createGrpcWebTransport, type GrpcWebTransportConfig, GrpcWebTransportError } from './grpc-web';
 export {
   ExchangeNotSentError,
   isAmbiguous,

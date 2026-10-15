@@ -188,9 +188,25 @@ It holds no state, so R1–R7 do not apply to it. It never refreshes and never r
 rejects with that `PlatformError`, and signing the user in again is the caller's job. Once the login moves onto
 platform's `SignInService`, the caller should be a `Session`.
 
-**Only a Node transport ships today**: `createGrpcJsTransport`, from `@primandproper/platform-client/grpc-js` rather
-than the root, because `@grpc/grpc-js` needs Node the moment it loads and the root must not. A browser calling services
-directly would need a gRPC-web or Connect transport behind the same `Transport` interface.
+### Transports
+
+`createGrpcJsTransport` is for a Node process, from `@primandproper/platform-client/grpc-js` rather than the root,
+because `@grpc/grpc-js` needs Node the moment it loads and the root must not.
+
+`createGrpcWebTransport` is for a browser or React Native app, and loads from the root: gRPC-web over `fetch`, against a
+server mounting primitives-go's `server/grpcweb` handler (or any other gRPC-web server, Envoy's filter included).
+
+```ts
+import { createGrpcWebTransport } from '@primandproper/platform-client';
+
+const transport = createGrpcWebTransport({ baseUrl: 'https://api.example.com', credentials: 'include' });
+```
+
+It is unary and binary (`application/grpc-web+proto`) only. A call that never got a status (the network, or a non-200
+from something in front of the server) rejects with a `GrpcWebTransportError`, which is ambiguous like any other
+status-less failure. `credentials: 'include'` is what sends a cookie to another origin. Across origins the server's CORS
+must also expose `grpc-status`, `grpc-message` and `grpc-status-details-bin`, or a trailers-only refusal arrives with
+its status unreadable and rejects as a transport failure.
 
 ## The contract, rule by rule
 
