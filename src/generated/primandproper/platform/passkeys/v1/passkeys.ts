@@ -106,6 +106,39 @@ export interface FinishLoginResponse {
   token: IssuedToken | undefined;
 }
 
+/**
+ * AdminFinishLoginRequest is FinishLogin through the administrative door, as
+ * signin.v1's AdminLoginForTokenRequest is LoginForToken through it. It
+ * finishes the same ceremony -- BeginLogin's options are the same for either
+ * door -- and is a message of its own so that the two doors can diverge
+ * without either becoming a field on the other.
+ *
+ * It carries no totp_code. The administrative door takes no code: the
+ * passkey has to have been two factors on its own, which is an authenticator
+ * that verified the person, and one asserted on a key tap alone is refused
+ * MULTI_FACTOR_REQUIRED however many codes came with it. A client signing an
+ * operator in asks BeginLogin's options for userVerification "required" and
+ * never meets that refusal.
+ */
+export interface AdminFinishLoginRequest {
+  /** username is the one BeginLogin was sent, empty for a discoverable login. */
+  username: string;
+  /**
+   * response is the PublicKeyCredential JSON navigator.credentials.get
+   * resolved with.
+   */
+  response: Uint8Array;
+  /**
+   * active_account_id is the account the token should be issued for, read
+   * exactly as signin.v1's Credentials reads it.
+   */
+  activeAccountId: string;
+}
+
+export interface AdminFinishLoginResponse {
+  token: IssuedToken | undefined;
+}
+
 export interface ListPasskeysRequest {}
 
 export interface ListPasskeysResponse {
@@ -842,6 +875,161 @@ export const FinishLoginResponse: MessageFns<FinishLoginResponse> = {
   },
 };
 
+function createBaseAdminFinishLoginRequest(): AdminFinishLoginRequest {
+  return { username: '', response: new Uint8Array(0), activeAccountId: '' };
+}
+
+export const AdminFinishLoginRequest: MessageFns<AdminFinishLoginRequest> = {
+  encode(message: AdminFinishLoginRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.username !== '') {
+      writer.uint32(10).string(message.username);
+    }
+    if (message.response.length !== 0) {
+      writer.uint32(18).bytes(message.response);
+    }
+    if (message.activeAccountId !== '') {
+      writer.uint32(26).string(message.activeAccountId);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AdminFinishLoginRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseAdminFinishLoginRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.username = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.response = reader.bytes();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.activeAccountId = reader.string();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): AdminFinishLoginRequest {
+    return {
+      username: isSet(object.username) ? globalThis.String(object.username) : '',
+      response: isSet(object.response) ? bytesFromBase64(object.response) : new Uint8Array(0),
+      activeAccountId: isSet(object.activeAccountID)
+        ? globalThis.String(object.activeAccountID)
+        : isSet(object.active_account_id)
+          ? globalThis.String(object.active_account_id)
+          : '',
+    };
+  },
+
+  toJSON(message: AdminFinishLoginRequest): unknown {
+    const obj: any = {};
+    if (message.username !== '') {
+      obj.username = message.username;
+    }
+    if (message.response.length !== 0) {
+      obj.response = base64FromBytes(message.response);
+    }
+    if (message.activeAccountId !== '') {
+      obj.activeAccountID = message.activeAccountId;
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<AdminFinishLoginRequest>, I>>(base?: I): AdminFinishLoginRequest {
+    return AdminFinishLoginRequest.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<AdminFinishLoginRequest>, I>>(object: I): AdminFinishLoginRequest {
+    const message = createBaseAdminFinishLoginRequest();
+    message.username = object.username ?? '';
+    message.response = object.response ?? new Uint8Array(0);
+    message.activeAccountId = object.activeAccountId ?? '';
+    return message;
+  },
+};
+
+function createBaseAdminFinishLoginResponse(): AdminFinishLoginResponse {
+  return { token: undefined };
+}
+
+export const AdminFinishLoginResponse: MessageFns<AdminFinishLoginResponse> = {
+  encode(message: AdminFinishLoginResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.token !== undefined) {
+      IssuedToken.encode(message.token, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AdminFinishLoginResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseAdminFinishLoginResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.token = IssuedToken.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): AdminFinishLoginResponse {
+    return { token: isSet(object.token) ? IssuedToken.fromJSON(object.token) : undefined };
+  },
+
+  toJSON(message: AdminFinishLoginResponse): unknown {
+    const obj: any = {};
+    if (message.token !== undefined) {
+      obj.token = IssuedToken.toJSON(message.token);
+    }
+    return obj;
+  },
+
+  create<I extends Exact<DeepPartial<AdminFinishLoginResponse>, I>>(base?: I): AdminFinishLoginResponse {
+    return AdminFinishLoginResponse.fromPartial(base ?? ({} as any));
+  },
+  fromPartial<I extends Exact<DeepPartial<AdminFinishLoginResponse>, I>>(object: I): AdminFinishLoginResponse {
+    const message = createBaseAdminFinishLoginResponse();
+    message.token =
+      object.token !== undefined && object.token !== null ? IssuedToken.fromPartial(object.token) : undefined;
+    return message;
+  },
+};
+
 function createBaseListPasskeysRequest(): ListPasskeysRequest {
   return {};
 }
@@ -1098,6 +1286,20 @@ export const PasskeysServiceDefinition = {
       requestType: FinishLoginRequest as typeof FinishLoginRequest,
       requestStream: false,
       responseType: FinishLoginResponse as typeof FinishLoginResponse,
+      responseStream: false,
+      options: {},
+    },
+    /**
+     * Signing an operator in with one: FinishLogin through the administrative
+     * door, anonymous like it. The token carries the administrative claim and
+     * lifetimes, and a subject who holds no administrative role is refused only
+     * after the assertion is proven, so the role is not an oracle.
+     */
+    adminFinishLogin: {
+      name: 'AdminFinishLogin',
+      requestType: AdminFinishLoginRequest as typeof AdminFinishLoginRequest,
+      requestStream: false,
+      responseType: AdminFinishLoginResponse as typeof AdminFinishLoginResponse,
       responseStream: false,
       options: {},
     },

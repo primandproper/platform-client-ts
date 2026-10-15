@@ -126,3 +126,15 @@ describe('finishPasskeyRegistration', () => {
     );
   });
 });
+
+describe('PasskeysService', () => {
+  it('exposes the administrative door to a passkey sign-in (v15.1.0)', () => {
+    const { path, requestType, responseType } = PasskeysService.adminFinishLogin;
+    const request = { username: 'jeff', response: assertion, activeAccountId: 'account' };
+    const response = { token: fakeIssuedToken(new FakeClock().now()) };
+
+    expect(path).toBe('/primandproper.platform.passkeys.v1.PasskeysService/AdminFinishLogin');
+    expect(requestType.decode(requestType.encode(request).finish())).toEqual(request);
+    expect(responseType.decode(responseType.encode(response).finish())).toEqual(response);
+  });
+});

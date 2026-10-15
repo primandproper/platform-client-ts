@@ -19,12 +19,14 @@ repository is what lets those domains land one at a time, against the real schem
 
 ## What it speaks
 
-**platform-go v15.0.0** (`PLATFORM_GO_VERSION`). The generated stubs are exactly that tag's protos, and the runtime
+**platform-go v15.2.0** (`PLATFORM_GO_VERSION`). The generated stubs are exactly that tag's protos, and the runtime
 implements
-[`platform-go`'s client contract](https://github.com/primandproper/platform-go/blob/v15.0.0/docs/client-contract.md) as
-it describes that tag. Some rules need a server at least that new: R10 (the keyed refresh retry, which is opt-in for
-that reason) and R11 (sign-in reasons, which an older server simply does not send) from v14.1.0, and R18 to R20 (passkey
-sign-in and switching accounts, whose RPCs an older server does not have) from v14.2.0.
+[`platform-go`'s client contract](https://github.com/primandproper/platform-go/blob/v15.2.0/docs/client-contract.md) as
+it describes that tag, except R21 (an operator's passkey sign-in), whose `adminFinishLogin` is generated but has no
+helper yet. Some rules need a server at least that new: R10 (the keyed refresh retry, which is opt-in for that reason)
+and R11 (sign-in reasons, which an older server simply does not send) from v14.1.0, R18 to R20 (passkey sign-in and
+switching accounts, whose RPCs an older server does not have) from v14.2.0, and `refreshCookieCredentialStore` (the
+refresh token in an httpOnly cookie) from v15.2.0.
 
 The package is `0.x` until DDB's web frontend has adopted it. Its version is its own: it states the platform-go tag it
 speaks rather than mirroring it, because a client-only fix needs a version number of its own to ship under.
